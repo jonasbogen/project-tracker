@@ -2,6 +2,7 @@
   "name": "project-tracker",
   "version": "2.0.0",
   "private": true,
+  "packageManager": "npm@10.9.2",
   "description": "Internal tool for tracking projects: status, challenges, timeline, customer, responsible owner, and linked cases. Hono API + React (Vite) frontend, served as a single app.",
   "engines": {
     "node": "22.x"
