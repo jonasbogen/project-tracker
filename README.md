@@ -102,6 +102,12 @@ single signed app. There is **no Dockerfile** — the `node` buildpack runs `npm
 ### CI and deployment
 
 - `.github/workflows/ci.yml` runs typecheck + tests + build on every push/PR (Linux runners).
-- **Minato does not support push-triggered builds or webhooks.** A deploy is always an explicit,
-  approval-gated `minato_deploy` from a Git ref. See the "autodeploy on push" note at the bottom of
-  the handover for how far this can be automated.
+- `.github/workflows/deploy.yml` can **queue** a deploy on push to `main`/`master` (or manually via
+  *workflow_dispatch*). **It cannot make a release live by itself:** Minato has no webhooks and every
+  deploy is approval-gated, so a human still approves the plan in the portal. The job stays skipped
+  until you opt in by setting these repo settings:
+  - Variable `MINATO_DEPLOY_ENABLED` = `true`
+  - Variable `MINATO_API_URL` = the Minato API base URL
+  - Secret `MINATO_TOKEN` = a Minato API bearer token
+  - A **self-hosted runner** with network access to the Minato API (the API is internal, so
+    GitHub-hosted runners likely can't reach it), with the `minato` CLI available.
