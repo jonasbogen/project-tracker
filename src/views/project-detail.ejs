@@ -1,0 +1,89 @@
+<%- include('partials/header') %>
+
+<div class="page-header">
+  <h1><%= project.name %></h1>
+  <div class="actions">
+    <a class="button" href="/projects/<%= project.id %>/edit">Rediger</a>
+    <form method="POST" action="/projects/<%= project.id %>/delete" onsubmit="return confirm('Slette prosjektet?');">
+      <button class="button danger" type="submit">Slett</button>
+    </form>
+  </div>
+</div>
+
+<section class="project-summary">
+  <dl>
+    <dt>Kunde</dt>
+    <dd><%= project.customer %></dd>
+
+    <dt>Status</dt>
+    <dd><span class="status-badge status-<%= project.status %>"><%= project.status %></span></dd>
+
+    <dt>Ansvarlig</dt>
+    <dd><%= project.responsible %></dd>
+
+    <dt>Tidslinje</dt>
+    <dd>
+      <%= project.start_date ? new Date(project.start_date).toLocaleDateString('no-NO') : 'ikke satt' %>
+      &ndash;
+      <%= project.end_date ? new Date(project.end_date).toLocaleDateString('no-NO') : 'ikke satt' %>
+    </dd>
+
+    <dt>Utfordringer</dt>
+    <dd><%= project.challenges || 'Ingen registrerte utfordringer.' %></dd>
+  </dl>
+</section>
+
+<section class="cases">
+  <h2>Aktuelle saker</h2>
+
+  <% if (cases.length === 0) { %>
+    <p class="empty">Ingen saker er koblet til dette prosjektet.</p>
+  <% } else { %>
+    <ul class="case-list">
+      <% cases.forEach((c) => { %>
+        <li class="case-item">
+          <div class="case-item-header">
+            <strong><%= c.title %></strong>
+            <span class="status-badge status-<%= c.status %>"><%= c.status %></span>
+          </div>
+          <% if (c.description) { %><p><%= c.description %></p><% } %>
+          <div class="case-item-footer">
+            <span><%= c.case_date ? new Date(c.case_date).toLocaleDateString('no-NO') : '' %></span>
+            <form method="POST" action="/projects/<%= project.id %>/cases/<%= c.id %>/delete" onsubmit="return confirm('Slette saken?');">
+              <button class="link-button" type="submit">Slett</button>
+            </form>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+
+  <form class="case-form" method="POST" action="/projects/<%= project.id %>/cases">
+    <h3>Legg til sak</h3>
+    <label>
+      Tittel
+      <input type="text" name="title" required />
+    </label>
+    <label>
+      Beskrivelse
+      <textarea name="description" rows="2"></textarea>
+    </label>
+    <label>
+      Status
+      <select name="status">
+        <% caseStatuses.forEach((s) => { %>
+          <option value="<%= s %>"><%= s %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>
+      Dato
+      <input type="date" name="case_date" />
+    </label>
+    <button class="button" type="submit">Legg til</button>
+  </form>
+</section>
+
+<p><a href="/">&larr; Tilbake til alle prosjekter</a></p>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,43 @@
+<%- include('partials/header') %>
+
+<h1><%= heading %></h1>
+
+<form class="project-form" method="POST" action="<%= formAction %>">
+  <label>
+    Prosjektnavn
+    <input type="text" name="name" value="<%= project.name || '' %>" required />
+  </label>
+  <label>
+    Kunde
+    <input type="text" name="customer" value="<%= project.customer || '' %>" required />
+  </label>
+  <label>
+    Status
+    <select name="status">
+      <% statuses.forEach((s) => { %>
+        <option value="<%= s %>" <%= project.status === s ? 'selected' : '' %>><%= s %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>
+    Ansvarlig
+    <input type="text" name="responsible" value="<%= project.responsible || '' %>" required />
+  </label>
+  <label>
+    Startdato
+    <input type="date" name="start_date" value="<%= project.start_date ? new Date(project.start_date).toISOString().slice(0,10) : '' %>" />
+  </label>
+  <label>
+    Sluttdato
+    <input type="date" name="end_date" value="<%= project.end_date ? new Date(project.end_date).toISOString().slice(0,10) : '' %>" />
+  </label>
+  <label>
+    Utfordringer
+    <textarea name="challenges" rows="4"><%= project.challenges || '' %></textarea>
+  </label>
+  <button class="button" type="submit">Lagre</button>
+</form>
+
+<p><a href="/">&larr; Tilbake til alle prosjekter</a></p>
+
+<%- include('partials/footer') %>
