@@ -1,6 +1,8 @@
-const { Pool } = require('pg');
+import pg from 'pg';
 
-const pool = new Pool({
+const { Pool } = pg;
+
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
@@ -28,8 +30,6 @@ CREATE TABLE IF NOT EXISTS cases (
 );
 `;
 
-async function initSchema() {
+export async function initSchema(): Promise<void> {
   await pool.query(SCHEMA);
 }
-
-module.exports = { pool, initSchema };
