@@ -1,0 +1,64 @@
+# Queue a Minato deployment.
+#
+# IMPORTANT — what this can and cannot do:
+#   * Minato has NO webhooks / push-triggered builds, and EVERY deploy is
+#     approval-gated. So this workflow can only *queue* a deployment; a human
+#     must still approve the typed plan in the Minato portal before anything
+#     goes live. Truly hands-off "push -> live" is not possible on Minato.
+#
+# Prerequisites (until these exist the job is skipped by the `if:` gate):
+#   1. Repository variable  MINATO_DEPLOY_ENABLED = "true"   (opt-in switch)
+#   2. Repository variable  MINATO_API_URL        = <the Minato API base URL>
+#   3. Repository secret     MINATO_TOKEN          = <a Minato API bearer token>
+#   4. A runner that can reach the Minato API. The API looks internal
+#      (*.intility.dev / *.intilitest.no), so GitHub-hosted runners probably
+#      cannot reach it — use a self-hosted Intility runner and set the
+#      `runs-on` label below accordingly.
+#   5. The `minato` CLI available on that runner (pre-installed on a self-hosted
+#      runner, or add an install step where marked).
+
+name: Deploy to Minato
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref (branch, tag, or commit SHA) to deploy
+        required: false
+        default: ''
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: minato-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Opt-in gate: stays skipped until you set the repo variable to "true".
+    if: vars.MINATO_DEPLOY_ENABLED == 'true'
+    runs-on: [self-hosted]           # requires network access to the Minato API
+    environment: minato-production   # add protection rules / required reviewers here
+    env:
+      MINATO_API_URL: ${{ vars.MINATO_API_URL }}
+      MINATO_TOKEN: ${{ secrets.MINATO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # If the runner does not already ship the CLI, install it here, e.g.:
+      # - name: Install Minato CLI
+      #   run: <your org's minato CLI install command>
+
+      - name: Queue Minato deployment (approval still required in the portal)
+        run: |
+          REF="${{ github.event.inputs.ref }}"
+          if [ -z "$REF" ]; then REF="${{ github.sha }}"; fi
+          echo "Queuing deploy of project-tracker @ $REF"
+          minato deploy project-tracker \
+            --tenant intility \
+            --git "${{ github.server_url }}/${{ github.repository }}" \
+            --ref "$REF" \
+            --builder node \
+            --no-wait --json \
+            --idempotency-key "gha-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "::notice::Deployment queued. Approve it in the Minato portal to go live."
