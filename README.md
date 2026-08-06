@@ -10,8 +10,8 @@ customer, the person responsible, and cases linked to each project.
 
 ## Architecture
 
-Turborepo monorepo with two workspaces, built and shipped as a **single deployable app** (Minato
-runs one container on one port):
+A **single Node package** at the repo root, with the two apps kept in separate folders and built
+and shipped as **one deployable app** (Minato runs one container on one port):
 
 ```
 apps/
@@ -27,8 +27,11 @@ apps/
 - **Single-process serving** – in production the Hono server serves both the JSON API and the
   static Vite build (`apps/web/dist`), with an SPA fallback to `index.html`. This matches Minato's
   one-app / one-port (Knative, port `8080`) model.
-- **Turborepo** orchestrates the `dev`, `build`, `typecheck`, and `test` tasks across both
-  workspaces.
+- **One root `package.json`** holds all dependencies and the `dev`/`build`/`typecheck`/`test`
+  scripts. There are **no npm workspaces and no Turborepo**: Minato builds with Cloud Native
+  Buildpacks (Paketo `node`), whose build model is a single conventional Node app at the repo root —
+  a workspaces/Turborepo layout does not build cleanly there. The two-folder layout keeps the code
+  organised without that build-time cost.
 
 ## Local development
 
@@ -36,7 +39,7 @@ apps/
 npm install
 cp .env.example .env      # point DATABASE_URL at a local Postgres instance
 
-npm run dev               # runs BOTH apps via Turborepo:
+npm run dev               # runs BOTH apps (via concurrently):
                           #   - Hono API  (tsx watch)  on http://localhost:8080
                           #   - Vite dev server        on http://localhost:5173  (proxies /api -> :8080)
 ```
@@ -47,17 +50,17 @@ process, so you get hot-reload for the frontend and the real API.
 ### Production build / start (single process)
 
 ```bash
-npm run build             # turbo: tsc (server) + vite build (web)
+npm run build             # tsc (server) then vite build (web)
 npm start                 # node apps/server/dist/index.js  — serves API + SPA on PORT (default 8080)
 ```
 
 `npm start` must be run from the repo root (that is also the Minato/Buildpacks launch context; see
 `Procfile`).
 
-> **Locked-down Windows note.** Some Intility machines block executing native binaries out of
-> `node_modules` (AppLocker/EDR). That prevents esbuild-based tools (`vite`, `vitest`, `tsx`, the
-> `turbo` binary) from running **locally on those machines** — you'll see `spawnSync ... UNKNOWN`.
-> The pure-JS TypeScript compiler still works, so you can always typecheck:
+> **Locked-down Windows note.** Some Intility machines block executing native binaries (AppLocker /
+> group policy). That prevents esbuild-based tools (`vite`, `vitest`, `tsx`) — and even the Minato
+> CLI — from running **locally on those machines** (`spawnSync … UNKNOWN`, or "blocked by group
+> policy"). The pure-JS TypeScript compiler still works, so you can always typecheck:
 >
 > ```bash
 > node node_modules/typescript/bin/tsc -p apps/server/tsconfig.json --noEmit
@@ -69,7 +72,7 @@ npm start                 # node apps/server/dist/index.js  — serves API + SPA
 ## Tests
 
 ```bash
-npm test                  # turbo -> vitest (server API tests, DB layer mocked)
+npm test                  # vitest (server API tests, DB layer mocked)
 ```
 
 Tests mock the database layer, so no Postgres instance is required to run them.
