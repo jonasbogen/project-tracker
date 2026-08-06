@@ -12,7 +12,8 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
-    "build": "turbo run build",
+    "build": "npm run build --workspace @project-tracker/server && npm run build --workspace @project-tracker/web",
+    "build:turbo": "turbo run build",
     "start": "node apps/server/dist/index.js",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
