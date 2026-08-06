@@ -1,10 +1,16 @@
 import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { initSchema } from './db.js';
+import { runEgressCheck } from './egress-check.js';
 
 const PORT = Number(process.env.PORT) || 8080;
 
 async function main(): Promise<void> {
+  // Temporary: spike/egress-check branch only. Inert unless EGRESS_CHECK=1.
+  if (process.env.EGRESS_CHECK === '1') {
+    void runEgressCheck();
+  }
+
   await initSchema();
 
   const app = createApp();
