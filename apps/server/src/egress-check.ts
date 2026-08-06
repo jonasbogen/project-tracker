@@ -5,8 +5,10 @@
 // unless explicitly enabled. Results are logged; read them with minato_logs.
 
 const TARGETS = [
-  'https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration',
-  'https://graph.microsoft.com/v1.0/',
+  // The real target: Intility's internal API gateway (colleagues endpoint).
+  // A 401/403 proves we REACHED it (auth solved separately); a fetch failure = blocked.
+  'https://api.intility.com/thanos/v2/colleagues',
+  // General-internet baseline for contrast (expected BLOCKED per earlier probe).
   'https://example.com',
 ];
 
