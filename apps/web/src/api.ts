@@ -8,6 +8,8 @@ export interface Project {
   start_date: string | null;
   end_date: string | null;
   challenges: string;
+  github_repo: string | null;
+  github_milestone_number: number | null;
   created_at: string;
 }
 

@@ -16,6 +16,8 @@ export interface Project {
   start_date: string | null;
   end_date: string | null;
   challenges: string;
+  github_repo: string | null;
+  github_milestone_number: number | null;
   created_at: string;
 }
 
@@ -129,6 +131,45 @@ export async function updateProject(id: number, data: ProjectInput): Promise<Pro
 
 export async function deleteProject(id: number): Promise<void> {
   await pool.query('DELETE FROM projects WHERE id = $1', [id]);
+}
+
+export interface GithubMilestoneInput {
+  name: string;
+  customer: string;
+  status: string;
+  responsible: string;
+  end_date: string | null;
+  challenges: string;
+  github_repo: string;
+  github_milestone_number: number;
+}
+
+// One row per (github_repo, github_milestone_number); re-running the sync updates
+// the GitHub-derived fields but leaves team as 'OT' and never touches unrelated projects.
+export async function upsertProjectFromGithub(data: GithubMilestoneInput): Promise<Project> {
+  const { rows } = await pool.query<Project>(
+    `INSERT INTO projects (name, customer, status, responsible, team, end_date, challenges, github_repo, github_milestone_number)
+     VALUES ($1, $2, $3, $4, 'OT', $5, $6, $7, $8)
+     ON CONFLICT (github_repo, github_milestone_number) DO UPDATE
+       SET name = EXCLUDED.name,
+           customer = EXCLUDED.customer,
+           status = EXCLUDED.status,
+           responsible = EXCLUDED.responsible,
+           end_date = EXCLUDED.end_date,
+           challenges = EXCLUDED.challenges
+     RETURNING *`,
+    [
+      data.name,
+      data.customer,
+      data.status,
+      data.responsible,
+      data.end_date,
+      data.challenges,
+      data.github_repo,
+      data.github_milestone_number,
+    ],
+  );
+  return rows[0];
 }
 
 export async function listCases(projectId: number): Promise<Case[]> {

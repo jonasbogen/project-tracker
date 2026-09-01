@@ -87,7 +87,14 @@ export default function ProjectList() {
           <Table.Body>
             {projects.map((p) => (
               <Table.Row key={p.id} onClick={() => navigate(`/projects/${p.id}`)}>
-                <Table.Cell>{p.name}</Table.Cell>
+                <Table.Cell>
+                  {p.name}
+                  {p.github_repo && (
+                    <Badge state="neutral" style={{ marginLeft: 8 }}>
+                      GitHub
+                    </Badge>
+                  )}
+                </Table.Cell>
                 <Table.Cell>{p.customer}</Table.Cell>
                 <Table.Cell>{p.team || <span className="muted">–</span>}</Table.Cell>
                 <Table.Cell>

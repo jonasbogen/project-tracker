@@ -144,7 +144,14 @@ export default function ProjectDetail() {
       </div>
 
       <div className="page-header">
-        <h1 className="bf-h1">{project.name}</h1>
+        <h1 className="bf-h1">
+          {project.name}
+          {project.github_repo && (
+            <Badge state="neutral" style={{ marginLeft: 8 }}>
+              GitHub
+            </Badge>
+          )}
+        </h1>
         <div className="inline-actions">
           <Button onClick={() => navigate(`/projects/${project.id}/edit`)}>
             <Icon icon={faPen} marginRight />

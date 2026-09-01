@@ -17,10 +17,18 @@ CREATE TABLE IF NOT EXISTS projects (
   start_date DATE,
   end_date DATE,
   challenges TEXT NOT NULL DEFAULT '',
+  github_repo TEXT,
+  github_milestone_number INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS team TEXT NOT NULL DEFAULT '';
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS github_repo TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS github_milestone_number INTEGER;
+
+-- One project per GitHub milestone; NULLs (manually created projects) never conflict with each other.
+CREATE UNIQUE INDEX IF NOT EXISTS projects_github_unique_idx
+  ON projects (github_repo, github_milestone_number);
 
 CREATE TABLE IF NOT EXISTS cases (
   id SERIAL PRIMARY KEY,

@@ -42,6 +42,8 @@ describe('project-tracker API', () => {
         start_date: null,
         end_date: null,
         challenges: '',
+        github_repo: null,
+        github_milestone_number: null,
         created_at: '2026-08-05T00:00:00Z',
         case_count: 2,
       },
@@ -75,6 +77,8 @@ describe('project-tracker API', () => {
       start_date: null,
       end_date: null,
       challenges: '',
+      github_repo: null,
+      github_milestone_number: null,
       created_at: '2026-08-05T00:00:00Z',
     });
 
