@@ -171,6 +171,10 @@ export default function ProjectDetail() {
           <div>{project.responsible}</div>
         </div>
         <div>
+          <div className="field-label">Team</div>
+          <div>{project.team || <span className="muted">–</span>}</div>
+        </div>
+        <div>
           <div className="field-label">Tidslinje</div>
           <div>{formatTimeline(project.start_date, project.end_date)}</div>
         </div>

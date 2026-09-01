@@ -5,23 +5,36 @@ import Badge from '@intility/bifrost-react/Badge';
 import Button from '@intility/bifrost-react/Button';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
+import Select from '@intility/bifrost-react-select';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { api, type ProjectWithCount } from '../api';
 import { projectBadgeState, formatTimeline } from '../status';
 
+interface Option {
+  value: string;
+  label: string;
+}
+
 export default function ProjectList() {
   const [projects, setProjects] = useState<ProjectWithCount[]>([]);
+  const [teams, setTeams] = useState<string[]>([]);
+  const [team, setTeam] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    api
-      .listProjects()
-      .then(setProjects)
+    setLoading(true);
+    Promise.all([api.listProjects(team || undefined), api.listTeams()])
+      .then(([projectList, teamList]) => {
+        setProjects(projectList);
+        setTeams(teamList);
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [team]);
+
+  const teamOptions: Option[] = teams.map((t) => ({ value: t, label: t }));
 
   return (
     <>
@@ -33,6 +46,17 @@ export default function ProjectList() {
         </Button>
       </div>
 
+      {teamOptions.length > 0 && (
+        <Select
+          label="Filtrer på team"
+          options={teamOptions}
+          value={team ? { value: team, label: team } : null}
+          onChange={(opt) => setTeam((opt as Option | null)?.value ?? '')}
+          isClearable
+          placeholder="Alle team"
+        />
+      )}
+
       {loading && <Icon.Spinner aria-label="Laster prosjekter" />}
 
       {error && (
@@ -42,8 +66,8 @@ export default function ProjectList() {
       )}
 
       {!loading && !error && projects.length === 0 && (
-        <Message header="Ingen prosjekter enda">
-          Opprett ditt første prosjekt for å komme i gang.
+        <Message header={team ? `Ingen prosjekter for team ${team}` : 'Ingen prosjekter enda'}>
+          {team ? 'Prøv et annet team, eller fjern filteret.' : 'Opprett ditt første prosjekt for å komme i gang.'}
         </Message>
       )}
 
@@ -53,6 +77,7 @@ export default function ProjectList() {
             <Table.Row>
               <Table.HeaderCell>Navn</Table.HeaderCell>
               <Table.HeaderCell>Kunde</Table.HeaderCell>
+              <Table.HeaderCell>Team</Table.HeaderCell>
               <Table.HeaderCell>Status</Table.HeaderCell>
               <Table.HeaderCell>Ansvarlig</Table.HeaderCell>
               <Table.HeaderCell>Tidslinje</Table.HeaderCell>
@@ -64,6 +89,7 @@ export default function ProjectList() {
               <Table.Row key={p.id} onClick={() => navigate(`/projects/${p.id}`)}>
                 <Table.Cell>{p.name}</Table.Cell>
                 <Table.Cell>{p.customer}</Table.Cell>
+                <Table.Cell>{p.team || <span className="muted">–</span>}</Table.Cell>
                 <Table.Cell>
                   <Badge state={projectBadgeState(p.status)}>{p.status}</Badge>
                 </Table.Cell>

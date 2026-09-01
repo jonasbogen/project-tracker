@@ -19,6 +19,7 @@ const EMPTY: ProjectInput = {
   customer: '',
   status: '',
   responsible: '',
+  team: '',
   start_date: '',
   end_date: '',
   challenges: '',
@@ -47,6 +48,7 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
             customer: project.customer,
             status: project.status,
             responsible: project.responsible,
+            team: project.team,
             start_date: project.start_date ?? '',
             end_date: project.end_date ?? '',
             challenges: project.challenges,
@@ -136,6 +138,12 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
             required
             value={form.responsible}
             onChange={(e) => update('responsible', e.target.value)}
+          />
+          <Input
+            label="Team"
+            optional
+            value={form.team ?? ''}
+            onChange={(e) => update('team', e.target.value)}
           />
           <Input
             label="Startdato"

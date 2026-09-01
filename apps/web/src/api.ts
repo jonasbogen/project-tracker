@@ -4,6 +4,7 @@ export interface Project {
   customer: string;
   status: string;
   responsible: string;
+  team: string;
   start_date: string | null;
   end_date: string | null;
   challenges: string;
@@ -29,6 +30,7 @@ export interface ProjectInput {
   customer: string;
   status: string;
   responsible: string;
+  team?: string;
   start_date?: string | null;
   end_date?: string | null;
   challenges?: string;
@@ -67,7 +69,9 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getMeta: () => request<Meta>('/api/meta'),
-  listProjects: () => request<ProjectWithCount[]>('/api/projects'),
+  listProjects: (team?: string) =>
+    request<ProjectWithCount[]>(`/api/projects${team ? `?team=${encodeURIComponent(team)}` : ''}`),
+  listTeams: () => request<string[]>('/api/teams'),
   getProject: (id: number) => request<{ project: Project; cases: Case[] }>(`/api/projects/${id}`),
   createProject: (data: ProjectInput) =>
     request<Project>('/api/projects', { method: 'POST', body: JSON.stringify(data) }),

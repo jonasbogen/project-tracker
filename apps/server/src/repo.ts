@@ -12,6 +12,7 @@ export interface Project {
   customer: string;
   status: string;
   responsible: string;
+  team: string;
   start_date: string | null;
   end_date: string | null;
   challenges: string;
@@ -37,6 +38,7 @@ export interface ProjectInput {
   customer: string;
   status: string;
   responsible: string;
+  team?: string;
   start_date?: string | null;
   end_date?: string | null;
   challenges?: string;
@@ -49,7 +51,19 @@ export interface CaseInput {
   case_date?: string | null;
 }
 
-export async function listProjects(): Promise<ProjectWithCount[]> {
+export async function listProjects(team?: string): Promise<ProjectWithCount[]> {
+  if (team) {
+    const { rows } = await pool.query<ProjectWithCount>(
+      `SELECT p.*, count(c.id)::int AS case_count
+       FROM projects p
+       LEFT JOIN cases c ON c.project_id = p.id
+       WHERE p.team = $1
+       GROUP BY p.id
+       ORDER BY p.created_at DESC`,
+      [team],
+    );
+    return rows;
+  }
   const { rows } = await pool.query<ProjectWithCount>(
     `SELECT p.*, count(c.id)::int AS case_count
      FROM projects p
@@ -60,6 +74,13 @@ export async function listProjects(): Promise<ProjectWithCount[]> {
   return rows;
 }
 
+export async function listTeams(): Promise<string[]> {
+  const { rows } = await pool.query<{ team: string }>(
+    `SELECT DISTINCT team FROM projects WHERE team <> '' ORDER BY team`,
+  );
+  return rows.map((r) => r.team);
+}
+
 export async function getProject(id: number): Promise<Project | undefined> {
   const { rows } = await pool.query<Project>('SELECT * FROM projects WHERE id = $1', [id]);
   return rows[0];
@@ -67,14 +88,15 @@ export async function getProject(id: number): Promise<Project | undefined> {
 
 export async function createProject(data: ProjectInput): Promise<Project> {
   const { rows } = await pool.query<Project>(
-    `INSERT INTO projects (name, customer, status, responsible, start_date, end_date, challenges)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO projects (name, customer, status, responsible, team, start_date, end_date, challenges)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
     [
       data.name,
       data.customer,
       data.status,
       data.responsible,
+      data.team || '',
       data.start_date || null,
       data.end_date || null,
       data.challenges || '',
@@ -87,14 +109,15 @@ export async function updateProject(id: number, data: ProjectInput): Promise<Pro
   const { rows } = await pool.query<Project>(
     `UPDATE projects
      SET name = $1, customer = $2, status = $3, responsible = $4,
-         start_date = $5, end_date = $6, challenges = $7
-     WHERE id = $8
+         team = $5, start_date = $6, end_date = $7, challenges = $8
+     WHERE id = $9
      RETURNING *`,
     [
       data.name,
       data.customer,
       data.status,
       data.responsible,
+      data.team || '',
       data.start_date || null,
       data.end_date || null,
       data.challenges || '',

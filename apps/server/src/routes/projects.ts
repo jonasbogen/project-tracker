@@ -27,6 +27,7 @@ function projectFromBody(body: Record<string, unknown>): ProjectInput | { error:
     customer,
     responsible,
     status,
+    team: String(body.team ?? '').trim(),
     start_date: body.start_date ? String(body.start_date) : null,
     end_date: body.end_date ? String(body.end_date) : null,
     challenges: String(body.challenges ?? '').trim(),
@@ -41,10 +42,17 @@ api.get('/meta', (c) =>
   }),
 );
 
-// GET /api/projects — list all projects with a linked-case count.
+// GET /api/projects — list all projects with a linked-case count, optionally filtered by team.
 api.get('/projects', async (c) => {
-  const projects = await repo.listProjects();
+  const team = c.req.query('team');
+  const projects = await repo.listProjects(team || undefined);
   return c.json(projects);
+});
+
+// GET /api/teams — distinct team names already in use, for the list filter.
+api.get('/teams', async (c) => {
+  const teams = await repo.listTeams();
+  return c.json(teams);
 });
 
 // POST /api/projects — create a project.

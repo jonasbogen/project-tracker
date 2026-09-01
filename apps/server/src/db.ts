@@ -13,11 +13,14 @@ CREATE TABLE IF NOT EXISTS projects (
   customer TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'Planlagt',
   responsible TEXT NOT NULL,
+  team TEXT NOT NULL DEFAULT '',
   start_date DATE,
   end_date DATE,
   challenges TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS team TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS cases (
   id SERIAL PRIMARY KEY,
