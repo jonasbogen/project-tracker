@@ -54,6 +54,7 @@ export interface CaseInput {
   description?: string;
   status?: string;
   case_date?: string | null;
+  owner?: string;
 }
 
 export async function listProjects(team?: string, search?: string): Promise<ProjectWithCount[]> {
@@ -135,6 +136,20 @@ export async function updateProject(id: number, data: ProjectInput): Promise<Pro
 
 export async function deleteProject(id: number): Promise<void> {
   await pool.query('DELETE FROM projects WHERE id = $1', [id]);
+}
+
+// Links an app-created project to the GitHub milestone minted for it (the app -> GitHub
+// half of the two-way sync), so the next pull recognizes it and updates in place.
+export async function setProjectGithubLink(
+  id: number,
+  githubRepo: string,
+  githubMilestoneNumber: number,
+): Promise<Project | undefined> {
+  const { rows } = await pool.query<Project>(
+    `UPDATE projects SET github_repo = $1, github_milestone_number = $2 WHERE id = $3 RETURNING *`,
+    [githubRepo, githubMilestoneNumber, id],
+  );
+  return rows[0];
 }
 
 export interface GithubMilestoneInput {
@@ -289,14 +304,39 @@ export async function listCases(projectId: number): Promise<Case[]> {
 
 export async function createCase(projectId: number, data: CaseInput): Promise<Case> {
   const { rows } = await pool.query<Case>(
-    `INSERT INTO cases (project_id, title, description, status, case_date)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO cases (project_id, title, description, status, case_date, owner)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [projectId, data.title, data.description || '', data.status || 'Åpen', data.case_date || null],
+    [
+      projectId,
+      data.title,
+      data.description || '',
+      data.status || 'Åpen',
+      data.case_date || null,
+      data.owner || '',
+    ],
   );
   return rows[0];
 }
 
 export async function deleteCase(projectId: number, caseId: number): Promise<void> {
   await pool.query('DELETE FROM cases WHERE id = $1 AND project_id = $2', [caseId, projectId]);
+}
+
+export interface CaseWithProject extends Case {
+  project_name: string;
+}
+
+// A person's active (not "Løst") cases across every project, with the parent project's
+// name so the UI can link back to it. Backs the "click a person" drill-down.
+export async function listActiveCasesByOwner(owner: string): Promise<CaseWithProject[]> {
+  const { rows } = await pool.query<CaseWithProject>(
+    `SELECT c.*, p.name AS project_name
+     FROM cases c
+     JOIN projects p ON p.id = c.project_id
+     WHERE c.owner = $1 AND c.status <> 'Løst'
+     ORDER BY c.case_date DESC NULLS LAST, c.created_at DESC`,
+    [owner],
+  );
+  return rows;
 }

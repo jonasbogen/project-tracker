@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import Table from '@intility/bifrost-react/Table';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
@@ -8,6 +9,7 @@ export default function Team() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     api
@@ -50,7 +52,10 @@ export default function Team() {
           </Table.Header>
           <Table.Body>
             {team.map((member) => (
-              <Table.Row key={member.owner}>
+              <Table.Row
+                key={member.owner}
+                onClick={() => navigate(`/team/${encodeURIComponent(member.owner)}`)}
+              >
                 <Table.Cell>
                   <span className="team-member">
                     <img

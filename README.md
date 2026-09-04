@@ -90,7 +90,7 @@ Tests mock the database layer, so no Postgres instance is required to run them.
 | `PORT` | No | Defaults to `8080`. Minato sets this automatically. |
 | `DATABASE_URL` | Yes at runtime | Injected automatically by Minato's managed Postgres. For local dev, point it at your own Postgres instance. |
 | `CLIENT_DIR` | No | Override the static frontend directory. Defaults to `./apps/web/dist`. |
-| `GITHUB_TOKEN` | No | A GitHub token (read access to issues/milestones) for the source repo below. Without it, GitHub sync is skipped (logged, not fatal). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
+| `GITHUB_TOKEN` | No | A GitHub token (read + write on issues/milestones) for the source repo below — write is needed to create milestones for app-created projects. Without it, GitHub sync is skipped (logged, not fatal). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
 | `GITHUB_ORG` | No | GitHub org that owns the source repo. Defaults to `intility`. |
 | `GITHUB_REPO` | No | Repo to sync from. Defaults to `Prosjektmappe` — the OT/Edge Platform project tracker repo, one milestone per customer project. |
 
@@ -117,9 +117,20 @@ issues (pull requests and issues without a milestone are skipped) and upserts:
 
 Re-running the sync updates those fields in place (matched on repo + milestone/issue number — see
 the `github_repo` / `github_milestone_number` / `github_issue_number` columns) rather than creating
-duplicates. Projects and cases created manually through the UI are never touched by the sync.
-Requires `GITHUB_TOKEN`; without it the sync is skipped and logs a message, the rest of the app
-works normally.
+duplicates. Cases created manually through the UI are never touched by the sync. Requires
+`GITHUB_TOKEN`; without it the sync is skipped and logs a message, the rest of the app works
+normally.
+
+**The other direction:** creating a project in the UI immediately creates a matching milestone in
+`Prosjektmappe` (title, description, due date), and links the new project to it — so it shows up
+with the same "GitHub" badge as a synced project, and the next hourly pull recognizes it instead of
+duplicating it. This call is best-effort: if `GITHUB_TOKEN` is absent, read-only, or GitHub is
+briefly unreachable, the project is still created in the app; only the GitHub link is skipped
+(logged, not surfaced as an error to the user).
+
+The case form's "Eier" field is a dropdown of the repo's assignable GitHub users
+(`GET /repos/{org}/{repo}/assignees`, read-only) when `GITHUB_TOKEN` is set, falling back to a
+plain text field otherwise.
 
 ## Deploying on Minato
 

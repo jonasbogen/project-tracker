@@ -10,7 +10,7 @@ import TextArea from '@intility/bifrost-react/TextArea';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faArrowLeft, faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { api, type Case, type Project } from '../api';
+import { api, type Assignee, type Case, type Project } from '../api';
 import { caseBadgeState, caseStatusColor, formatDate, formatTimeline, projectBadgeState } from '../status';
 import BarChart from '../charts/BarChart';
 import Calendar from '../components/Calendar';
@@ -28,6 +28,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<Project | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [caseStatuses, setCaseStatuses] = useState<string[]>([]);
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -37,6 +38,7 @@ export default function ProjectDetail() {
   const [description, setDescription] = useState('');
   const [caseStatus, setCaseStatus] = useState<string>('');
   const [caseDate, setCaseDate] = useState('');
+  const [owner, setOwner] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -44,10 +46,15 @@ export default function ProjectDetail() {
     setLoading(true);
     setError(null);
     try {
-      const [data, meta] = await Promise.all([api.getProject(projectId), api.getMeta()]);
+      const [data, meta, assigneeList] = await Promise.all([
+        api.getProject(projectId),
+        api.getMeta(),
+        api.listAssignees(),
+      ]);
       setProject(data.project);
       setCases(data.cases);
       setCaseStatuses(meta.caseStatuses);
+      setAssignees(assigneeList);
     } catch (e) {
       const err = e as Error & { message: string };
       if (err.message.includes('finnes ikke')) setNotFound(true);
@@ -91,11 +98,13 @@ export default function ProjectDetail() {
         description: description.trim(),
         status: caseStatus || undefined,
         case_date: caseDate || null,
+        owner: owner || undefined,
       });
       setTitle('');
       setDescription('');
       setCaseStatus('');
       setCaseDate('');
+      setOwner('');
       await load();
     } catch (err) {
       setFormError((err as Error).message);
@@ -304,6 +313,25 @@ export default function ProjectDetail() {
               isClearable
               placeholder="Åpen"
             />
+            {assignees.length > 0 ? (
+              <Select
+                label="Eier"
+                optional
+                options={assignees.map((a) => ({ value: a.login, label: a.login }))}
+                value={owner ? { value: owner, label: owner } : null}
+                onChange={(opt) => setOwner((opt as Option | null)?.value ?? '')}
+                isClearable
+                placeholder="Velg blant assignees på GitHub"
+              />
+            ) : (
+              <Input
+                label="Eier"
+                optional
+                value={owner}
+                onChange={(e) => setOwner(e.target.value)}
+                placeholder="GitHub-brukernavn"
+              />
+            )}
           </div>
           <TextArea
             label="Beskrivelse"

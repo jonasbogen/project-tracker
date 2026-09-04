@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import * as repo from '../repo.js';
 import type { CaseInput, ProjectInput } from '../repo.js';
+import { createGithubMilestone, githubRepoName, listGithubAssignees } from '../github-sync.js';
 
 export const api = new Hono();
 
@@ -63,18 +64,44 @@ api.get('/team', async (c) => {
   return c.json(team);
 });
 
+// GET /api/team/:owner/cases — one person's active cases, with their parent project name.
+api.get('/team/:owner/cases', async (c) => {
+  const owner = c.req.param('owner');
+  const cases = await repo.listActiveCasesByOwner(owner);
+  return c.json(cases);
+});
+
+// GET /api/assignees — people assignable to issues in the source GitHub repo, for the
+// "Eier" picker on the case form. Empty list (not an error) when GITHUB_TOKEN is unset.
+api.get('/assignees', async (c) => {
+  const assignees = await listGithubAssignees();
+  return c.json(assignees);
+});
+
 // GET /api/stats — aggregate counts for the dashboard.
 api.get('/stats', async (c) => {
   const stats = await repo.getDashboardStats();
   return c.json(stats);
 });
 
-// POST /api/projects — create a project.
+// POST /api/projects — create a project, then push it to GitHub as a milestone (the
+// app -> GitHub half of the two-way sync). The GitHub call is best-effort: creation in
+// the app always succeeds even if GITHUB_TOKEN is absent, read-only, or GitHub is down.
 api.post('/projects', async (c) => {
   const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
   const data = projectFromBody(body);
   if ('error' in data) return c.json({ error: data.error }, 400);
-  const project = await repo.createProject(data);
+  let project = await repo.createProject(data);
+
+  const milestone = await createGithubMilestone({
+    title: project.name,
+    description: project.challenges,
+    due_on: project.end_date,
+  });
+  if (milestone) {
+    project = (await repo.setProjectGithubLink(project.id, githubRepoName(), milestone.number)) ?? project;
+  }
+
   return c.json(project, 201);
 });
 
@@ -128,6 +155,7 @@ api.post('/projects/:id/cases', async (c) => {
     description: String(body.description ?? '').trim(),
     status: status || undefined,
     case_date: body.case_date ? String(body.case_date) : null,
+    owner: String(body.owner ?? '').trim(),
   };
   const created = await repo.createCase(id, data);
   return c.json(created, 201);

@@ -36,6 +36,15 @@ export interface TeamMember {
   total_cases: number;
 }
 
+export interface CaseWithProject extends Case {
+  project_name: string;
+}
+
+export interface Assignee {
+  login: string;
+  avatar_url: string;
+}
+
 export interface DashboardStats {
   projectStatusCounts: { status: string; count: number }[];
   caseStatusCounts: { status: string; count: number }[];
@@ -59,6 +68,7 @@ export interface CaseInput {
   description?: string;
   status?: string;
   case_date?: string | null;
+  owner?: string;
 }
 
 export interface Meta {
@@ -96,6 +106,9 @@ export const api = {
   },
   listTeams: () => request<string[]>('/api/teams'),
   listTeam: () => request<TeamMember[]>('/api/team'),
+  listCasesForOwner: (owner: string) =>
+    request<CaseWithProject[]>(`/api/team/${encodeURIComponent(owner)}/cases`),
+  listAssignees: () => request<Assignee[]>('/api/assignees'),
   getStats: () => request<DashboardStats>('/api/stats'),
   getProject: (id: number) => request<{ project: Project; cases: Case[] }>(`/api/projects/${id}`),
   createProject: (data: ProjectInput) =>

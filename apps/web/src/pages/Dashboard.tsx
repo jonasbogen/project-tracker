@@ -6,6 +6,7 @@ import Message from '@intility/bifrost-react/Message';
 import Badge from '@intility/bifrost-react/Badge';
 import { api, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
+import HeroBackground from '../components/HeroBackground';
 import { formatDate, projectStatusColor } from '../status';
 
 function daysUntil(date: string): number {
@@ -39,12 +40,22 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <Icon.Spinner aria-label="Laster oversikt" />;
+  if (loading) {
+    return (
+      <>
+        <HeroBackground />
+        <Icon.Spinner aria-label="Laster oversikt" />
+      </>
+    );
+  }
   if (error || !stats) {
     return (
-      <Message state="alert" header="Kunne ikke laste oversikten">
-        {error ?? 'Ukjent feil.'}
-      </Message>
+      <>
+        <HeroBackground />
+        <Message state="alert" header="Kunne ikke laste oversikten">
+          {error ?? 'Ukjent feil.'}
+        </Message>
+      </>
     );
   }
 
@@ -57,8 +68,10 @@ export default function Dashboard() {
     .reduce((sum, r) => sum + r.count, 0);
 
   return (
-    <div className="stack">
-      <h1 className="bf-h1">Oversikt</h1>
+    <>
+      <HeroBackground />
+      <div className="stack">
+        <h1 className="bf-h1">Oversikt</h1>
 
       <div className="stat-tile-row">
         <StatTile label="Prosjekter totalt" value={totalProjects} />
@@ -84,6 +97,7 @@ export default function Dashboard() {
           <BarChart
             items={stats.topOwners.map((o) => ({ label: o.owner, value: o.total_cases }))}
             emptyText="Ingen saker har en eier fra GitHub enda."
+            onItemClick={(owner) => navigate(`/team/${encodeURIComponent(owner)}`)}
           />
         </Card>
       </div>
@@ -118,6 +132,7 @@ export default function Dashboard() {
           </div>
         )}
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

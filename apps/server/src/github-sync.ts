@@ -29,19 +29,23 @@ interface GithubIssue {
   pull_request?: unknown;
 }
 
-async function githubFetch<T>(path: string): Promise<T> {
+async function githubFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error('GITHUB_TOKEN is not set');
   const res = await fetch(`${GITHUB_API}${path}`, {
+    ...init,
     headers: {
       authorization: `Bearer ${token}`,
       accept: 'application/vnd.github+json',
       'x-github-api-version': '2022-11-28',
+      ...(init?.body ? { 'content-type': 'application/json' } : {}),
     },
   });
   if (!res.ok) {
-    throw new Error(`GitHub API request failed (${res.status}): ${path}`);
+    const detail = await res.text().catch(() => '');
+    throw new Error(`GitHub API request failed (${res.status}): ${path}${detail ? ` — ${detail}` : ''}`);
   }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
@@ -131,4 +135,57 @@ export async function syncGithubProjects(): Promise<SyncResult> {
   }
 
   return { projects: milestones.length, cases: caseCount };
+}
+
+export interface GithubAssignee {
+  login: string;
+  avatar_url: string;
+}
+
+// Users assignable to issues in the source repo — the pick list for the "Eier" field
+// when logging a new case. Read-only, same Issues permission as the rest of the sync.
+// Returns an empty list (never throws) when GITHUB_TOKEN is absent, so the case form
+// still works with a plain text fallback.
+export async function listGithubAssignees(): Promise<GithubAssignee[]> {
+  if (!process.env.GITHUB_TOKEN) return [];
+  try {
+    return await paginate<GithubAssignee>(`/repos/${ORG}/${REPO}/assignees`);
+  } catch (err) {
+    console.error('GitHub sync: failed to list assignees', err);
+    return [];
+  }
+}
+
+export interface NewMilestoneInput {
+  title: string;
+  description: string;
+  due_on: string | null;
+}
+
+// The app -> GitHub half of the two-way sync: a project created in the UI becomes a
+// milestone in the source repo immediately, instead of waiting to be read back on the
+// next hourly pull. Returns null (never throws) when GITHUB_TOKEN is absent or the
+// GitHub call fails (e.g. a duplicate title, or a read-only token) — project creation
+// in the app must succeed either way.
+export async function createGithubMilestone(
+  input: NewMilestoneInput,
+): Promise<{ number: number } | null> {
+  if (!process.env.GITHUB_TOKEN) return null;
+  try {
+    const body: Record<string, unknown> = { title: input.title };
+    if (input.description) body.description = input.description;
+    if (input.due_on) body.due_on = `${input.due_on}T00:00:00Z`;
+    const milestone = await githubFetch<{ number: number }>(`/repos/${ORG}/${REPO}/milestones`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    return milestone;
+  } catch (err) {
+    console.error('GitHub sync: failed to create milestone', err);
+    return null;
+  }
+}
+
+export function githubRepoName(): string {
+  return REPO;
 }

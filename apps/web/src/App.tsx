@@ -8,6 +8,7 @@ import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
 import ProjectForm from './pages/ProjectForm';
 import Team from './pages/Team';
+import PersonCases from './pages/PersonCases';
 import NotFound from './pages/NotFound';
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/projects/:id/edit" element={<ProjectForm mode="edit" />} />
           <Route path="/team" element={<Team />} />
+          <Route path="/team/:owner" element={<PersonCases />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
