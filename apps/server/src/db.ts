@@ -50,6 +50,15 @@ ALTER TABLE cases ADD COLUMN IF NOT EXISTS owner TEXT NOT NULL DEFAULT '';
 -- One case per GitHub issue; NULLs (manually created cases) never conflict with each other.
 CREATE UNIQUE INDEX IF NOT EXISTS cases_github_unique_idx
   ON cases (github_repo, github_issue_number);
+
+CREATE TABLE IF NOT EXISTS prices (
+  id SERIAL PRIMARY KEY,
+  service TEXT NOT NULL,
+  price NUMERIC(12, 2) NOT NULL,
+  unit TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 `;
 
 export async function initSchema(): Promise<void> {

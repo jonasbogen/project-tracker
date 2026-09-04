@@ -2,13 +2,21 @@ import { NavLink, Route, Routes } from 'react-router';
 import Nav from '@intility/bifrost-react/Nav';
 import Badge from '@intility/bifrost-react/Badge';
 import Inline from '@intility/bifrost-react/Inline';
-import { faDiagramProject, faGaugeHigh, faUsers } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBuilding,
+  faDiagramProject,
+  faGaugeHigh,
+  faTags,
+  faUsers,
+} from '@fortawesome/free-solid-svg-icons';
 import Dashboard from './pages/Dashboard';
 import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
 import ProjectForm from './pages/ProjectForm';
 import Team from './pages/Team';
-import PersonCases from './pages/PersonCases';
+import Board from './pages/Board';
+import Customers from './pages/Customers';
+import Prices from './pages/Prices';
 import NotFound from './pages/NotFound';
 import ChatWidget from './components/ChatWidget';
 
@@ -38,6 +46,12 @@ export default function App() {
           <NavLink to="/team">
             <Nav.Item icon={faUsers}>Team</Nav.Item>
           </NavLink>
+          <NavLink to="/customers">
+            <Nav.Item icon={faBuilding}>Kunder</Nav.Item>
+          </NavLink>
+          <NavLink to="/prices">
+            <Nav.Item icon={faTags}>Prisliste</Nav.Item>
+          </NavLink>
         </>
       }
     >
@@ -49,7 +63,9 @@ export default function App() {
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/projects/:id/edit" element={<ProjectForm mode="edit" />} />
           <Route path="/team" element={<Team />} />
-          <Route path="/team/:owner" element={<PersonCases />} />
+          <Route path="/board" element={<Board />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/prices" element={<Prices />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

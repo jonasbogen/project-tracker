@@ -340,3 +340,104 @@ export async function listActiveCasesByOwner(owner: string): Promise<CaseWithPro
   );
   return rows;
 }
+
+export interface CaseWithProjectInfo extends Case {
+  project_name: string;
+  customer: string;
+}
+
+export interface CaseFilters {
+  projectId?: number;
+  owner?: string;
+}
+
+// Every case (any status) across every project, optionally narrowed to one project
+// and/or one owner, with the parent project's name and customer for display. Backs
+// the "Saker"-board — the click-through target for every case counter in the app.
+export async function listAllCases(filters: CaseFilters): Promise<CaseWithProjectInfo[]> {
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+  if (filters.projectId) {
+    params.push(filters.projectId);
+    conditions.push(`c.project_id = $${params.length}`);
+  }
+  if (filters.owner) {
+    params.push(filters.owner);
+    conditions.push(`c.owner = $${params.length}`);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const { rows } = await pool.query<CaseWithProjectInfo>(
+    `SELECT c.*, p.name AS project_name, p.customer
+     FROM cases c
+     JOIN projects p ON p.id = c.project_id
+     ${where}
+     ORDER BY c.case_date DESC NULLS LAST, c.created_at DESC`,
+    params,
+  );
+  return rows;
+}
+
+export interface Customer {
+  customer: string;
+  project_count: number;
+  active_count: number;
+}
+
+// One row per distinct customer name across all projects, with a count of active
+// (not "Fullført") projects alongside the total. Backs the "Kunder" page.
+export async function listCustomers(): Promise<Customer[]> {
+  const { rows } = await pool.query<Customer>(
+    `SELECT customer,
+            count(*)::int AS project_count,
+            count(*) FILTER (WHERE status <> 'Fullført')::int AS active_count
+     FROM projects
+     GROUP BY customer
+     ORDER BY customer ASC`,
+  );
+  return rows;
+}
+
+export interface Price {
+  id: number;
+  service: string;
+  price: string;
+  unit: string;
+  description: string;
+  created_at: string;
+}
+
+export interface PriceInput {
+  service: string;
+  price: number;
+  unit?: string;
+  description?: string;
+}
+
+export async function listPrices(): Promise<Price[]> {
+  const { rows } = await pool.query<Price>('SELECT * FROM prices ORDER BY service ASC');
+  return rows;
+}
+
+export async function createPrice(data: PriceInput): Promise<Price> {
+  const { rows } = await pool.query<Price>(
+    `INSERT INTO prices (service, price, unit, description)
+     VALUES ($1, $2, $3, $4)
+     RETURNING *`,
+    [data.service, data.price, data.unit || '', data.description || ''],
+  );
+  return rows[0];
+}
+
+export async function updatePrice(id: number, data: PriceInput): Promise<Price | undefined> {
+  const { rows } = await pool.query<Price>(
+    `UPDATE prices SET service = $1, price = $2, unit = $3, description = $4
+     WHERE id = $5
+     RETURNING *`,
+    [data.service, data.price, data.unit || '', data.description || '', id],
+  );
+  return rows[0];
+}
+
+export async function deletePrice(id: number): Promise<void> {
+  await pool.query('DELETE FROM prices WHERE id = $1', [id]);
+}

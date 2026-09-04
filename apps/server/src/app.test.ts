@@ -14,8 +14,13 @@ vi.mock('./repo.js', async (importActual) => {
     listCases: vi.fn(),
     createCase: vi.fn(),
     listTeam: vi.fn(),
-    listActiveCasesByOwner: vi.fn(),
     getDashboardStats: vi.fn(),
+    listAllCases: vi.fn(),
+    listCustomers: vi.fn(),
+    listPrices: vi.fn(),
+    createPrice: vi.fn(),
+    updatePrice: vi.fn(),
+    deletePrice: vi.fn(),
   };
 });
 
@@ -236,11 +241,68 @@ describe('project-tracker API', () => {
     );
   });
 
-  it('GET /api/team/:owner/cases returns the repo result', async () => {
-    vi.mocked(repo.listActiveCasesByOwner).mockResolvedValue([]);
-    const res = await app.request('/api/team/endsan/cases');
+  it('GET /api/cases passes project/owner filters through to the repo', async () => {
+    vi.mocked(repo.listAllCases).mockResolvedValue([]);
+    await app.request('/api/cases?project=3&owner=endsan');
+    expect(repo.listAllCases).toHaveBeenCalledWith({ projectId: 3, owner: 'endsan' });
+  });
+
+  it('GET /api/customers returns the repo result', async () => {
+    vi.mocked(repo.listCustomers).mockResolvedValue([
+      { customer: 'Acme', project_count: 2, active_count: 1 },
+    ]);
+    const res = await app.request('/api/customers');
     expect(res.status).toBe(200);
-    expect(repo.listActiveCasesByOwner).toHaveBeenCalledWith('endsan');
+    expect(await res.json()).toEqual([{ customer: 'Acme', project_count: 2, active_count: 1 }]);
+  });
+
+  it('GET /api/prices returns the repo result', async () => {
+    vi.mocked(repo.listPrices).mockResolvedValue([
+      { id: 1, service: 'SRO', price: '1500.00', unit: 'per time', description: '', created_at: '2026-08-05T00:00:00Z' },
+    ]);
+    const res = await app.request('/api/prices');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveLength(1);
+  });
+
+  it('POST /api/prices validates required fields', async () => {
+    const res = await app.request('/api/prices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ service: '', price: 'not-a-number' }),
+    });
+    expect(res.status).toBe(400);
+    expect(repo.createPrice).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/prices creates a valid row', async () => {
+    vi.mocked(repo.createPrice).mockResolvedValue({
+      id: 1,
+      service: 'SRO',
+      price: '1500.00',
+      unit: 'per time',
+      description: '',
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    const res = await app.request('/api/prices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ service: 'SRO', price: 1500, unit: 'per time' }),
+    });
+    expect(res.status).toBe(201);
+    expect(repo.createPrice).toHaveBeenCalledWith({
+      service: 'SRO',
+      price: 1500,
+      unit: 'per time',
+      description: '',
+    });
+  });
+
+  it('DELETE /api/prices/:id removes the row', async () => {
+    const res = await app.request('/api/prices/1', { method: 'DELETE' });
+    expect(res.status).toBe(204);
+    expect(repo.deletePrice).toHaveBeenCalledWith(1);
   });
 
   it('GET /api/assignees returns the github-sync result', async () => {

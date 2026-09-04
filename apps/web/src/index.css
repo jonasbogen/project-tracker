@@ -460,6 +460,77 @@
   flex: 1;
 }
 
+.cell-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: hsl(var(--bfc-brand-hsl));
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Board (Kanban) */
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.board-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.board-column-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.board-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid var(--bfc-base-dimmed);
+  border-radius: 8px;
+  background: var(--bfc-base-3);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.board-card:hover {
+  background: var(--bfc-base-2);
+}
+
+.board-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.board-card-meta {
+  font-size: 0.8125rem;
+}
+
+.board-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
 @media (max-width: 600px) {
   .form-grid {
     grid-template-columns: 1fr;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import Table from '@intility/bifrost-react/Table';
 import Badge from '@intility/bifrost-react/Badge';
 import Button from '@intility/bifrost-react/Button';
@@ -18,11 +18,14 @@ interface Option {
 }
 
 export default function ProjectList() {
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') ?? '';
+
   const [projects, setProjects] = useState<ProjectWithCount[]>([]);
   const [teams, setTeams] = useState<string[]>([]);
   const [team, setTeam] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -128,7 +131,17 @@ export default function ProjectList() {
                   </Table.Cell>
                   <Table.Cell>{p.responsible}</Table.Cell>
                   <Table.Cell>{formatTimeline(p.start_date, p.end_date)}</Table.Cell>
-                  <Table.Cell>{p.case_count}</Table.Cell>
+                  <Table.Cell>
+                    <button
+                      className="cell-link"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/board?project=${p.id}`);
+                      }}
+                    >
+                      {p.case_count}
+                    </button>
+                  </Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>

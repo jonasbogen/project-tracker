@@ -8,7 +8,15 @@ customer, the person responsible, and cases linked to each project.
 - **Milestones** (`/projects`) – lists all projects with customer, status, responsible owner,
   timeline, and case count; searchable by name/customer and filterable by team.
 - **Team** (`/team`) – everyone currently assigned to at least one GitHub-synced case, with
-  open/total case counts.
+  open/total case counts. A row's counts open that person's cases on the board (below).
+- **Kunder** (`/customers`) – every distinct customer across all projects, with active/total
+  project counts; a row's counts jump into Milestones pre-filtered to that customer.
+- **Prisliste** (`/prices`) – an editable list of services and prices (service, price, unit,
+  description), stored in Postgres. Anyone using the tool can add/edit/remove rows.
+- **Saker-board** (`/board`) – a Kanban view (one column per case status) of cases, optionally
+  filtered to one project (`?project=<id>`) or one person (`?owner=<login>`). This is the
+  click-through target for every case counter in the app: the "Saker" column in Milestones, the
+  "Åpne saker" stat tile on Oversikt, "Saker per eier", and Team's per-person counts.
 - Clicking into a project (`/projects/:id`) shows the full detail view: status, challenges,
   timeline, customer, responsible owner, a calendar of the project's deadline and case activity,
   a case-status breakdown, and the list of cases tied to that project (each case shows its GitHub
@@ -171,7 +179,7 @@ single signed app. There is **no Dockerfile** — the `node` buildpack runs `npm
    `node` builder and the repo root as the build context. No secrets are required.
 2. Enable the managed Postgres database for the app (`small` plan, version `16`). Minato injects
    `DATABASE_URL` into the running app automatically.
-3. On boot the app runs `CREATE TABLE IF NOT EXISTS` for its two tables (`projects`, `cases`), so
+3. On boot the app runs `CREATE TABLE IF NOT EXISTS` for its tables (`projects`, `cases`, `prices`), so
    no manual migration step is needed.
 
 ### CI and deployment

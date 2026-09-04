@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import * as repo from '../repo.js';
-import type { CaseInput, ProjectInput } from '../repo.js';
+import type { CaseInput, PriceInput, ProjectInput } from '../repo.js';
 import { createGithubMilestone, githubRepoName, listGithubAssignees } from '../github-sync.js';
 
 export const api = new Hono();
@@ -64,11 +64,70 @@ api.get('/team', async (c) => {
   return c.json(team);
 });
 
-// GET /api/team/:owner/cases — one person's active cases, with their parent project name.
-api.get('/team/:owner/cases', async (c) => {
-  const owner = c.req.param('owner');
-  const cases = await repo.listActiveCasesByOwner(owner);
+// GET /api/cases — every case (any status), optionally narrowed to one project and/or
+// one owner. Backs the "Saker"-board that every case counter in the app links to.
+api.get('/cases', async (c) => {
+  const projectId = parseId(c.req.query('project') ?? undefined);
+  const owner = c.req.query('owner');
+  const cases = await repo.listAllCases({
+    projectId: projectId ?? undefined,
+    owner: owner || undefined,
+  });
   return c.json(cases);
+});
+
+// GET /api/customers — every distinct customer across all projects, with counts.
+api.get('/customers', async (c) => {
+  const customers = await repo.listCustomers();
+  return c.json(customers);
+});
+
+// GET /api/prices — the service price list.
+api.get('/prices', async (c) => {
+  const prices = await repo.listPrices();
+  return c.json(prices);
+});
+
+function priceFromBody(body: Record<string, unknown>): PriceInput | { error: string } {
+  const service = String(body.service ?? '').trim();
+  const price = Number(body.price);
+  if (!service) return { error: 'Tjeneste er påkrevd.' };
+  if (!Number.isFinite(price) || price < 0) return { error: 'Ugyldig pris.' };
+  return {
+    service,
+    price,
+    unit: String(body.unit ?? '').trim(),
+    description: String(body.description ?? '').trim(),
+  };
+}
+
+// POST /api/prices — add a row to the price list.
+api.post('/prices', async (c) => {
+  const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
+  const data = priceFromBody(body);
+  if ('error' in data) return c.json({ error: data.error }, 400);
+  const price = await repo.createPrice(data);
+  return c.json(price, 201);
+});
+
+// PUT /api/prices/:id — edit a price list row.
+api.put('/prices/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
+  const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
+  const data = priceFromBody(body);
+  if ('error' in data) return c.json({ error: data.error }, 400);
+  const price = await repo.updatePrice(id, data);
+  if (!price) return c.json({ error: 'Fant ikke raden.' }, 404);
+  return c.json(price);
+});
+
+// DELETE /api/prices/:id — remove a price list row.
+api.delete('/prices/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
+  await repo.deletePrice(id);
+  return c.body(null, 204);
 });
 
 // GET /api/assignees — people assignable to issues in the source GitHub repo, for the

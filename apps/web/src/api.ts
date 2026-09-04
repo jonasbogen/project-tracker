@@ -36,13 +36,36 @@ export interface TeamMember {
   total_cases: number;
 }
 
-export interface CaseWithProject extends Case {
+export interface CaseWithProjectInfo extends Case {
   project_name: string;
+  customer: string;
 }
 
 export interface Assignee {
   login: string;
   avatar_url: string;
+}
+
+export interface Customer {
+  customer: string;
+  project_count: number;
+  active_count: number;
+}
+
+export interface Price {
+  id: number;
+  service: string;
+  price: string;
+  unit: string;
+  description: string;
+  created_at: string;
+}
+
+export interface PriceInput {
+  service: string;
+  price: number;
+  unit?: string;
+  description?: string;
 }
 
 export interface DashboardStats {
@@ -111,10 +134,22 @@ export const api = {
   },
   listTeams: () => request<string[]>('/api/teams'),
   listTeam: () => request<TeamMember[]>('/api/team'),
-  listCasesForOwner: (owner: string) =>
-    request<CaseWithProject[]>(`/api/team/${encodeURIComponent(owner)}/cases`),
   listAssignees: () => request<Assignee[]>('/api/assignees'),
   getStats: () => request<DashboardStats>('/api/stats'),
+  listCases: (filters: { projectId?: number; owner?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (filters.projectId) params.set('project', String(filters.projectId));
+    if (filters.owner) params.set('owner', filters.owner);
+    const query = params.toString();
+    return request<CaseWithProjectInfo[]>(`/api/cases${query ? `?${query}` : ''}`);
+  },
+  listCustomers: () => request<Customer[]>('/api/customers'),
+  listPrices: () => request<Price[]>('/api/prices'),
+  createPrice: (data: PriceInput) =>
+    request<Price>('/api/prices', { method: 'POST', body: JSON.stringify(data) }),
+  updatePrice: (id: number, data: PriceInput) =>
+    request<Price>(`/api/prices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePrice: (id: number) => request<void>(`/api/prices/${id}`, { method: 'DELETE' }),
   getProject: (id: number) => request<{ project: Project; cases: Case[] }>(`/api/projects/${id}`),
   createProject: (data: ProjectInput) =>
     request<Project>('/api/projects', { method: 'POST', body: JSON.stringify(data) }),
