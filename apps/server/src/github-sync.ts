@@ -249,6 +249,27 @@ export function githubRepoName(): string {
   return REPO;
 }
 
+export interface OpenPullRequest {
+  number: number;
+  title: string;
+  html_url: string;
+  draft: boolean;
+}
+
+// Open pull requests on the source repo, for the "bell" notification on the
+// dashboard — a nudge that something is ready to review/merge on GitHub, not
+// something this app can act on itself. Empty (never throws) when GITHUB_TOKEN
+// is absent.
+export async function listOpenPullRequests(): Promise<OpenPullRequest[]> {
+  if (!process.env.GITHUB_TOKEN) return [];
+  try {
+    return await paginate<OpenPullRequest>(`/repos/${ORG}/${REPO}/pulls?state=open`);
+  } catch (err) {
+    console.error('GitHub sync: failed to list open pull requests', err);
+    return [];
+  }
+}
+
 export interface OpenMilestone {
   number: number;
   title: string;
@@ -441,4 +462,173 @@ export async function listCustomerOptions(): Promise<string[]> {
   const fromProjectField = await fetchCustomerOptionsFromProjectField();
   const options = fromProjectField.length ? fromProjectField : await fetchCustomerOptionsFromLabels();
   return [...options].sort((a, b) => a.localeCompare(b, 'nb'));
+}
+
+// The Projects V2 "Status" field value (Backlog/To do/In progress/Blocked/Done,
+// in this org's board) for a batch of issues, in one request via aliased GraphQL
+// fields. This is the same board field the Kunde project field lives on, so it
+// needs the same org-Projects-scoped PROJECT_TOKEN; without it every issue comes
+// back with a null status and the milestone board just shows no status counts.
+async function fetchIssueStatuses(issueNumbers: number[]): Promise<Record<number, string | null>> {
+  const token = process.env.PROJECT_TOKEN;
+  if (!token || issueNumbers.length === 0) return {};
+  try {
+    const fields = issueNumbers
+      .map(
+        (n) => `i${n}: issue(number: ${n}) {
+          projectItems(first: 10) {
+            nodes {
+              fieldValueByName(name: "Status") {
+                ... on ProjectV2ItemFieldSingleSelectValue { name }
+              }
+            }
+          }
+        }`,
+      )
+      .join('\n');
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        query: `query { repository(owner: "${ORG}", name: "${REPO}") { ${fields} } }`,
+      }),
+    });
+    const json = (await res.json()) as {
+      data?: {
+        repository?: Record<
+          string,
+          { projectItems?: { nodes?: ({ fieldValueByName?: { name?: string } | null } | null)[] } } | null
+        >;
+      };
+    };
+    const repository = json.data?.repository ?? {};
+    const result: Record<number, string | null> = {};
+    for (const number of issueNumbers) {
+      const nodes = repository[`i${number}`]?.projectItems?.nodes ?? [];
+      const status = nodes.find((node) => node?.fieldValueByName?.name)?.fieldValueByName?.name;
+      result[number] = status ?? null;
+    }
+    return result;
+  } catch (err) {
+    console.error('GitHub sync: failed to read issue statuses', err);
+    return {};
+  }
+}
+
+export interface MilestoneBoardIssue {
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  html_url: string;
+  assignees: GithubAssignee[];
+  status: string | null;
+}
+
+export interface MilestoneBoardGroup {
+  umbrella: { number: number; title: string; html_url: string } | null;
+  total: number;
+  completed: number;
+  percentCompleted: number;
+  issues: MilestoneBoardIssue[];
+}
+
+export interface MilestoneBoard {
+  statusCounts: { status: string; count: number }[];
+  groups: MilestoneBoardGroup[];
+}
+
+interface GithubIssueDetailed extends GithubIssue {
+  html_url: string;
+  parent_issue_url: string | null;
+}
+
+function parentNumberFromUrl(url: string | null): number | null {
+  const match = url?.match(/\/issues\/(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+// Mirrors the GitHub Projects board for one milestone: issues grouped under
+// their Tjenesteparaply parent (with a completion count scoped to just this
+// milestone's issues, not the umbrella's global total), plus Status field
+// counts across the whole milestone. The grouping and per-group progress work
+// with the plain GITHUB_TOKEN (parent_issue_url is a normal Issues field); the
+// top-level status counts need PROJECT_TOKEN (see fetchIssueStatuses) and come
+// back empty without it. Never throws — an unreachable repo or missing token
+// just yields an empty board.
+export async function getMilestoneBoard(milestoneNumber: number): Promise<MilestoneBoard> {
+  if (!process.env.GITHUB_TOKEN) return { statusCounts: [], groups: [] };
+  try {
+    const allIssues = await paginate<GithubIssueDetailed>(
+      `/repos/${ORG}/${REPO}/issues?milestone=${milestoneNumber}&state=all`,
+    );
+    const issues = allIssues.filter((i) => !i.pull_request);
+
+    const parentNumbers = new Set<number>();
+    for (const issue of issues) {
+      const parentNumber = parentNumberFromUrl(issue.parent_issue_url);
+      if (parentNumber) parentNumbers.add(parentNumber);
+    }
+
+    const parentEntries = await Promise.all(
+      [...parentNumbers].map(async (number): Promise<[number, GithubIssueDetailed] | null> => {
+        try {
+          const parent = await githubFetch<GithubIssueDetailed>(
+            `/repos/${ORG}/${REPO}/issues/${number}`,
+          );
+          return [number, parent];
+        } catch (err) {
+          console.error(`GitHub sync: failed to load umbrella issue #${number}`, err);
+          return null;
+        }
+      }),
+    );
+    const parents = new Map(parentEntries.filter((e) => e !== null));
+
+    const statuses = await fetchIssueStatuses(issues.map((i) => i.number));
+
+    const issuesByParent = new Map<number | null, GithubIssueDetailed[]>();
+    for (const issue of issues) {
+      const parentNumber = parentNumberFromUrl(issue.parent_issue_url);
+      const key = parentNumber && parents.has(parentNumber) ? parentNumber : null;
+      const list = issuesByParent.get(key) ?? [];
+      list.push(issue);
+      issuesByParent.set(key, list);
+    }
+
+    const groups: MilestoneBoardGroup[] = [...issuesByParent.entries()].map(([parentNumber, groupIssues]) => {
+      const completed = groupIssues.filter((i) => i.state === 'closed').length;
+      const total = groupIssues.length;
+      const parent = parentNumber !== null ? parents.get(parentNumber) : undefined;
+      return {
+        umbrella: parent ? { number: parent.number, title: parent.title, html_url: parent.html_url } : null,
+        total,
+        completed,
+        percentCompleted: total ? Math.round((completed / total) * 100) : 0,
+        issues: groupIssues.map((i) => ({
+          number: i.number,
+          title: i.title,
+          state: i.state,
+          html_url: i.html_url,
+          assignees: i.assignees,
+          status: statuses[i.number] ?? null,
+        })),
+      };
+    });
+    groups.sort((a, b) => {
+      if (!a.umbrella) return 1;
+      if (!b.umbrella) return -1;
+      return a.umbrella.title.localeCompare(b.umbrella.title, 'nb');
+    });
+
+    const statusCounts = new Map<string, number>();
+    for (const status of Object.values(statuses)) {
+      if (!status) continue;
+      statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
+    }
+
+    return { statusCounts: [...statusCounts.entries()].map(([status, count]) => ({ status, count })), groups };
+  } catch (err) {
+    console.error(`GitHub sync: failed to build the milestone board for #${milestoneNumber}`, err);
+    return { statusCounts: [], groups: [] };
+  }
 }

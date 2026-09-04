@@ -63,6 +63,35 @@ export interface RepoTeam {
   name: string;
 }
 
+export interface OpenPullRequest {
+  number: number;
+  title: string;
+  html_url: string;
+  draft: boolean;
+}
+
+export interface MilestoneBoardIssue {
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  html_url: string;
+  assignees: Assignee[];
+  status: string | null;
+}
+
+export interface MilestoneBoardGroup {
+  umbrella: { number: number; title: string; html_url: string } | null;
+  total: number;
+  completed: number;
+  percentCompleted: number;
+  issues: MilestoneBoardIssue[];
+}
+
+export interface MilestoneBoard {
+  statusCounts: { status: string; count: number }[];
+  groups: MilestoneBoardGroup[];
+}
+
 export interface Customer {
   customer: string;
   project_count: number;
@@ -172,6 +201,7 @@ export const api = {
   listOpenMilestones: () => request<OpenMilestone[]>('/api/milestones'),
   listRepoTeams: () => request<RepoTeam[]>('/api/repo-teams'),
   listTeamMembers: (slug: string) => request<Assignee[]>(`/api/repo-teams/${encodeURIComponent(slug)}/members`),
+  listOpenPullRequests: () => request<OpenPullRequest[]>('/api/pull-requests'),
   getStats: () => request<DashboardStats>('/api/stats'),
   listCases: (filters: { projectId?: number; owner?: string } = {}) => {
     const params = new URLSearchParams();
@@ -188,6 +218,7 @@ export const api = {
     request<Price>(`/api/prices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePrice: (id: number) => request<void>(`/api/prices/${id}`, { method: 'DELETE' }),
   getProject: (id: number) => request<{ project: Project; cases: Case[] }>(`/api/projects/${id}`),
+  getProjectBoard: (id: number) => request<MilestoneBoard>(`/api/projects/${id}/board`),
   createProject: (data: ProjectInput, existingMilestoneNumber?: number) =>
     request<Project>('/api/projects', {
       method: 'POST',

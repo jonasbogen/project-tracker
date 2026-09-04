@@ -4,10 +4,12 @@ import type { CaseInput, PriceInput, ProjectInput } from '../repo.js';
 import {
   createGithubIssue,
   createGithubMilestone,
+  getMilestoneBoard,
   githubRepoName,
   listActiveIssueOwners,
   listCustomerOptions,
   listOpenMilestones,
+  listOpenPullRequests,
   listRepoTeams,
   listServiceUmbrellas,
   listTeamMembers,
@@ -193,6 +195,13 @@ api.get('/milestones', async (c) => {
   return c.json(milestones.filter((m) => !used.has(m.number)));
 });
 
+// GET /api/pull-requests — open pull requests on the source repo, for the "bell"
+// notification on the dashboard.
+api.get('/pull-requests', async (c) => {
+  const pulls = await listOpenPullRequests();
+  return c.json(pulls);
+});
+
 // GET /api/stats — aggregate counts for the dashboard.
 api.get('/stats', async (c) => {
   const stats = await repo.getDashboardStats();
@@ -243,6 +252,20 @@ api.get('/projects/:id', async (c) => {
   if (!project) return c.json({ error: 'Prosjektet finnes ikke.' }, 404);
   const cases = await repo.listCases(id);
   return c.json({ project, cases });
+});
+
+// GET /api/projects/:id/board — a live mirror of the GitHub Projects board for
+// this project's milestone: issues grouped by Tjenesteparaply with a completion
+// count, and Status field totals across the milestone. Empty when the project
+// isn't linked to a GitHub milestone.
+api.get('/projects/:id/board', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
+  const project = await repo.getProject(id);
+  if (!project) return c.json({ error: 'Prosjektet finnes ikke.' }, 404);
+  if (!project.github_milestone_number) return c.json({ statusCounts: [], groups: [] });
+  const board = await getMilestoneBoard(project.github_milestone_number);
+  return c.json(board);
 });
 
 // PUT /api/projects/:id — update a project.

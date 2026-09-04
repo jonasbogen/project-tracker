@@ -8,6 +8,7 @@ import { faCodeBranch, faDiagramProject } from '@fortawesome/free-solid-svg-icon
 import { api, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import HeroBackground from '../components/HeroBackground';
+import PullRequestBell from '../components/PullRequestBell';
 import {
   daysUntil,
   formatDate,
@@ -87,7 +88,10 @@ export default function Dashboard() {
     <>
       <HeroBackground />
       <div className="stack">
-        <h1 className="bf-h1">Oversikt</h1>
+        <div className="page-header">
+          <h1 className="bf-h1">Oversikt</h1>
+          <PullRequestBell />
+        </div>
 
         <div className="stat-tile-row">
           <StatTile
@@ -117,6 +121,7 @@ export default function Dashboard() {
                 value: countByStatus(stats.projectStatusCounts, status),
                 color: projectStatusColor(status),
               }))}
+              onItemClick={(status) => navigate(`/projects?status=${encodeURIComponent(status)}`)}
             />
           </Card>
 

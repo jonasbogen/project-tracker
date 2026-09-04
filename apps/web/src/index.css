@@ -1,7 +1,89 @@
 .page {
   padding: 24px;
-  max-width: 1100px;
+  max-width: 1320px;
   margin: 0 auto;
+}
+
+/* Project detail: a searchable milestone sidebar alongside the main content. */
+
+.project-detail-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.project-detail-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.milestone-sidebar {
+  flex: 0 0 260px;
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 48px);
+}
+
+.milestone-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.milestone-sidebar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--bf-radius-s);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.milestone-sidebar-item:hover {
+  background: var(--bfc-base-2);
+}
+
+.milestone-sidebar-item-active {
+  background: hsl(var(--bfc-brand-hsl) / 0.12);
+}
+
+.milestone-sidebar-item-name {
+  font-weight: 600;
+}
+
+.milestone-sidebar-item-customer {
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 900px) {
+  .project-detail-layout {
+    flex-direction: column;
+  }
+
+  .milestone-sidebar {
+    flex: 1 1 auto;
+    position: static;
+    width: 100%;
+    max-height: none;
+  }
+}
+
+/* Bifrost's Card ships with square corners by default; round every card (and
+   the boxy content it wraps almost everywhere in this app) to match Message,
+   Badge, and the chat panel, which already use the same radius scale. */
+.bf-card {
+  border-radius: var(--bf-radius-m);
+  overflow: hidden;
 }
 
 .page-header {
@@ -369,6 +451,86 @@
   gap: 6px;
 }
 
+/* Pull-request bell (dashboard) */
+
+.pr-bell {
+  position: relative;
+}
+
+.pr-bell-button {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--bfc-base-dimmed);
+  background: var(--bfc-base-3);
+  color: var(--bfc-base-c);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pr-bell-button:hover {
+  background: var(--bfc-base-2);
+}
+
+.pr-bell-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 0.6875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pr-bell-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--bfc-base-3);
+  border-radius: var(--bf-radius-m);
+  box-shadow: 0 8px 32px var(--bfc-shadow);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pr-bell-panel-title {
+  font-weight: 600;
+}
+
+.pr-bell-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pr-bell-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--bf-radius-s);
+  color: inherit;
+  text-decoration: none;
+}
+
+.pr-bell-item:hover {
+  background: var(--bfc-base-2);
+}
+
 /* Chat widget - floating, fixed to the viewport, mounted once at the app
    root so it survives page navigation. */
 
@@ -377,9 +539,9 @@
   right: 24px;
   bottom: 24px;
   z-index: 100;
-  width: 56px;
   height: 56px;
-  border-radius: 50%;
+  padding: 0 20px 0 18px;
+  border-radius: var(--bf-radius-full);
   border: none;
   background: hsl(var(--bfc-brand-hsl));
   color: var(--bfc-brand-hc);
@@ -387,7 +549,8 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
 }
 
 .chat-widget-fab:hover {
@@ -587,4 +750,102 @@
   .form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Milestone board (mirrors the GitHub Projects board for one milestone) */
+
+.milestone-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.milestone-status-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: var(--bf-radius-m);
+  background: var(--bfc-base-2);
+  min-width: 90px;
+}
+
+.milestone-status-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.milestone-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.milestone-group {
+  border: 1px solid var(--bfc-base-dimmed);
+  border-radius: var(--bf-radius-m);
+  padding: 12px 16px;
+}
+
+.milestone-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.milestone-group-title a {
+  font-weight: 600;
+  color: inherit;
+}
+
+.milestone-group-progress {
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.milestone-progress-track {
+  height: 6px;
+  border-radius: var(--bf-radius-full);
+  background: var(--bfc-base-2);
+  margin: 8px 0 4px;
+  overflow: hidden;
+}
+
+.milestone-progress-fill {
+  height: 100%;
+  background: hsl(var(--bfc-success-hsl));
+}
+
+.milestone-issue-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.milestone-issue-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+  border-radius: var(--bf-radius-s);
+  color: inherit;
+  text-decoration: none;
+}
+
+.milestone-issue-row:hover {
+  background: var(--bfc-base-2);
+}
+
+.milestone-issue-title-done {
+  text-decoration: line-through;
+  color: var(--bfc-base-c-2);
+}
+
+.milestone-issue-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }

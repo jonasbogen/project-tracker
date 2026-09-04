@@ -22,6 +22,8 @@ import {
 } from '../status';
 import BarChart from '../charts/BarChart';
 import FormattedText from '../components/FormattedText';
+import MilestoneBoard from '../components/MilestoneBoard';
+import MilestoneSidebar from '../components/MilestoneSidebar';
 
 interface Option {
   value: string;
@@ -179,7 +181,9 @@ export default function ProjectDetail() {
   const statusOptions: Option[] = caseStatuses.map((s) => ({ value: s, label: s }));
 
   return (
-    <div className="stack">
+    <div className="project-detail-layout">
+      <MilestoneSidebar activeProjectId={projectId} />
+      <div className="stack project-detail-main">
       <div>
         <Button variant="flat" small onClick={() => navigate('/projects')}>
           <Icon icon={faArrowLeft} marginRight />
@@ -317,6 +321,12 @@ export default function ProjectDetail() {
           />
         </Card>
       </div>
+
+      {project.github_milestone_number && (
+        <Card padding="medium">
+          <MilestoneBoard projectId={project.id} />
+        </Card>
+      )}
 
       <Card padding="medium" className="stack-sm">
         <h2 className="bf-h2">Issuer</h2>
@@ -506,6 +516,7 @@ export default function ProjectDetail() {
           </div>
         </form>
       </Card>
+      </div>
     </div>
   );
 }

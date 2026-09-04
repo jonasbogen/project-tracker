@@ -3,7 +3,7 @@ import Button from '@intility/bifrost-react/Button';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import TextArea from '@intility/bifrost-react/TextArea';
-import { faComments, faPaperPlane, faRobot, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faRobot, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { api, type ChatMessage } from '../api';
 
 const SUGGESTIONS = [
@@ -68,7 +68,8 @@ export default function ChatWidget() {
         onClick={() => setOpen(true)}
         aria-label="Åpne Chat bot"
       >
-        <Icon icon={faComments} size="lg" />
+        <Icon icon={faRobot} size="lg" />
+        <span>Chat bot</span>
       </button>
     );
   }

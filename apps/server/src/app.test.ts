@@ -33,6 +33,8 @@ vi.mock('./github-sync.js', () => ({
   listCustomerOptions: vi.fn().mockResolvedValue([]),
   listServiceUmbrellas: vi.fn().mockResolvedValue([]),
   listOpenMilestones: vi.fn().mockResolvedValue([]),
+  listOpenPullRequests: vi.fn().mockResolvedValue([]),
+  getMilestoneBoard: vi.fn().mockResolvedValue({ statusCounts: [], groups: [] }),
   listRepoTeams: vi.fn().mockResolvedValue([]),
   listTeamMembers: vi.fn().mockResolvedValue([]),
   githubRepoName: vi.fn().mockReturnValue('Prosjektmappe'),
@@ -126,6 +128,53 @@ describe('project-tracker API', () => {
     vi.mocked(repo.getProject).mockResolvedValue(undefined);
     const res = await app.request('/api/projects/999');
     expect(res.status).toBe(404);
+  });
+
+  it('GET /api/projects/:id/board skips the GitHub call when not linked to a milestone', async () => {
+    vi.mocked(repo.getProject).mockResolvedValue({
+      id: 1,
+      name: 'X',
+      customer: 'Acme',
+      status: 'Pågår',
+      responsible: 'Jonas',
+      team: '',
+      start_date: null,
+      end_date: null,
+      challenges: '',
+      github_repo: null,
+      github_milestone_number: null,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    const res = await app.request('/api/projects/1/board');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ statusCounts: [], groups: [] });
+    expect(githubSync.getMilestoneBoard).not.toHaveBeenCalled();
+  });
+
+  it('GET /api/projects/:id/board returns the github-sync result for a linked milestone', async () => {
+    vi.mocked(repo.getProject).mockResolvedValue({
+      id: 1,
+      name: 'X',
+      customer: 'Acme',
+      status: 'Pågår',
+      responsible: 'Jonas',
+      team: '',
+      start_date: null,
+      end_date: null,
+      challenges: '',
+      github_repo: 'Prosjektmappe',
+      github_milestone_number: 39,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    const board = {
+      statusCounts: [{ status: 'Backlog', count: 3 }],
+      groups: [{ umbrella: null, total: 3, completed: 1, percentCompleted: 33, issues: [] }],
+    };
+    vi.mocked(githubSync.getMilestoneBoard).mockResolvedValue(board);
+    const res = await app.request('/api/projects/1/board');
+    expect(res.status).toBe(200);
+    expect(githubSync.getMilestoneBoard).toHaveBeenCalledWith(39);
+    expect(await res.json()).toEqual(board);
   });
 
   it('GET /api/projects passes the search/status query through to the repo', async () => {
@@ -495,6 +544,28 @@ describe('project-tracker API', () => {
     expect(res.status).toBe(200);
     expect(githubSync.listTeamMembers).toHaveBeenCalledWith('network-ot');
     expect(await res.json()).toEqual([{ login: 'endsan', avatar_url: 'https://example.com/a.png' }]);
+  });
+
+  it('GET /api/pull-requests returns the github-sync result', async () => {
+    vi.mocked(githubSync.listOpenPullRequests).mockResolvedValue([
+      { number: 12, title: 'Fiks synk', html_url: 'https://github.com/intility/Prosjektmappe/pull/12', draft: false },
+    ]);
+    const res = await app.request('/api/pull-requests');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([
+      { number: 12, title: 'Fiks synk', html_url: 'https://github.com/intility/Prosjektmappe/pull/12', draft: false },
+    ]);
+  });
+
+  it('GET /api/pull-requests returns the github-sync result', async () => {
+    vi.mocked(githubSync.listOpenPullRequests).mockResolvedValue([
+      { number: 12, title: 'Fix noe', html_url: 'https://github.com/x/y/pull/12', draft: false },
+    ]);
+    const res = await app.request('/api/pull-requests');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([
+      { number: 12, title: 'Fix noe', html_url: 'https://github.com/x/y/pull/12', draft: false },
+    ]);
   });
 
   it('unknown /api routes return JSON 404', async () => {
