@@ -292,16 +292,27 @@
   font-weight: 600;
 }
 
+.calendar-jumps {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .calendar-dots {
   display: flex;
-  gap: 2px;
-  height: 6px;
+  gap: 3px;
+  height: 8px;
 }
 
 .calendar-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
+}
+
+.calendar-empty-hint {
+  margin-top: 10px;
+  font-size: 0.8125rem;
 }
 
 .calendar-dot-deadline {
