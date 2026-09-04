@@ -5,10 +5,12 @@ import {
   createGithubIssue,
   createGithubMilestone,
   githubRepoName,
+  listActiveIssueOwners,
   listCustomerOptions,
-  listGithubAssignees,
   listOpenMilestones,
+  listRepoTeams,
   listServiceUmbrellas,
+  listTeamMembers,
   syncGithubProjects,
   verifyGithubWebhookSignature,
 } from '../github-sync.js';
@@ -143,11 +145,27 @@ api.delete('/prices/:id', async (c) => {
   return c.body(null, 204);
 });
 
-// GET /api/assignees — people assignable to issues in the source GitHub repo, for the
-// "Eier" picker on the case form. Empty list (not an error) when GITHUB_TOKEN is unset.
+// GET /api/assignees — people who already own at least one open issue in the
+// source repo, for the "Eier" picker on the issue form. Empty list (not an error)
+// when GITHUB_TOKEN is unset.
 api.get('/assignees', async (c) => {
-  const assignees = await listGithubAssignees();
+  const assignees = await listActiveIssueOwners();
   return c.json(assignees);
+});
+
+// GET /api/repo-teams — GitHub teams with access to the source repo, for the
+// "Team" picker on project creation.
+api.get('/repo-teams', async (c) => {
+  const teams = await listRepoTeams();
+  return c.json(teams);
+});
+
+// GET /api/repo-teams/:slug/members — a team's members, for the "Ansvarlig"
+// picker once a Team is chosen on project creation.
+api.get('/repo-teams/:slug/members', async (c) => {
+  const slug = c.req.param('slug');
+  const members = await listTeamMembers(slug);
+  return c.json(members);
 });
 
 // GET /api/customer-options — the "Kunde" dropdown's live options, for the issue

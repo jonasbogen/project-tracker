@@ -58,6 +58,11 @@ export interface OpenMilestone {
   description: string | null;
 }
 
+export interface RepoTeam {
+  slug: string;
+  name: string;
+}
+
 export interface Customer {
   customer: string;
   project_count: number;
@@ -165,6 +170,8 @@ export const api = {
   listCustomerOptions: () => request<string[]>('/api/customer-options'),
   listServiceUmbrellas: () => request<ServiceUmbrella[]>('/api/service-umbrellas'),
   listOpenMilestones: () => request<OpenMilestone[]>('/api/milestones'),
+  listRepoTeams: () => request<RepoTeam[]>('/api/repo-teams'),
+  listTeamMembers: (slug: string) => request<Assignee[]>(`/api/repo-teams/${encodeURIComponent(slug)}/members`),
   getStats: () => request<DashboardStats>('/api/stats'),
   listCases: (filters: { projectId?: number; owner?: string } = {}) => {
     const params = new URLSearchParams();

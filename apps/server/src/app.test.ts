@@ -29,10 +29,12 @@ vi.mock('./repo.js', async (importActual) => {
 vi.mock('./github-sync.js', () => ({
   createGithubMilestone: vi.fn().mockResolvedValue(null),
   createGithubIssue: vi.fn().mockResolvedValue(null),
-  listGithubAssignees: vi.fn().mockResolvedValue([]),
+  listActiveIssueOwners: vi.fn().mockResolvedValue([]),
   listCustomerOptions: vi.fn().mockResolvedValue([]),
   listServiceUmbrellas: vi.fn().mockResolvedValue([]),
   listOpenMilestones: vi.fn().mockResolvedValue([]),
+  listRepoTeams: vi.fn().mockResolvedValue([]),
+  listTeamMembers: vi.fn().mockResolvedValue([]),
   githubRepoName: vi.fn().mockReturnValue('Prosjektmappe'),
   syncGithubProjects: vi.fn().mockResolvedValue({ projects: 0, cases: 0 }),
   verifyGithubWebhookSignature: vi.fn().mockReturnValue(false),
@@ -470,11 +472,28 @@ describe('project-tracker API', () => {
   });
 
   it('GET /api/assignees returns the github-sync result', async () => {
-    vi.mocked(githubSync.listGithubAssignees).mockResolvedValue([
+    vi.mocked(githubSync.listActiveIssueOwners).mockResolvedValue([
       { login: 'endsan', avatar_url: 'https://example.com/a.png' },
     ]);
     const res = await app.request('/api/assignees');
     expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([{ login: 'endsan', avatar_url: 'https://example.com/a.png' }]);
+  });
+
+  it('GET /api/repo-teams returns the github-sync result', async () => {
+    vi.mocked(githubSync.listRepoTeams).mockResolvedValue([{ slug: 'network-ot', name: 'Network-OT' }]);
+    const res = await app.request('/api/repo-teams');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([{ slug: 'network-ot', name: 'Network-OT' }]);
+  });
+
+  it('GET /api/repo-teams/:slug/members returns the github-sync result', async () => {
+    vi.mocked(githubSync.listTeamMembers).mockResolvedValue([
+      { login: 'endsan', avatar_url: 'https://example.com/a.png' },
+    ]);
+    const res = await app.request('/api/repo-teams/network-ot/members');
+    expect(res.status).toBe(200);
+    expect(githubSync.listTeamMembers).toHaveBeenCalledWith('network-ot');
     expect(await res.json()).toEqual([{ login: 'endsan', avatar_url: 'https://example.com/a.png' }]);
   });
 

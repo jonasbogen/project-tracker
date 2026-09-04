@@ -8,7 +8,7 @@ import TextArea from '@intility/bifrost-react/TextArea';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import { api, type OpenMilestone, type ProjectInput } from '../api';
+import { api, type Assignee, type OpenMilestone, type ProjectInput, type RepoTeam } from '../api';
 
 interface Option {
   value: string;
@@ -35,6 +35,9 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
   const [statuses, setStatuses] = useState<string[]>([]);
   const [milestones, setMilestones] = useState<OpenMilestone[]>([]);
   const [linkMilestone, setLinkMilestone] = useState<OpenMilestone | null>(null);
+  const [customerOptions, setCustomerOptions] = useState<string[]>([]);
+  const [repoTeams, setRepoTeams] = useState<RepoTeam[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Assignee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -42,8 +45,14 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
   useEffect(() => {
     async function load() {
       try {
-        const meta = await api.getMeta();
+        const [meta, customerList, teamList] = await Promise.all([
+          api.getMeta(),
+          api.listCustomerOptions(),
+          api.listRepoTeams(),
+        ]);
         setStatuses(meta.projectStatuses);
+        setCustomerOptions(customerList);
+        setRepoTeams(teamList);
         if (mode === 'edit') {
           const { project } = await api.getProject(projectId);
           setForm({
@@ -69,6 +78,23 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, projectId]);
+
+  // Once a Team is picked (or, in edit mode, once the project's existing team
+  // matches one of the repo's teams), fetch its members for the "Ansvarlig" picker.
+  useEffect(() => {
+    const match = repoTeams.find((t) => t.name === form.team);
+    if (!match) {
+      setTeamMembers([]);
+      return;
+    }
+    let cancelled = false;
+    api.listTeamMembers(match.slug).then((members) => {
+      if (!cancelled) setTeamMembers(members);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.team, repoTeams]);
 
   function update<K extends keyof ProjectInput>(key: K, value: ProjectInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -148,12 +174,23 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
               value={form.name}
               onChange={(e) => update('name', e.target.value)}
             />
-            <Input
-              label="Kunde"
-              required
-              value={form.customer}
-              onChange={(e) => update('customer', e.target.value)}
-            />
+            {customerOptions.length > 0 ? (
+              <Select
+                label="Kunde"
+                required
+                options={customerOptions.map((c) => ({ value: c, label: c }))}
+                value={form.customer ? { value: form.customer, label: form.customer } : null}
+                onChange={(opt) => update('customer', (opt as Option | null)?.value ?? '')}
+                placeholder="Velg kunde"
+              />
+            ) : (
+              <Input
+                label="Kunde"
+                required
+                value={form.customer}
+                onChange={(e) => update('customer', e.target.value)}
+              />
+            )}
             <Select
               label="Status"
               options={statusOptions}
@@ -161,18 +198,41 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
               onChange={(opt) => update('status', (opt as Option | null)?.value ?? '')}
               required
             />
-            <Input
-              label="Ansvarlig"
-              required
-              value={form.responsible}
-              onChange={(e) => update('responsible', e.target.value)}
-            />
-            <Input
-              label="Team"
-              optional
-              value={form.team ?? ''}
-              onChange={(e) => update('team', e.target.value)}
-            />
+            {repoTeams.length > 0 ? (
+              <Select
+                label="Team"
+                optional
+                options={repoTeams.map((t) => ({ value: t.name, label: t.name }))}
+                value={form.team ? { value: form.team, label: form.team } : null}
+                onChange={(opt) => update('team', (opt as Option | null)?.value ?? '')}
+                isClearable
+                placeholder="Velg team"
+              />
+            ) : (
+              <Input
+                label="Team"
+                optional
+                value={form.team ?? ''}
+                onChange={(e) => update('team', e.target.value)}
+              />
+            )}
+            {teamMembers.length > 0 ? (
+              <Select
+                label="Ansvarlig"
+                required
+                options={teamMembers.map((m) => ({ value: m.login, label: m.login }))}
+                value={form.responsible ? { value: form.responsible, label: form.responsible } : null}
+                onChange={(opt) => update('responsible', (opt as Option | null)?.value ?? '')}
+                placeholder="Velg blant teamets medlemmer"
+              />
+            ) : (
+              <Input
+                label="Ansvarlig"
+                required
+                value={form.responsible}
+                onChange={(e) => update('responsible', e.target.value)}
+              />
+            )}
             <Input
               label="Startdato"
               type="date"

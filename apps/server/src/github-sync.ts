@@ -26,7 +26,7 @@ interface GithubIssue {
   state: 'open' | 'closed';
   created_at: string;
   milestone: { number: number } | null;
-  assignees: { login: string }[];
+  assignees: { login: string; avatar_url: string }[];
   pull_request?: unknown;
 }
 
@@ -159,16 +159,58 @@ export interface GithubAssignee {
   avatar_url: string;
 }
 
-// Users assignable to issues in the source repo — the pick list for the "Eier" field
-// when logging a new case. Read-only, same Issues permission as the rest of the sync.
-// Returns an empty list (never throws) when GITHUB_TOKEN is absent, so the case form
-// still works with a plain text fallback.
-export async function listGithubAssignees(): Promise<GithubAssignee[]> {
+// The pick list for the "Eier" field when logging a new issue: people who already
+// own at least one open issue in the source repo. Deliberately NOT every user
+// GitHub would let you assign (GET .../assignees) — on an org repo that's every
+// member with repo access, hundreds of people, useless as a picker. Read-only,
+// same Issues permission as the rest of the sync. Returns an empty list (never
+// throws) when GITHUB_TOKEN is absent, so the issue form still works with a plain
+// text fallback.
+export async function listActiveIssueOwners(): Promise<GithubAssignee[]> {
   if (!process.env.GITHUB_TOKEN) return [];
   try {
-    return await paginate<GithubAssignee>(`/repos/${ORG}/${REPO}/assignees`);
+    const issues = await paginate<GithubIssue>(`/repos/${ORG}/${REPO}/issues?state=open`);
+    const owners = new Map<string, GithubAssignee>();
+    for (const issue of issues) {
+      if (issue.pull_request) continue;
+      for (const assignee of issue.assignees) owners.set(assignee.login, assignee);
+    }
+    return [...owners.values()].sort((a, b) => a.login.localeCompare(b.login));
   } catch (err) {
-    console.error('GitHub sync: failed to list assignees', err);
+    console.error('GitHub sync: failed to list active issue owners', err);
+    return [];
+  }
+}
+
+export interface RepoTeam {
+  slug: string;
+  name: string;
+}
+
+// Teams with access to the source repo, for the "Team" picker on project
+// creation — a small, relevant slice of the org's hundreds of teams (GET
+// /orgs/{org}/teams lists literally every team in Intility, not scoped to this
+// repo at all). Empty (never throws) when GITHUB_TOKEN is absent.
+export async function listRepoTeams(): Promise<RepoTeam[]> {
+  if (!process.env.GITHUB_TOKEN) return [];
+  try {
+    const teams = await paginate<RepoTeam>(`/repos/${ORG}/${REPO}/teams`);
+    return teams.map((t) => ({ slug: t.slug, name: t.name })).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+  } catch (err) {
+    console.error('GitHub sync: failed to list repo teams', err);
+    return [];
+  }
+}
+
+// A GitHub team's members, for the "Ansvarlig" picker once a Team is chosen on
+// project creation. Empty (never throws) when GITHUB_TOKEN is absent or the team
+// doesn't exist.
+export async function listTeamMembers(teamSlug: string): Promise<GithubAssignee[]> {
+  if (!process.env.GITHUB_TOKEN) return [];
+  try {
+    return await paginate<GithubAssignee>(`/orgs/${ORG}/teams/${teamSlug}/members`);
+  } catch (err) {
+    console.error(`GitHub sync: failed to list members of team "${teamSlug}"`, err);
     return [];
   }
 }
