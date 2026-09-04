@@ -288,8 +288,32 @@
 }
 
 .calendar-cell-today {
-  background: var(--bfc-base-2);
   font-weight: 600;
+  box-shadow: inset 0 0 0 2px var(--bfc-base-c-2);
+}
+
+.calendar-cell-range {
+  background: hsl(var(--bfc-brand-hsl) / 0.14);
+}
+
+.calendar-cell-deadline {
+  background: hsl(var(--bfc-warning-hsl) / 0.35);
+  font-weight: 600;
+}
+
+.calendar-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.calendar-swatch-range {
+  background: hsl(var(--bfc-brand-hsl) / 0.35);
+}
+
+.calendar-swatch-deadline {
+  background: hsl(var(--bfc-warning-hsl) / 0.7);
 }
 
 .calendar-jumps {
@@ -313,10 +337,6 @@
 .calendar-empty-hint {
   margin-top: 10px;
   font-size: 0.8125rem;
-}
-
-.calendar-dot-deadline {
-  background: hsl(var(--bfc-warning-hsl));
 }
 
 .calendar-dot-case {

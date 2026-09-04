@@ -225,7 +225,11 @@ export default function ProjectDetail() {
       <div className="dashboard-grid">
         <Card padding="medium">
           <h2 className="bf-h2">Frister og aktivitet</h2>
-          <Calendar deadline={project.end_date} markers={cases.map((c) => c.case_date ?? '')} />
+          <Calendar
+            startDate={project.start_date}
+            endDate={project.end_date}
+            markers={cases.map((c) => c.case_date ?? '')}
+          />
         </Card>
         <Card padding="medium">
           <h2 className="bf-h2">Saker per status</h2>

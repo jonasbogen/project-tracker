@@ -4,10 +4,17 @@ import Icon from '@intility/bifrost-react/Icon';
 import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 
 interface CalendarProps {
-  /** Project end date (YYYY-MM-DD), highlighted as the deadline. */
-  deadline: string | null;
+  /** Project start date (YYYY-MM-DD), if set. */
+  startDate: string | null;
+  /** Project end date (YYYY-MM-DD) — the deadline. */
+  endDate: string | null;
   /** One date (YYYY-MM-DD) per case, marked on the day it was logged. */
   markers: string[];
+}
+
+interface Range {
+  start: string;
+  end: string;
 }
 
 const WEEKDAYS = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
@@ -25,28 +32,42 @@ function toKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-// Picks the most useful month to open on: an upcoming deadline first (that's the
-// whole point of the widget), otherwise the most recent case activity, otherwise
-// today. Without this, a milestone whose cases were all logged in August but whose
-// deadline is in November opens on a nearly-empty month either way.
-function pickInitialMonth(deadline: string | null, markers: string[]): Date {
+// The visible "timeline" band. Most projects here only ever get an end date (GitHub
+// milestones have no start date) — for those, show the runway from today to the
+// deadline, which is exactly the useful bit ("how long until this is due") and is
+// available for almost every project, not just the rare one with both dates set.
+function computeRange(startDate: string | null, endDate: string | null, todayKey: string): Range | null {
+  if (startDate && endDate) return { start: startDate, end: endDate };
+  if (endDate && endDate >= todayKey) return { start: todayKey, end: endDate };
+  if (startDate) return { start: startDate, end: startDate > todayKey ? startDate : todayKey };
+  return null;
+}
+
+// Picks the most useful month to open on: today if it falls inside the timeline
+// range (shows the countdown in progress), otherwise an upcoming deadline,
+// otherwise the most recent case activity, otherwise just today.
+function pickInitialMonth(range: Range | null, endDate: string | null, markers: string[], todayKey: string): Date {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  if (deadline) {
-    const deadlineDate = new Date(deadline);
+  if (range && todayKey >= range.start && todayKey <= range.end) return today;
+
+  if (endDate) {
+    const deadlineDate = new Date(endDate);
     if (deadlineDate >= today) return deadlineDate;
   }
 
   const validMarkers = markers.filter(Boolean).sort();
   if (validMarkers.length > 0) return new Date(validMarkers[validMarkers.length - 1]);
 
-  if (deadline) return new Date(deadline);
+  if (endDate) return new Date(endDate);
   return today;
 }
 
-export default function Calendar({ deadline, markers }: CalendarProps) {
-  const initial = pickInitialMonth(deadline, markers);
+export default function Calendar({ startDate, endDate, markers }: CalendarProps) {
+  const todayKeyForInit = toKey(new Date());
+  const range = useMemo(() => computeRange(startDate, endDate, todayKeyForInit), [startDate, endDate, todayKeyForInit]);
+  const initial = pickInitialMonth(range, endDate, markers, todayKeyForInit);
   const [cursor, setCursor] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1));
 
   const markerCounts = useMemo(() => {
@@ -71,10 +92,14 @@ export default function Calendar({ deadline, markers }: CalendarProps) {
   ];
 
   const hasEventThisMonth = cells.some(
-    (date) => date && (toKey(date) === deadline || markerCounts.has(toKey(date))),
+    (date) =>
+      date &&
+      (toKey(date) === endDate ||
+        markerCounts.has(toKey(date)) ||
+        (range && toKey(date) >= range.start && toKey(date) <= range.end)),
   );
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
-  const deadlineDate = deadline ? new Date(deadline) : null;
+  const deadlineDate = endDate ? new Date(endDate) : null;
   const isDeadlineMonth =
     deadlineDate && year === deadlineDate.getFullYear() && month === deadlineDate.getMonth();
 
@@ -133,18 +158,20 @@ export default function Calendar({ deadline, markers }: CalendarProps) {
           if (!date) return <div key={i} className="calendar-cell calendar-cell-empty" />;
           const key = toKey(date);
           const count = markerCounts.get(key) ?? 0;
+          const inRange = !!range && key >= range.start && key <= range.end;
+          const isDeadline = key === endDate;
+          const classes = ['calendar-cell'];
+          if (inRange) classes.push('calendar-cell-range');
+          if (isDeadline) classes.push('calendar-cell-deadline');
+          if (key === todayKey) classes.push('calendar-cell-today');
           return (
-            <div
-              key={i}
-              className={`calendar-cell${key === todayKey ? ' calendar-cell-today' : ''}`}
-            >
+            <div key={i} className={classes.join(' ')} title={isDeadline ? 'Frist' : undefined}>
               <span className="calendar-date">{date.getDate()}</span>
-              <span className="calendar-dots">
-                {deadline === key && <span className="calendar-dot calendar-dot-deadline" title="Frist" />}
-                {count > 0 && (
+              {count > 0 && (
+                <span className="calendar-dots">
                   <span className="calendar-dot calendar-dot-case" title={`${count} sak(er) registrert`} />
-                )}
-              </span>
+                </span>
+              )}
             </div>
           );
         })}
@@ -152,7 +179,10 @@ export default function Calendar({ deadline, markers }: CalendarProps) {
 
       <div className="calendar-legend">
         <span>
-          <span className="calendar-dot calendar-dot-deadline" /> Frist
+          <span className="calendar-swatch calendar-swatch-range" /> Prosjektperiode
+        </span>
+        <span>
+          <span className="calendar-swatch calendar-swatch-deadline" /> Frist
         </span>
         <span>
           <span className="calendar-dot calendar-dot-case" /> Sak registrert
@@ -161,8 +191,8 @@ export default function Calendar({ deadline, markers }: CalendarProps) {
 
       {!hasEventThisMonth && (
         <p className="muted calendar-empty-hint">
-          Ingen frist eller sakaktivitet i {MONTH_NAMES[month]}. Bruk «I dag» eller «Frist» for å
-          hoppe til en måned med noe å vise.
+          Ingen frist, tidslinje eller sakaktivitet i {MONTH_NAMES[month]}. Bruk «I dag» eller
+          «Frist» for å hoppe til en måned med noe å vise.
         </p>
       )}
     </div>
