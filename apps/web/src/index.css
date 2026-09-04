@@ -466,6 +466,8 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   max-width: 320px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .cell-link {

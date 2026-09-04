@@ -21,6 +21,7 @@ import {
 } from '../status';
 import BarChart from '../charts/BarChart';
 import Calendar from '../components/Calendar';
+import FormattedText from '../components/FormattedText';
 
 interface Option {
   value: string;
@@ -210,8 +211,12 @@ export default function ProjectDetail() {
 
           <div>
             <div className="field-label">Utfordringer</div>
-            <div style={{ whiteSpace: 'pre-wrap' }}>
-              {project.challenges ? project.challenges : <span className="muted">Ingen registrert.</span>}
+            <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              {project.challenges ? (
+                <FormattedText text={project.challenges} />
+              ) : (
+                <span className="muted">Ingen registrert.</span>
+              )}
             </div>
           </div>
         </div>
@@ -274,7 +279,7 @@ export default function ProjectDetail() {
                   <Table.Cell>
                     {c.description ? (
                       <span className="cell-clamp" title={c.description}>
-                        {c.description}
+                        <FormattedText text={c.description} />
                       </span>
                     ) : (
                       <span className="muted">–</span>
