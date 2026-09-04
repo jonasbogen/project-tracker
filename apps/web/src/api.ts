@@ -76,6 +76,11 @@ export interface Meta {
   caseStatuses: string[];
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     headers: init?.body ? { 'content-type': 'application/json' } : undefined,
@@ -121,4 +126,31 @@ export const api = {
     request<Case>(`/api/projects/${projectId}/cases`, { method: 'POST', body: JSON.stringify(data) }),
   deleteCase: (projectId: number, caseId: number) =>
     request<void>(`/api/projects/${projectId}/cases/${caseId}`, { method: 'DELETE' }),
+  // Streams the assistant's reply as plain text chunks via `onChunk`, resolving
+  // once the stream ends. Not routed through `request()`: this is a text stream,
+  // not a single JSON body.
+  streamChat: async (messages: ChatMessage[], onChunk: (text: string) => void): Promise<void> => {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ messages }),
+    });
+    if (!res.ok || !res.body) {
+      let message = `Forespørselen feilet (${res.status})`;
+      try {
+        const body = (await res.json()) as { error?: string };
+        if (body.error) message = body.error;
+      } catch {
+        // ignore non-JSON error bodies
+      }
+      throw new Error(message);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      onChunk(decoder.decode(value, { stream: true }));
+    }
+  },
 };

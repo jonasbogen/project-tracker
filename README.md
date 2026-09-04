@@ -13,6 +13,9 @@ customer, the person responsible, and cases linked to each project.
   timeline, customer, responsible owner, a calendar of the project's deadline and case activity,
   a case-status breakdown, and the list of cases tied to that project (each case shows its GitHub
   assignee as "Eier" when synced). Cases can be added and removed from the detail page.
+- **Spør AI** (`/chat`) – a chat assistant (Claude) that can search projects and cases and answer
+  questions, or suggest next steps / draft comments. Read-only: it has no way to write anything
+  back. See "AI chat" below.
 
 ## Architecture
 
@@ -93,10 +96,11 @@ Tests mock the database layer, so no Postgres instance is required to run them.
 | `GITHUB_TOKEN` | No | A GitHub token (read + write on issues/milestones) for the source repo below — write is needed to create milestones for app-created projects. Without it, GitHub sync is skipped (logged, not fatal). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
 | `GITHUB_ORG` | No | GitHub org that owns the source repo. Defaults to `intility`. |
 | `GITHUB_REPO` | No | Repo to sync from. Defaults to `Prosjektmappe` — the OT/Edge Platform project tracker repo, one milestone per customer project. |
+| `ANTHROPIC_API_KEY` | No | A Claude API key, for the "Spør AI" chat. Without it, `/api/chat` returns 503 (the rest of the app is unaffected). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
 
 Access is gated by Minato's mandatory tenant SSO at the gateway, so the app needs no auth of its
-own for users. `GITHUB_TOKEN` is the one exception: an outbound credential the app itself uses to
-call the GitHub API (see "GitHub sync" below).
+own for users. `GITHUB_TOKEN` and `ANTHROPIC_API_KEY` are the two exceptions: outbound credentials
+the app itself uses to call the GitHub and Claude APIs (see "GitHub sync" and "AI chat" below).
 
 ## GitHub sync
 
@@ -131,6 +135,19 @@ briefly unreachable, the project is still created in the app; only the GitHub li
 The case form's "Eier" field is a dropdown of the repo's assignable GitHub users
 (`GET /repos/{org}/{repo}/assignees`, read-only) when `GITHUB_TOKEN` is set, falling back to a
 plain text field otherwise.
+
+## AI chat
+
+`/chat` ("Spør AI") is a Claude-powered assistant (`claude-opus-5`, via `@anthropic-ai/sdk`) with
+five read-only tools over this app's own data: `search_projects`, `get_project`, `list_team`,
+`list_cases_for_person`, and `get_dashboard_stats` — the same data every other page reads from
+Postgres. It can search across projects, summarize status, and suggest next steps or a draft
+comment, but has no tool that writes anything: nothing it says is ever saved automatically.
+
+`POST /api/chat` takes the full message history (the API is stateless, like the underlying Claude
+API) and streams the reply back as plain text, running a manual tool-use loop server-side
+(`apps/server/src/routes/chat.ts`) capped at 8 iterations. Requires `ANTHROPIC_API_KEY`; without it
+the endpoint returns 503 and the rest of the app is unaffected.
 
 ## Deploying on Minato
 

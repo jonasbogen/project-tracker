@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createApp } from './app.js';
 import * as repo from './repo.js';
 import * as githubSync from './github-sync.js';
@@ -256,5 +256,34 @@ describe('project-tracker API', () => {
     const res = await app.request('/api/does-not-exist');
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: 'Not found' });
+  });
+});
+
+describe('POST /api/chat', () => {
+  const originalKey = process.env.ANTHROPIC_API_KEY;
+
+  afterEach(() => {
+    if (originalKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = originalKey;
+  });
+
+  it('returns 503 when ANTHROPIC_API_KEY is not set', async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    const res = await app.request('/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: 'Hei' }] }),
+    });
+    expect(res.status).toBe(503);
+  });
+
+  it('returns 400 for an empty message list', async () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    const res = await app.request('/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ messages: [] }),
+    });
+    expect(res.status).toBe(400);
   });
 });
