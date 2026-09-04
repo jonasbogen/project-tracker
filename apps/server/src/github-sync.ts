@@ -73,6 +73,22 @@ function extractField(body: string | null, heading: string): string {
   return match ? match[1].trim() : '';
 }
 
+// True when the body is the structured issue-form template (Prosjekt/Kunde/
+// Tjenesteparaply/Beskrivelse headings), as opposed to plain freeform text.
+function isFormTemplate(body: string): boolean {
+  return /###\s*(Prosjekt|Kunde|Tjenesteparaply|Beskrivelse)/i.test(body);
+}
+
+// The "Beskrivelse" field alone, never the raw template — dumping the whole body
+// (with its "### Kunde" / "### Tjenesteparaply" headings and all) as a "description"
+// reads as noise. Plain freeform bodies (no template headings at all) are used as-is.
+function extractDescription(body: string | null): string {
+  const fromField = extractField(body, 'Beskrivelse');
+  if (fromField) return fromField;
+  if (body && !isFormTemplate(body)) return body.trim();
+  return '';
+}
+
 // The "Kunde" field is filled in per-issue, not per-milestone; use whichever linked
 // issue has it set, falling back to the milestone title itself.
 function findCustomer(issues: GithubIssue[], milestoneNumber: number): string {
@@ -118,7 +134,7 @@ export async function syncGithubProjects(): Promise<SyncResult> {
       const projectId = await getProjectIdByGithubMilestone(REPO, issue.milestone.number);
       if (!projectId) continue;
 
-      const description = extractField(issue.body, 'Beskrivelse') || issue.body?.trim() || '';
+      const description = extractDescription(issue.body);
       await upsertCaseFromGithub(projectId, {
         title: issue.title,
         description,

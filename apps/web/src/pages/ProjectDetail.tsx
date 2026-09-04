@@ -271,7 +271,15 @@ export default function ProjectDetail() {
                       </Badge>
                     )}
                   </Table.Cell>
-                  <Table.Cell>{c.description || <span className="muted">–</span>}</Table.Cell>
+                  <Table.Cell>
+                    {c.description ? (
+                      <span className="cell-clamp" title={c.description}>
+                        {c.description}
+                      </span>
+                    ) : (
+                      <span className="muted">–</span>
+                    )}
+                  </Table.Cell>
                   <Table.Cell>
                     <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
                   </Table.Cell>

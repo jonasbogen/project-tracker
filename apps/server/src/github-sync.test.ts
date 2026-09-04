@@ -111,6 +111,51 @@ describe('syncGithubProjects', () => {
     );
   });
 
+  it('never dumps the raw template body as description when "Beskrivelse" is missing, but keeps plain freeform bodies', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse([{ number: 5, title: 'Test prosjekt', description: null, state: 'open', due_on: null }]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            number: 60,
+            title: 'Uten Beskrivelse-felt',
+            body: '### Prosjekt (milestone)\n\nTest prosjekt\n\n### Kunde\n\nAcme',
+            state: 'open',
+            created_at: '2026-08-01T00:00:00Z',
+            milestone: { number: 5 },
+            assignees: [],
+          },
+          {
+            number: 61,
+            title: 'Fritekst-issue',
+            body: 'Bare litt vanlig tekst, ingen mal her.',
+            state: 'open',
+            created_at: '2026-08-02T00:00:00Z',
+            milestone: { number: 5 },
+            assignees: [],
+          },
+        ]),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(repo.getProjectIdByGithubMilestone).mockResolvedValue(7);
+
+    await syncGithubProjects();
+
+    expect(vi.mocked(repo.upsertCaseFromGithub)).toHaveBeenNthCalledWith(
+      1,
+      7,
+      expect.objectContaining({ description: '' }),
+    );
+    expect(vi.mocked(repo.upsertCaseFromGithub)).toHaveBeenNthCalledWith(
+      2,
+      7,
+      expect.objectContaining({ description: 'Bare litt vanlig tekst, ingen mal her.' }),
+    );
+  });
+
   it('skips a case sync it cannot resolve back to a project without failing the whole run', async () => {
     const fetchMock = vi
       .fn()

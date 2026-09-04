@@ -460,6 +460,14 @@
   flex: 1;
 }
 
+.cell-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 320px;
+}
+
 .cell-link {
   border: none;
   background: none;

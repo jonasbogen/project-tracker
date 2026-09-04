@@ -130,7 +130,15 @@ export default function Prices() {
                   <Table.Cell>{p.service}</Table.Cell>
                   <Table.Cell>{formatPrice(p.price)}</Table.Cell>
                   <Table.Cell>{p.unit || <span className="muted">–</span>}</Table.Cell>
-                  <Table.Cell>{p.description || <span className="muted">–</span>}</Table.Cell>
+                  <Table.Cell>
+                    {p.description ? (
+                      <span className="cell-clamp" title={p.description}>
+                        {p.description}
+                      </span>
+                    ) : (
+                      <span className="muted">–</span>
+                    )}
+                  </Table.Cell>
                   <Table.Cell>
                     <div className="inline-actions">
                       <Button small variant="flat" aria-label="Rediger" onClick={() => startEdit(p)}>
