@@ -84,29 +84,36 @@ Tests mock the database layer, so no Postgres instance is required to run them.
 | `PORT` | No | Defaults to `8080`. Minato sets this automatically. |
 | `DATABASE_URL` | Yes at runtime | Injected automatically by Minato's managed Postgres. For local dev, point it at your own Postgres instance. |
 | `CLIENT_DIR` | No | Override the static frontend directory. Defaults to `./apps/web/dist`. |
-| `GITHUB_TOKEN` | No | A GitHub token (read access to repo metadata and issues/milestones) for the `intility` org. Without it, GitHub sync is skipped (logged, not fatal). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
-| `GITHUB_ORG` | No | GitHub org to sync from. Defaults to `intility`. |
+| `GITHUB_TOKEN` | No | A GitHub token (read access to issues/milestones) for the source repo below. Without it, GitHub sync is skipped (logged, not fatal). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
+| `GITHUB_ORG` | No | GitHub org that owns the source repo. Defaults to `intility`. |
+| `GITHUB_REPO` | No | Repo to sync from. Defaults to `Prosjektmappe` — the OT/Edge Platform project tracker repo, one milestone per customer project. |
 
 Access is gated by Minato's mandatory tenant SSO at the gateway, so the app needs no auth of its
 own for users. `GITHUB_TOKEN` is the one exception: an outbound credential the app itself uses to
-call the GitHub API (see "GitHub milestone sync" below).
+call the GitHub API (see "GitHub sync" below).
 
-## GitHub milestone sync
+## GitHub sync
 
-On startup, and then every hour, the server calls the GitHub API for every repository in the
-`intility` org whose name contains `ot` (case-insensitive), reads each repo's milestones (open and
-closed), and upserts one project per milestone:
+`github.com/intility/Prosjektmappe` is the source of truth for OT/Edge Platform customer projects:
+one **milestone** per customer project, one **issue** per case/task within that project. Issue
+bodies follow a form template with `### Kunde` and `### Beskrivelse` headings.
 
-- `name` = milestone title, `customer` = repo name, `team` = `OT`, `responsible` = milestone
-  creator's GitHub login (blank if unset).
-- `status`: `Fullført` if the milestone is closed, `Forsinket` if open and past its due date,
-  otherwise `Pågår`.
-- `end_date` = milestone due date, `challenges` = milestone description.
+On startup, and then every hour, the server reads that repo's milestones and milestone-linked
+issues (pull requests and issues without a milestone are skipped) and upserts:
 
-Re-running the sync updates those fields in place (matched on repo + milestone number — see the
-`github_repo` / `github_milestone_number` columns) rather than creating duplicates. Projects
-created manually through the UI are never touched by the sync. Requires `GITHUB_TOKEN`; without it
-the sync is skipped and logs a message, the rest of the app works normally.
+- **One project per milestone** — `name` = milestone title, `customer` = the `Kunde` field from any
+  of its linked issues (falls back to the milestone title if none is set), `team` = `OT`,
+  `status`: `Fullført` if closed, `Forsinket` if open and past its due date, otherwise `Pågår`,
+  `end_date` = milestone due date, `challenges` = milestone description.
+- **One case per issue** — `title` = issue title, `description` = the `Beskrivelse` field (falls
+  back to the raw issue body), `status`: `Løst` if closed, otherwise `Åpen`, `case_date` = issue
+  creation date.
+
+Re-running the sync updates those fields in place (matched on repo + milestone/issue number — see
+the `github_repo` / `github_milestone_number` / `github_issue_number` columns) rather than creating
+duplicates. Projects and cases created manually through the UI are never touched by the sync.
+Requires `GITHUB_TOKEN`; without it the sync is skipped and logs a message, the rest of the app
+works normally.
 
 ## Deploying on Minato
 

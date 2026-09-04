@@ -24,6 +24,8 @@ export interface Case {
   description: string;
   status: string;
   case_date: string | null;
+  github_repo: string | null;
+  github_issue_number: number | null;
   created_at: string;
 }
 

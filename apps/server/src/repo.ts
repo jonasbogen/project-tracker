@@ -32,6 +32,8 @@ export interface Case {
   description: string;
   status: string;
   case_date: string | null;
+  github_repo: string | null;
+  github_issue_number: number | null;
   created_at: string;
 }
 
@@ -167,6 +169,55 @@ export async function upsertProjectFromGithub(data: GithubMilestoneInput): Promi
       data.challenges,
       data.github_repo,
       data.github_milestone_number,
+    ],
+  );
+  return rows[0];
+}
+
+export async function getProjectIdByGithubMilestone(
+  githubRepo: string,
+  milestoneNumber: number,
+): Promise<number | undefined> {
+  const { rows } = await pool.query<{ id: number }>(
+    'SELECT id FROM projects WHERE github_repo = $1 AND github_milestone_number = $2',
+    [githubRepo, milestoneNumber],
+  );
+  return rows[0]?.id;
+}
+
+export interface GithubIssueInput {
+  title: string;
+  description: string;
+  status: string;
+  case_date: string | null;
+  github_repo: string;
+  github_issue_number: number;
+}
+
+// One row per (github_repo, github_issue_number); re-running the sync updates the
+// GitHub-derived fields on the matching case rather than creating duplicates.
+export async function upsertCaseFromGithub(
+  projectId: number,
+  data: GithubIssueInput,
+): Promise<Case> {
+  const { rows } = await pool.query<Case>(
+    `INSERT INTO cases (project_id, title, description, status, case_date, github_repo, github_issue_number)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (github_repo, github_issue_number) DO UPDATE
+       SET project_id = EXCLUDED.project_id,
+           title = EXCLUDED.title,
+           description = EXCLUDED.description,
+           status = EXCLUDED.status,
+           case_date = EXCLUDED.case_date
+     RETURNING *`,
+    [
+      projectId,
+      data.title,
+      data.description,
+      data.status,
+      data.case_date,
+      data.github_repo,
+      data.github_issue_number,
     ],
   );
   return rows[0];

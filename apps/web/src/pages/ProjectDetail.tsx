@@ -212,7 +212,14 @@ export default function ProjectDetail() {
             <Table.Body>
               {cases.map((c) => (
                 <Table.Row key={c.id}>
-                  <Table.Cell>{c.title}</Table.Cell>
+                  <Table.Cell>
+                    {c.title}
+                    {c.github_repo && (
+                      <Badge state="neutral" style={{ marginLeft: 8 }}>
+                        GitHub
+                      </Badge>
+                    )}
+                  </Table.Cell>
                   <Table.Cell>{c.description || <span className="muted">–</span>}</Table.Cell>
                   <Table.Cell>
                     <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>

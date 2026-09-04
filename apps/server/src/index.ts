@@ -12,8 +12,8 @@ function runGithubSync(): void {
     return;
   }
   syncGithubProjects()
-    .then(({ repos, milestones }) =>
-      console.log(`GitHub sync: ${milestones} milestone(s) from ${repos} repo(s)`),
+    .then(({ projects, cases }) =>
+      console.log(`GitHub sync: ${projects} project(s), ${cases} case(s)`),
     )
     .catch((err) => console.error('GitHub sync failed', err));
 }
