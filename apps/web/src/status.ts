@@ -21,6 +21,27 @@ export function caseBadgeState(status: string): BadgeState {
   return CASE_BADGE[status] ?? 'default';
 }
 
+const BADGE_STATE_COLOR: Record<BadgeState, string> = {
+  default: 'hsl(var(--bfc-neutral-hsl))',
+  neutral: 'hsl(var(--bfc-neutral-hsl))',
+  brand: 'hsl(var(--bfc-brand-hsl))',
+  chill: 'hsl(var(--bfc-chill-hsl))',
+  attn: 'hsl(var(--bfc-attn-hsl))',
+  success: 'hsl(var(--bfc-success-hsl))',
+  warning: 'hsl(var(--bfc-warning-hsl))',
+  alert: 'hsl(var(--bfc-alert-hsl))',
+};
+
+// Reuse the same reserved status palette as the badges, so a chart bar for
+// "Forsinket" is drawn in the exact color as the "Forsinket" badge elsewhere.
+export function projectStatusColor(status: string): string {
+  return BADGE_STATE_COLOR[projectBadgeState(status)];
+}
+
+export function caseStatusColor(status: string): string {
+  return BADGE_STATE_COLOR[caseBadgeState(status)];
+}
+
 export function formatDate(value: string | null): string {
   if (!value) return '–';
   const date = new Date(value);

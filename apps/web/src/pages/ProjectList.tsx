@@ -4,9 +4,10 @@ import Table from '@intility/bifrost-react/Table';
 import Badge from '@intility/bifrost-react/Badge';
 import Button from '@intility/bifrost-react/Button';
 import Icon from '@intility/bifrost-react/Icon';
+import Input from '@intility/bifrost-react/Input';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { api, type ProjectWithCount } from '../api';
 import { projectBadgeState, formatTimeline } from '../status';
 
@@ -19,20 +20,28 @@ export default function ProjectList() {
   const [projects, setProjects] = useState<ProjectWithCount[]>([]);
   const [teams, setTeams] = useState<string[]>([]);
   const [team, setTeam] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // Debounce free-text search so we don't hit the API on every keystroke.
+  useEffect(() => {
+    const timeout = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(timeout);
+  }, [searchInput]);
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([api.listProjects(team || undefined), api.listTeams()])
+    Promise.all([api.listProjects(team || undefined, search || undefined), api.listTeams()])
       .then(([projectList, teamList]) => {
         setProjects(projectList);
         setTeams(teamList);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [team]);
+  }, [team, search]);
 
   const teamOptions: Option[] = teams.map((t) => ({ value: t, label: t }));
 
@@ -46,16 +55,27 @@ export default function ProjectList() {
         </Button>
       </div>
 
-      {teamOptions.length > 0 && (
-        <Select
-          label="Filtrer på team"
-          options={teamOptions}
-          value={team ? { value: team, label: team } : null}
-          onChange={(opt) => setTeam((opt as Option | null)?.value ?? '')}
-          isClearable
-          placeholder="Alle team"
+      <div className="filter-row">
+        <Input
+          label="Søk"
+          hideLabel
+          icon={faMagnifyingGlass}
+          placeholder="Søk på navn eller kunde…"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
-      )}
+        {teamOptions.length > 0 && (
+          <Select
+            label="Filtrer på team"
+            hideLabel
+            options={teamOptions}
+            value={team ? { value: team, label: team } : null}
+            onChange={(opt) => setTeam((opt as Option | null)?.value ?? '')}
+            isClearable
+            placeholder="Alle team"
+          />
+        )}
+      </div>
 
       {loading && <Icon.Spinner aria-label="Laster prosjekter" />}
 
@@ -65,9 +85,13 @@ export default function ProjectList() {
         </Message>
       )}
 
-      {!loading && !error && projects.length === 0 && (
-        <Message header={team ? `Ingen prosjekter for team ${team}` : 'Ingen prosjekter enda'}>
-          {team ? 'Prøv et annet team, eller fjern filteret.' : 'Opprett ditt første prosjekt for å komme i gang.'}
+      {!loading && !error && projects.length === 0 && (search || team) && (
+        <Message header="Ingen prosjekter matcher">Prøv et annet søk eller fjern filteret.</Message>
+      )}
+
+      {!loading && !error && projects.length === 0 && !search && !team && (
+        <Message header="Ingen prosjekter enda">
+          Opprett ditt første prosjekt for å komme i gang.
         </Message>
       )}
 

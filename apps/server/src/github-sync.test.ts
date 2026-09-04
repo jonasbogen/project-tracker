@@ -44,6 +44,7 @@ describe('syncGithubProjects', () => {
             state: 'open',
             created_at: '2026-08-01T00:00:00Z',
             milestone: { number: 1 },
+            assignees: [{ login: 'endsan' }],
           },
           {
             number: 37,
@@ -52,6 +53,7 @@ describe('syncGithubProjects', () => {
             state: 'open',
             created_at: '2026-08-02T00:00:00Z',
             milestone: { number: 1 },
+            assignees: [],
             pull_request: {},
           },
           {
@@ -61,6 +63,7 @@ describe('syncGithubProjects', () => {
             state: 'open',
             created_at: '2026-08-03T00:00:00Z',
             milestone: null,
+            assignees: [],
           },
         ]),
       );
@@ -86,6 +89,7 @@ describe('syncGithubProjects', () => {
       description: 'Bytt ut gammelt utstyr',
       status: 'Åpen',
       case_date: '2026-08-01',
+      owner: 'endsan',
       github_repo: 'Prosjektmappe',
       github_issue_number: 36,
     });
@@ -120,6 +124,7 @@ describe('syncGithubProjects', () => {
             state: 'open',
             created_at: '2026-08-01T00:00:00Z',
             milestone: { number: 99 },
+            assignees: [],
           },
         ]),
       );

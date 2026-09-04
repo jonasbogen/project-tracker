@@ -55,6 +55,221 @@
   color: var(--bfc-base-c-2);
 }
 
+.filter-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.filter-row > * {
+  flex: 1 1 220px;
+}
+
+/* Dashboard */
+
+.stat-tile-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.stat-tile-label {
+  font-size: 0.8125rem;
+  color: var(--bfc-base-c-2);
+  margin-bottom: 4px;
+}
+
+.stat-tile-value {
+  font-size: 2rem;
+  font-weight: 600;
+  font-variant-numeric: proportional-nums;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.deadline-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.deadline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 4px;
+  border: none;
+  background: none;
+  border-bottom: 1px solid var(--bfc-base-dimmed);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+}
+
+.deadline-row:last-child {
+  border-bottom: none;
+}
+
+.deadline-row:hover {
+  background: var(--bfc-base-2);
+}
+
+.deadline-name {
+  font-weight: 600;
+}
+
+.deadline-when {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+/* Bar chart */
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar-chart-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 140px) 1fr 32px;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-chart-label {
+  font-size: 0.8125rem;
+  color: var(--bfc-base-c-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-chart-track {
+  height: 16px;
+  background: var(--bfc-base-2);
+  border-radius: 4px;
+}
+
+.bar-chart-fill {
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+}
+
+.bar-chart-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Team */
+
+.team-member {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-avatar {
+  border-radius: 50%;
+  background: var(--bfc-base-2);
+}
+
+/* Calendar */
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.calendar-title {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--bfc-base-c-2);
+  padding-bottom: 4px;
+}
+
+.calendar-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  gap: 2px;
+}
+
+.calendar-cell-empty {
+  visibility: hidden;
+}
+
+.calendar-cell-today {
+  background: var(--bfc-base-2);
+  font-weight: 600;
+}
+
+.calendar-dots {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+}
+
+.calendar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.calendar-dot-deadline {
+  background: hsl(var(--bfc-warning-hsl));
+}
+
+.calendar-dot-case {
+  background: hsl(var(--bfc-brand-hsl));
+}
+
+.calendar-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 0.8125rem;
+  color: var(--bfc-base-c-2);
+}
+
+.calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 @media (max-width: 600px) {
   .form-grid {
     grid-template-columns: 1fr;

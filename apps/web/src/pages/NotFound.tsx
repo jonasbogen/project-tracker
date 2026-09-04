@@ -10,7 +10,7 @@ export default function NotFound() {
     <Message state="warning" header="Siden finnes ikke">
       <Button variant="flat" onClick={() => navigate('/')}>
         <Icon icon={faArrowLeft} marginRight />
-        Tilbake til prosjekter
+        Tilbake til oversikt
       </Button>
     </Message>
   );

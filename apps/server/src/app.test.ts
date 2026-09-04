@@ -11,6 +11,8 @@ vi.mock('./repo.js', async (importActual) => {
     createProject: vi.fn(),
     listCases: vi.fn(),
     createCase: vi.fn(),
+    listTeam: vi.fn(),
+    getDashboardStats: vi.fn(),
   };
 });
 
@@ -100,6 +102,32 @@ describe('project-tracker API', () => {
     vi.mocked(repo.getProject).mockResolvedValue(undefined);
     const res = await app.request('/api/projects/999');
     expect(res.status).toBe(404);
+  });
+
+  it('GET /api/projects passes the search query through to the repo', async () => {
+    vi.mocked(repo.listProjects).mockResolvedValue([]);
+    await app.request('/api/projects?team=OT&search=arbion');
+    expect(repo.listProjects).toHaveBeenCalledWith('OT', 'arbion');
+  });
+
+  it('GET /api/team returns the repo result', async () => {
+    vi.mocked(repo.listTeam).mockResolvedValue([{ owner: 'endsan', open_cases: 2, total_cases: 3 }]);
+    const res = await app.request('/api/team');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([{ owner: 'endsan', open_cases: 2, total_cases: 3 }]);
+  });
+
+  it('GET /api/stats returns the repo result', async () => {
+    const stats = {
+      projectStatusCounts: [{ status: 'Pågår', count: 3 }],
+      caseStatusCounts: [{ status: 'Åpen', count: 5 }],
+      upcomingDeadlines: [],
+      topOwners: [],
+    };
+    vi.mocked(repo.getDashboardStats).mockResolvedValue(stats);
+    const res = await app.request('/api/stats');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(stats);
   });
 
   it('unknown /api routes return JSON 404', async () => {

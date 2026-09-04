@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import Table from '@intility/bifrost-react/Table';
 import Badge from '@intility/bifrost-react/Badge';
 import Button from '@intility/bifrost-react/Button';
+import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Input from '@intility/bifrost-react/Input';
 import TextArea from '@intility/bifrost-react/TextArea';
@@ -10,7 +11,9 @@ import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faArrowLeft, faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { api, type Case, type Project } from '../api';
-import { caseBadgeState, formatDate, formatTimeline, projectBadgeState } from '../status';
+import { caseBadgeState, caseStatusColor, formatDate, formatTimeline, projectBadgeState } from '../status';
+import BarChart from '../charts/BarChart';
+import Calendar from '../components/Calendar';
 
 interface Option {
   value: string;
@@ -68,7 +71,7 @@ export default function ProjectDetail() {
     if (!confirm('Slette dette prosjektet og alle tilhørende saker?')) return;
     try {
       await api.deleteProject(projectId);
-      navigate('/');
+      navigate('/projects');
     } catch (e) {
       setError((e as Error).message);
     }
@@ -116,7 +119,7 @@ export default function ProjectDetail() {
   if (notFound) {
     return (
       <Message state="warning" header="Prosjektet finnes ikke">
-        <Button variant="flat" onClick={() => navigate('/')}>
+        <Button variant="flat" onClick={() => navigate('/projects')}>
           <Icon icon={faArrowLeft} marginRight />
           Tilbake til prosjekter
         </Button>
@@ -137,7 +140,7 @@ export default function ProjectDetail() {
   return (
     <div className="stack">
       <div>
-        <Button variant="flat" small onClick={() => navigate('/')}>
+        <Button variant="flat" small onClick={() => navigate('/projects')}>
           <Icon icon={faArrowLeft} marginRight />
           Prosjekter
         </Button>
@@ -194,6 +197,24 @@ export default function ProjectDetail() {
         </div>
       </div>
 
+      <div className="dashboard-grid">
+        <Card padding="medium">
+          <h2 className="bf-h2">Frister og aktivitet</h2>
+          <Calendar deadline={project.end_date} markers={cases.map((c) => c.case_date ?? '')} />
+        </Card>
+        <Card padding="medium">
+          <h2 className="bf-h2">Saker per status</h2>
+          <BarChart
+            items={caseStatuses.map((status) => ({
+              label: status,
+              value: cases.filter((c) => c.status === status).length,
+              color: caseStatusColor(status),
+            }))}
+            emptyText="Ingen saker registrert enda."
+          />
+        </Card>
+      </div>
+
       <section className="stack-sm">
         <h2 className="bf-h2">Saker</h2>
         {cases.length === 0 ? (
@@ -205,6 +226,7 @@ export default function ProjectDetail() {
                 <Table.HeaderCell>Tittel</Table.HeaderCell>
                 <Table.HeaderCell>Beskrivelse</Table.HeaderCell>
                 <Table.HeaderCell>Status</Table.HeaderCell>
+                <Table.HeaderCell>Eier</Table.HeaderCell>
                 <Table.HeaderCell>Dato</Table.HeaderCell>
                 <Table.HeaderCell>{''}</Table.HeaderCell>
               </Table.Row>
@@ -223,6 +245,22 @@ export default function ProjectDetail() {
                   <Table.Cell>{c.description || <span className="muted">–</span>}</Table.Cell>
                   <Table.Cell>
                     <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
+                  </Table.Cell>
+                  <Table.Cell>
+                    {c.owner ? (
+                      <span className="team-member">
+                        <img
+                          className="team-avatar"
+                          src={`https://github.com/${c.owner}.png?size=64`}
+                          alt=""
+                          width={20}
+                          height={20}
+                        />
+                        {c.owner}
+                      </span>
+                    ) : (
+                      <span className="muted">–</span>
+                    )}
                   </Table.Cell>
                   <Table.Cell>{formatDate(c.case_date)}</Table.Cell>
                   <Table.Cell>

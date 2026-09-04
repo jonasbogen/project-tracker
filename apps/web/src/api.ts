@@ -24,9 +24,23 @@ export interface Case {
   description: string;
   status: string;
   case_date: string | null;
+  owner: string;
   github_repo: string | null;
   github_issue_number: number | null;
   created_at: string;
+}
+
+export interface TeamMember {
+  owner: string;
+  open_cases: number;
+  total_cases: number;
+}
+
+export interface DashboardStats {
+  projectStatusCounts: { status: string; count: number }[];
+  caseStatusCounts: { status: string; count: number }[];
+  upcomingDeadlines: { id: number; name: string; customer: string; end_date: string }[];
+  topOwners: TeamMember[];
 }
 
 export interface ProjectInput {
@@ -73,9 +87,16 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getMeta: () => request<Meta>('/api/meta'),
-  listProjects: (team?: string) =>
-    request<ProjectWithCount[]>(`/api/projects${team ? `?team=${encodeURIComponent(team)}` : ''}`),
+  listProjects: (team?: string, search?: string) => {
+    const params = new URLSearchParams();
+    if (team) params.set('team', team);
+    if (search) params.set('search', search);
+    const query = params.toString();
+    return request<ProjectWithCount[]>(`/api/projects${query ? `?${query}` : ''}`);
+  },
   listTeams: () => request<string[]>('/api/teams'),
+  listTeam: () => request<TeamMember[]>('/api/team'),
+  getStats: () => request<DashboardStats>('/api/stats'),
   getProject: (id: number) => request<{ project: Project; cases: Case[] }>(`/api/projects/${id}`),
   createProject: (data: ProjectInput) =>
     request<Project>('/api/projects', { method: 'POST', body: JSON.stringify(data) }),

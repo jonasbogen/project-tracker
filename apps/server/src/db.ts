@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS cases (
   description TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'Åpen',
   case_date DATE,
+  owner TEXT NOT NULL DEFAULT '',
   github_repo TEXT,
   github_issue_number INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS cases (
 
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS github_repo TEXT;
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS github_issue_number INTEGER;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS owner TEXT NOT NULL DEFAULT '';
 
 -- One case per GitHub issue; NULLs (manually created cases) never conflict with each other.
 CREATE UNIQUE INDEX IF NOT EXISTS cases_github_unique_idx

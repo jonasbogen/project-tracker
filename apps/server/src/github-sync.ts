@@ -25,6 +25,7 @@ interface GithubIssue {
   state: 'open' | 'closed';
   created_at: string;
   milestone: { number: number } | null;
+  assignees: { login: string }[];
   pull_request?: unknown;
 }
 
@@ -119,6 +120,7 @@ export async function syncGithubProjects(): Promise<SyncResult> {
         description,
         status: issue.state === 'closed' ? 'Løst' : 'Åpen',
         case_date: issue.created_at.slice(0, 10),
+        owner: issue.assignees[0]?.login ?? '',
         github_repo: REPO,
         github_issue_number: issue.number,
       });

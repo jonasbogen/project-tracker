@@ -97,7 +97,7 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
         <Button
           variant="flat"
           small
-          onClick={() => navigate(mode === 'edit' ? `/projects/${projectId}` : '/')}
+          onClick={() => navigate(mode === 'edit' ? `/projects/${projectId}` : '/projects')}
         >
           <Icon icon={faArrowLeft} marginRight />
           Avbryt

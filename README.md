@@ -3,10 +3,16 @@
 Internal tool for Intility staff to track projects: status, challenges, timeline,
 customer, the person responsible, and cases linked to each project.
 
-- Main page lists all projects with customer, status, responsible owner, timeline, and case count.
-- Clicking into a project shows the full detail view: status, challenges, timeline, customer,
-  responsible owner, and the list of cases tied to that project. Cases can be added and removed
-  from the detail page.
+- **Oversikt** (`/`) – a dashboard with stat tiles, a project-status breakdown, a "cases per
+  owner" chart, and upcoming project deadlines.
+- **Milestones** (`/projects`) – lists all projects with customer, status, responsible owner,
+  timeline, and case count; searchable by name/customer and filterable by team.
+- **Team** (`/team`) – everyone currently assigned to at least one GitHub-synced case, with
+  open/total case counts.
+- Clicking into a project (`/projects/:id`) shows the full detail view: status, challenges,
+  timeline, customer, responsible owner, a calendar of the project's deadline and case activity,
+  a case-status breakdown, and the list of cases tied to that project (each case shows its GitHub
+  assignee as "Eier" when synced). Cases can be added and removed from the detail page.
 
 ## Architecture
 

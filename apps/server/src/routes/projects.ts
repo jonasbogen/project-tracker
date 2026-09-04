@@ -42,10 +42,12 @@ api.get('/meta', (c) =>
   }),
 );
 
-// GET /api/projects — list all projects with a linked-case count, optionally filtered by team.
+// GET /api/projects — list all projects with a linked-case count, optionally filtered by
+// team and/or a free-text search over name/customer.
 api.get('/projects', async (c) => {
   const team = c.req.query('team');
-  const projects = await repo.listProjects(team || undefined);
+  const search = c.req.query('search');
+  const projects = await repo.listProjects(team || undefined, search || undefined);
   return c.json(projects);
 });
 
@@ -53,6 +55,18 @@ api.get('/projects', async (c) => {
 api.get('/teams', async (c) => {
   const teams = await repo.listTeams();
   return c.json(teams);
+});
+
+// GET /api/team — people who own cases (from GitHub issue assignees), with counts.
+api.get('/team', async (c) => {
+  const team = await repo.listTeam();
+  return c.json(team);
+});
+
+// GET /api/stats — aggregate counts for the dashboard.
+api.get('/stats', async (c) => {
+  const stats = await repo.getDashboardStats();
+  return c.json(stats);
 });
 
 // POST /api/projects — create a project.

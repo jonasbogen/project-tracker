@@ -32,6 +32,7 @@ export interface Case {
   description: string;
   status: string;
   case_date: string | null;
+  owner: string;
   github_repo: string | null;
   github_issue_number: number | null;
   created_at: string;
@@ -55,25 +56,26 @@ export interface CaseInput {
   case_date?: string | null;
 }
 
-export async function listProjects(team?: string): Promise<ProjectWithCount[]> {
+export async function listProjects(team?: string, search?: string): Promise<ProjectWithCount[]> {
+  const conditions: string[] = [];
+  const params: string[] = [];
   if (team) {
-    const { rows } = await pool.query<ProjectWithCount>(
-      `SELECT p.*, count(c.id)::int AS case_count
-       FROM projects p
-       LEFT JOIN cases c ON c.project_id = p.id
-       WHERE p.team = $1
-       GROUP BY p.id
-       ORDER BY p.created_at DESC`,
-      [team],
-    );
-    return rows;
+    params.push(team);
+    conditions.push(`p.team = $${params.length}`);
   }
+  if (search) {
+    params.push(`%${search}%`);
+    conditions.push(`(p.name ILIKE $${params.length} OR p.customer ILIKE $${params.length})`);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const { rows } = await pool.query<ProjectWithCount>(
     `SELECT p.*, count(c.id)::int AS case_count
      FROM projects p
      LEFT JOIN cases c ON c.project_id = p.id
+     ${where}
      GROUP BY p.id
      ORDER BY p.created_at DESC`,
+    params,
   );
   return rows;
 }
@@ -190,6 +192,7 @@ export interface GithubIssueInput {
   description: string;
   status: string;
   case_date: string | null;
+  owner: string;
   github_repo: string;
   github_issue_number: number;
 }
@@ -201,14 +204,15 @@ export async function upsertCaseFromGithub(
   data: GithubIssueInput,
 ): Promise<Case> {
   const { rows } = await pool.query<Case>(
-    `INSERT INTO cases (project_id, title, description, status, case_date, github_repo, github_issue_number)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO cases (project_id, title, description, status, case_date, owner, github_repo, github_issue_number)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (github_repo, github_issue_number) DO UPDATE
        SET project_id = EXCLUDED.project_id,
            title = EXCLUDED.title,
            description = EXCLUDED.description,
            status = EXCLUDED.status,
-           case_date = EXCLUDED.case_date
+           case_date = EXCLUDED.case_date,
+           owner = EXCLUDED.owner
      RETURNING *`,
     [
       projectId,
@@ -216,11 +220,63 @@ export async function upsertCaseFromGithub(
       data.description,
       data.status,
       data.case_date,
+      data.owner,
       data.github_repo,
       data.github_issue_number,
     ],
   );
   return rows[0];
+}
+
+export interface TeamMember {
+  owner: string;
+  open_cases: number;
+  total_cases: number;
+}
+
+export async function listTeam(): Promise<TeamMember[]> {
+  const { rows } = await pool.query<TeamMember>(
+    `SELECT owner,
+            count(*) FILTER (WHERE status <> 'Løst')::int AS open_cases,
+            count(*)::int AS total_cases
+     FROM cases
+     WHERE owner <> ''
+     GROUP BY owner
+     ORDER BY total_cases DESC, owner ASC`,
+  );
+  return rows;
+}
+
+export interface DashboardStats {
+  projectStatusCounts: { status: string; count: number }[];
+  caseStatusCounts: { status: string; count: number }[];
+  upcomingDeadlines: { id: number; name: string; customer: string; end_date: string }[];
+  topOwners: TeamMember[];
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const [projectStatusRows, caseStatusRows, deadlineRows, owners] = await Promise.all([
+    pool.query<{ status: string; count: number }>(
+      `SELECT status, count(*)::int AS count FROM projects GROUP BY status`,
+    ),
+    pool.query<{ status: string; count: number }>(
+      `SELECT status, count(*)::int AS count FROM cases GROUP BY status`,
+    ),
+    pool.query<{ id: number; name: string; customer: string; end_date: string }>(
+      `SELECT id, name, customer, end_date FROM projects
+       WHERE end_date IS NOT NULL AND end_date >= current_date
+       ORDER BY end_date ASC
+       LIMIT 5`,
+    ),
+    listTeam(),
+  ]);
+
+  return {
+    projectStatusCounts: projectStatusRows.rows,
+    caseStatusCounts: caseStatusRows.rows,
+    upcomingDeadlines: deadlineRows.rows,
+    topOwners: owners.slice(0, 6),
+  };
 }
 
 export async function listCases(projectId: number): Promise<Case[]> {
