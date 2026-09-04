@@ -7,12 +7,7 @@ import Badge from '@intility/bifrost-react/Badge';
 import { api, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import HeroBackground from '../components/HeroBackground';
-import { formatDate, projectStatusColor } from '../status';
-
-function daysUntil(date: string): number {
-  const ms = new Date(date).getTime() - new Date().setHours(0, 0, 0, 0);
-  return Math.round(ms / (1000 * 60 * 60 * 24));
-}
+import { daysUntil, formatDate, projectStatusColor } from '../status';
 
 function StatTile({
   label,
@@ -87,9 +82,21 @@ export default function Dashboard() {
         <h1 className="bf-h1">Oversikt</h1>
 
         <div className="stat-tile-row">
-          <StatTile label="Prosjekter totalt" value={totalProjects} />
-          <StatTile label="Pågår" value={countByStatus(stats.projectStatusCounts, 'Pågår')} />
-          <StatTile label="Forsinket" value={countByStatus(stats.projectStatusCounts, 'Forsinket')} />
+          <StatTile
+            label="Prosjekter totalt"
+            value={totalProjects}
+            onClick={() => navigate('/projects')}
+          />
+          <StatTile
+            label="Pågår"
+            value={countByStatus(stats.projectStatusCounts, 'Pågår')}
+            onClick={() => navigate('/projects?status=Pågår')}
+          />
+          <StatTile
+            label="Forsinket"
+            value={countByStatus(stats.projectStatusCounts, 'Forsinket')}
+            onClick={() => navigate('/projects?status=Forsinket')}
+          />
           <StatTile label="Åpne saker" value={totalOpenCases} onClick={() => navigate('/board')} />
         </div>
 

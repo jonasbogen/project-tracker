@@ -119,10 +119,10 @@ describe('project-tracker API', () => {
     expect(res.status).toBe(404);
   });
 
-  it('GET /api/projects passes the search query through to the repo', async () => {
+  it('GET /api/projects passes the search/status query through to the repo', async () => {
     vi.mocked(repo.listProjects).mockResolvedValue([]);
-    await app.request('/api/projects?team=OT&search=arbion');
-    expect(repo.listProjects).toHaveBeenCalledWith('OT', 'arbion');
+    await app.request('/api/projects?team=OT&search=arbion&status=Pågår');
+    expect(repo.listProjects).toHaveBeenCalledWith('OT', 'arbion', 'Pågår');
   });
 
   it('GET /api/team returns the repo result', async () => {

@@ -62,3 +62,8 @@ const GITHUB_ORG = 'intility';
 export function githubIssueUrl(repo: string, issueNumber: number): string {
   return `https://github.com/${GITHUB_ORG}/${repo}/issues/${issueNumber}`;
 }
+
+export function daysUntil(date: string): number {
+  const ms = new Date(date).getTime() - new Date().setHours(0, 0, 0, 0);
+  return Math.round(ms / (1000 * 60 * 60 * 24));
+}

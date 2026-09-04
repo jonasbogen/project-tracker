@@ -48,7 +48,8 @@ api.get('/meta', (c) =>
 api.get('/projects', async (c) => {
   const team = c.req.query('team');
   const search = c.req.query('search');
-  const projects = await repo.listProjects(team || undefined, search || undefined);
+  const status = c.req.query('status');
+  const projects = await repo.listProjects(team || undefined, search || undefined, status || undefined);
   return c.json(projects);
 });
 

@@ -125,10 +125,11 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getMeta: () => request<Meta>('/api/meta'),
-  listProjects: (team?: string, search?: string) => {
+  listProjects: (team?: string, search?: string, status?: string) => {
     const params = new URLSearchParams();
     if (team) params.set('team', team);
     if (search) params.set('search', search);
+    if (status) params.set('status', status);
     const query = params.toString();
     return request<ProjectWithCount[]>(`/api/projects${query ? `?${query}` : ''}`);
   },

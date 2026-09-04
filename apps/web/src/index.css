@@ -172,6 +172,18 @@
   white-space: nowrap;
 }
 
+.deadline-row-static {
+  cursor: default;
+}
+
+.deadline-row-static:hover {
+  background: none;
+}
+
+.recent-activity-heading {
+  margin-top: 20px;
+}
+
 /* Bar chart */
 
 .bar-chart {

@@ -20,10 +20,13 @@ interface Option {
 export default function ProjectList() {
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') ?? '';
+  const initialStatus = searchParams.get('status') ?? '';
 
   const [projects, setProjects] = useState<ProjectWithCount[]>([]);
   const [teams, setTeams] = useState<string[]>([]);
+  const [statuses, setStatuses] = useState<string[]>([]);
   const [team, setTeam] = useState('');
+  const [status, setStatus] = useState(initialStatus);
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
   const [loading, setLoading] = useState(true);
@@ -38,16 +41,23 @@ export default function ProjectList() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([api.listProjects(team || undefined, search || undefined), api.listTeams()])
-      .then(([projectList, teamList]) => {
+    Promise.all([
+      api.listProjects(team || undefined, search || undefined, status || undefined),
+      api.listTeams(),
+      api.getMeta(),
+    ])
+      .then(([projectList, teamList, meta]) => {
         setProjects(projectList);
         setTeams(teamList);
+        setStatuses(meta.projectStatuses);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [team, search]);
+  }, [team, search, status]);
 
   const teamOptions: Option[] = teams.map((t) => ({ value: t, label: t }));
+  const statusOptions: Option[] = statuses.map((s) => ({ value: s, label: s }));
+  const hasFilter = !!(search || team || status);
 
   return (
     <div className="stack">
@@ -80,6 +90,15 @@ export default function ProjectList() {
               placeholder="Alle team"
             />
           )}
+          <Select
+            label="Filtrer på status"
+            hideLabel
+            options={statusOptions}
+            value={status ? { value: status, label: status } : null}
+            onChange={(opt) => setStatus((opt as Option | null)?.value ?? '')}
+            isClearable
+            placeholder="Alle statuser"
+          />
         </div>
 
         {loading && <Icon.Spinner aria-label="Laster prosjekter" />}
@@ -90,11 +109,11 @@ export default function ProjectList() {
           </Message>
         )}
 
-        {!loading && !error && projects.length === 0 && (search || team) && (
+        {!loading && !error && projects.length === 0 && hasFilter && (
           <Message header="Ingen prosjekter matcher">Prøv et annet søk eller fjern filteret.</Message>
         )}
 
-        {!loading && !error && projects.length === 0 && !search && !team && (
+        {!loading && !error && projects.length === 0 && !hasFilter && (
           <Message header="Ingen prosjekter enda">
             Opprett ditt første prosjekt for å komme i gang.
           </Message>

@@ -14,13 +14,13 @@ import { api, type Assignee, type Case, type Project } from '../api';
 import {
   caseBadgeState,
   caseStatusColor,
+  daysUntil,
   formatDate,
   formatTimeline,
   githubIssueUrl,
   projectBadgeState,
 } from '../status';
 import BarChart from '../charts/BarChart';
-import Calendar from '../components/Calendar';
 import FormattedText from '../components/FormattedText';
 
 interface Option {
@@ -224,12 +224,62 @@ export default function ProjectDetail() {
 
       <div className="dashboard-grid">
         <Card padding="medium">
-          <h2 className="bf-h2">Frister og aktivitet</h2>
-          <Calendar
-            startDate={project.start_date}
-            endDate={project.end_date}
-            markers={cases.map((c) => c.case_date ?? '')}
-          />
+          <h2 className="bf-h2">Frist og aktivitet</h2>
+          {project.end_date ? (
+            <div className="deadline-list">
+              <div className="deadline-row deadline-row-static">
+                <div>
+                  <div className="deadline-name">Frist</div>
+                  <div className="muted">{project.name}</div>
+                </div>
+                <div className="deadline-when">
+                  <span>{formatDate(project.end_date)}</span>
+                  {(() => {
+                    const days = daysUntil(project.end_date);
+                    return (
+                      <Badge state={days <= 7 ? 'warning' : 'neutral'}>
+                        {days < 0 ? 'Passert' : days === 0 ? 'I dag' : `${days} dager`}
+                      </Badge>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="muted">Ingen frist satt for dette prosjektet.</p>
+          )}
+
+          <h3 className="bf-h3 recent-activity-heading">Siste aktivitet</h3>
+          {cases.length === 0 ? (
+            <p className="muted">Ingen saker registrert enda.</p>
+          ) : (
+            <div className="deadline-list">
+              {[...cases]
+                .sort((a, b) => (b.case_date ?? '').localeCompare(a.case_date ?? ''))
+                .slice(0, 5)
+                .map((c) => {
+                  const issueUrl =
+                    c.github_repo && c.github_issue_number
+                      ? githubIssueUrl(c.github_repo, c.github_issue_number)
+                      : null;
+                  return (
+                    <button
+                      key={c.id}
+                      className={`deadline-row${issueUrl ? '' : ' deadline-row-static'}`}
+                      onClick={
+                        issueUrl ? () => window.open(issueUrl, '_blank', 'noopener,noreferrer') : undefined
+                      }
+                    >
+                      <div className="deadline-name">{c.title}</div>
+                      <div className="deadline-when">
+                        <span>{formatDate(c.case_date)}</span>
+                        <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
         </Card>
         <Card padding="medium">
           <h2 className="bf-h2">Saker per status</h2>

@@ -57,7 +57,11 @@ export interface CaseInput {
   owner?: string;
 }
 
-export async function listProjects(team?: string, search?: string): Promise<ProjectWithCount[]> {
+export async function listProjects(
+  team?: string,
+  search?: string,
+  status?: string,
+): Promise<ProjectWithCount[]> {
   const conditions: string[] = [];
   const params: string[] = [];
   if (team) {
@@ -67,6 +71,10 @@ export async function listProjects(team?: string, search?: string): Promise<Proj
   if (search) {
     params.push(`%${search}%`);
     conditions.push(`(p.name ILIKE $${params.length} OR p.customer ILIKE $${params.length})`);
+  }
+  if (status) {
+    params.push(status);
+    conditions.push(`p.status = $${params.length}`);
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const { rows } = await pool.query<ProjectWithCount>(
