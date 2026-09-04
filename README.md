@@ -13,9 +13,9 @@ customer, the person responsible, and cases linked to each project.
   timeline, customer, responsible owner, a calendar of the project's deadline and case activity,
   a case-status breakdown, and the list of cases tied to that project (each case shows its GitHub
   assignee as "Eier" when synced). Cases can be added and removed from the detail page.
-- **Spør AI** (`/chat`) – a chat assistant (Claude) that can search projects and cases and answer
-  questions, or suggest next steps / draft comments. Read-only: it has no way to write anything
-  back. See "AI chat" below.
+- **Spør AI** – a floating chat widget (bottom-right, on every page, not a route of its own) that
+  can search projects and cases and answer questions, or suggest next steps / draft comments.
+  Read-only: it has no way to write anything back. See "AI chat" below.
 
 ## Architecture
 
@@ -140,7 +140,10 @@ plain text field otherwise.
 
 ## AI chat
 
-`/chat` ("Spør AI") is an AI assistant with five read-only tools over this app's own data:
+"Spør AI" (`apps/web/src/components/ChatWidget.tsx`) is a floating chat widget mounted once at the
+app root (in `App.tsx`, alongside `<Routes>`, not inside them) so it persists — open/closed state
+and the conversation survive page navigation — and always renders bottom-right regardless of which
+page is open. It's an AI assistant with five read-only tools over this app's own data:
 `search_projects`, `get_project`, `list_team`, `list_cases_for_person`, and `get_dashboard_stats` —
 the same data every other page reads from Postgres. It can search across projects, summarize
 status, and suggest next steps or a draft comment, but has no tool that writes anything: nothing it

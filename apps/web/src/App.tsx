@@ -2,15 +2,15 @@ import { NavLink, Route, Routes } from 'react-router';
 import Nav from '@intility/bifrost-react/Nav';
 import Badge from '@intility/bifrost-react/Badge';
 import Inline from '@intility/bifrost-react/Inline';
-import { faDiagramProject, faGaugeHigh, faRobot, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faDiagramProject, faGaugeHigh, faUsers } from '@fortawesome/free-solid-svg-icons';
 import Dashboard from './pages/Dashboard';
 import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
 import ProjectForm from './pages/ProjectForm';
 import Team from './pages/Team';
 import PersonCases from './pages/PersonCases';
-import Chat from './pages/Chat';
 import NotFound from './pages/NotFound';
+import ChatWidget from './components/ChatWidget';
 
 export default function App() {
   return (
@@ -38,9 +38,6 @@ export default function App() {
           <NavLink to="/team">
             <Nav.Item icon={faUsers}>Team</Nav.Item>
           </NavLink>
-          <NavLink to="/chat">
-            <Nav.Item icon={faRobot}>Spør AI</Nav.Item>
-          </NavLink>
         </>
       }
     >
@@ -53,10 +50,10 @@ export default function App() {
           <Route path="/projects/:id/edit" element={<ProjectForm mode="edit" />} />
           <Route path="/team" element={<Team />} />
           <Route path="/team/:owner" element={<PersonCases />} />
-          <Route path="/chat" element={<Chat />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
+      <ChatWidget />
     </Nav>
   );
 }

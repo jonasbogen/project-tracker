@@ -326,19 +326,90 @@
   gap: 6px;
 }
 
-/* Chat */
+/* Chat widget - floating, fixed to the viewport, mounted once at the app
+   root so it survives page navigation. */
 
-.chat-page {
-  max-width: 760px;
+.chat-widget-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 100;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: hsl(var(--bfc-brand-hsl));
+  color: var(--bfc-brand-hc);
+  box-shadow: 0 4px 16px var(--bfc-shadow);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.chat-transcript {
-  min-height: 320px;
-  max-height: 60vh;
+.chat-widget-fab:hover {
+  background: hsl(var(--bfc-brand-hsl) / 0.9);
+}
+
+.chat-widget-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 100;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  height: 560px;
+  max-height: calc(100vh - 48px);
+  background: var(--bfc-base-3);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px var(--bfc-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bfc-base-dimmed);
+  flex-shrink: 0;
+}
+
+.chat-widget-title {
+  font-weight: 600;
+}
+
+.chat-widget-close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--bfc-base-c-2);
+  padding: 4px;
+}
+
+.chat-widget-transcript {
+  flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  padding: 16px;
+}
+
+.chat-widget-form {
+  padding: 12px;
+  border-top: 1px solid var(--bfc-base-dimmed);
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .chat-widget-panel {
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
 }
 
 .chat-empty {

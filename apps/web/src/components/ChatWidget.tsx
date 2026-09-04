@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Button from '@intility/bifrost-react/Button';
-import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import TextArea from '@intility/bifrost-react/TextArea';
-import { faPaperPlane, faRobot } from '@fortawesome/free-solid-svg-icons';
+import { faComments, faPaperPlane, faRobot, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { api, type ChatMessage } from '../api';
 
 const SUGGESTIONS = [
@@ -13,7 +12,11 @@ const SUGGESTIONS = [
   'Foreslå neste steg for et prosjekt uten nylig aktivitet',
 ];
 
-export default function Chat() {
+// Mounted once at the app root (outside <Routes>), so it survives page
+// navigation: the conversation and open/closed state persist as you move
+// between pages, exactly like a bottom-right chat bot that "follows" you.
+export default function ChatWidget() {
+  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -21,8 +24,8 @@ export default function Chat() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, open]);
 
   async function send(text: string) {
     const question = text.trim();
@@ -58,20 +61,41 @@ export default function Chat() {
     void send(input);
   }
 
-  return (
-    <div className="stack chat-page">
-      <h1 className="bf-h1">Spør AI</h1>
-      <p className="muted">
-        Still spørsmål om prosjektene og sakene i verktøyet. Assistenten søker i den samme
-        dataen du ser ellers i appen, og kan foreslå neste steg eller et utkast til en kommentar
-        - men skriver aldri noe tilbake selv.
-      </p>
+  if (!open) {
+    return (
+      <button
+        className="chat-widget-fab"
+        onClick={() => setOpen(true)}
+        aria-label="Åpne AI-chat"
+      >
+        <Icon icon={faComments} size="lg" />
+      </button>
+    );
+  }
 
-      <Card padding="medium" className="chat-transcript">
+  return (
+    <div className="chat-widget-panel" role="dialog" aria-label="Spør AI">
+      <div className="chat-widget-header">
+        <span className="chat-widget-title">
+          <Icon icon={faRobot} marginRight />
+          Spør AI
+        </span>
+        <button
+          className="chat-widget-close"
+          onClick={() => setOpen(false)}
+          aria-label="Lukk AI-chat"
+        >
+          <Icon icon={faXmark} />
+        </button>
+      </div>
+
+      <div className="chat-widget-transcript">
         {messages.length === 0 && (
           <div className="chat-empty">
-            <Icon icon={faRobot} size="2x" className="muted" />
-            <p className="muted">Prøv for eksempel:</p>
+            <p className="muted">
+              Spør om prosjektene og sakene i verktøyet. Jeg søker i den samme dataen du ser
+              ellers i appen, og skriver aldri noe tilbake selv.
+            </p>
             <div className="chat-suggestions">
               {SUGGESTIONS.map((s) => (
                 <Button key={s} variant="flat" small onClick={() => void send(s)}>
@@ -91,7 +115,7 @@ export default function Chat() {
           </div>
         ))}
         <div ref={bottomRef} />
-      </Card>
+      </div>
 
       {error && (
         <Message state="alert" header="Kunne ikke svare">
@@ -99,7 +123,7 @@ export default function Chat() {
         </Message>
       )}
 
-      <form onSubmit={handleSubmit} className="chat-form">
+      <form onSubmit={handleSubmit} className="chat-form chat-widget-form">
         <TextArea
           label="Spørsmål"
           hideLabel
@@ -112,11 +136,10 @@ export default function Chat() {
               void send(input);
             }
           }}
-          rows={2}
+          rows={1}
         />
-        <Button type="submit" variant="filled" state={sending ? 'inactive' : 'default'}>
-          <Icon icon={faPaperPlane} marginRight />
-          Send
+        <Button type="submit" variant="filled" state={sending ? 'inactive' : 'default'} aria-label="Send">
+          <Icon icon={faPaperPlane} />
         </Button>
       </form>
     </div>
