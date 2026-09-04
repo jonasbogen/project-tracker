@@ -278,7 +278,7 @@ export default function ProjectDetail() {
                   </Table.Cell>
                   <Table.Cell>
                     {c.description ? (
-                      <span className="cell-clamp" title={c.description}>
+                      <span className="cell-clamp">
                         <FormattedText text={c.description} />
                       </span>
                     ) : (

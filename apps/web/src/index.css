@@ -461,11 +461,10 @@
 }
 
 .cell-clamp {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  max-width: 320px;
+  display: block;
+  max-width: 440px;
+  min-width: 220px;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
 }

@@ -132,9 +132,7 @@ export default function Prices() {
                   <Table.Cell>{p.unit || <span className="muted">–</span>}</Table.Cell>
                   <Table.Cell>
                     {p.description ? (
-                      <span className="cell-clamp" title={p.description}>
-                        {p.description}
-                      </span>
+                      <span className="cell-clamp">{p.description}</span>
                     ) : (
                       <span className="muted">–</span>
                     )}
