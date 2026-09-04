@@ -96,11 +96,13 @@ Tests mock the database layer, so no Postgres instance is required to run them.
 | `GITHUB_TOKEN` | No | A GitHub token (read + write on issues/milestones) for the source repo below — write is needed to create milestones for app-created projects. Without it, GitHub sync is skipped (logged, not fatal). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
 | `GITHUB_ORG` | No | GitHub org that owns the source repo. Defaults to `intility`. |
 | `GITHUB_REPO` | No | Repo to sync from. Defaults to `Prosjektmappe` — the OT/Edge Platform project tracker repo, one milestone per customer project. |
-| `ANTHROPIC_API_KEY` | No | A Claude API key, for the "Spør AI" chat. Without it, `/api/chat` returns 503 (the rest of the app is unaffected). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
+| `OPENAI_API_KEY` | No | API key for the "Spør AI" chat's model backend (an OpenAI-compatible endpoint — currently an internal GLM deployment, not OpenAI itself). Without it (or `OPENAI_BASE_URL`), `/api/chat` returns 503 (the rest of the app is unaffected). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
+| `OPENAI_BASE_URL` | No | Base URL of that OpenAI-compatible endpoint, e.g. `https://<gateway>.ai.intility.app/v1`. |
+| `OPENAI_MODEL` | No | Model id to request. Defaults to `glm-5-2-fp8`. |
 
 Access is gated by Minato's mandatory tenant SSO at the gateway, so the app needs no auth of its
-own for users. `GITHUB_TOKEN` and `ANTHROPIC_API_KEY` are the two exceptions: outbound credentials
-the app itself uses to call the GitHub and Claude APIs (see "GitHub sync" and "AI chat" below).
+own for users. `GITHUB_TOKEN` and `OPENAI_API_KEY` are the two exceptions: outbound credentials the
+app itself uses to call the GitHub and chat-model APIs (see "GitHub sync" and "AI chat" below).
 
 ## GitHub sync
 
@@ -138,16 +140,22 @@ plain text field otherwise.
 
 ## AI chat
 
-`/chat` ("Spør AI") is a Claude-powered assistant (`claude-opus-5`, via `@anthropic-ai/sdk`) with
-five read-only tools over this app's own data: `search_projects`, `get_project`, `list_team`,
-`list_cases_for_person`, and `get_dashboard_stats` — the same data every other page reads from
-Postgres. It can search across projects, summarize status, and suggest next steps or a draft
-comment, but has no tool that writes anything: nothing it says is ever saved automatically.
+`/chat` ("Spør AI") is an AI assistant with five read-only tools over this app's own data:
+`search_projects`, `get_project`, `list_team`, `list_cases_for_person`, and `get_dashboard_stats` —
+the same data every other page reads from Postgres. It can search across projects, summarize
+status, and suggest next steps or a draft comment, but has no tool that writes anything: nothing it
+says is ever saved automatically.
 
-`POST /api/chat` takes the full message history (the API is stateless, like the underlying Claude
-API) and streams the reply back as plain text, running a manual tool-use loop server-side
-(`apps/server/src/routes/chat.ts`) capped at 8 iterations. Requires `ANTHROPIC_API_KEY`; without it
-the endpoint returns 503 and the rest of the app is unaffected.
+The model backend is an internal GLM deployment behind an OpenAI-compatible `/v1/chat/completions`
+endpoint (Envoy AI Gateway + vLLM), talked to via the official `openai` npm SDK with a custom
+`baseURL` — not OpenAI itself. It supports standard OpenAI-shaped tool calling and streaming; the
+model's internal `reasoning` delta (a vLLM/GLM-specific stream field) is deliberately never
+forwarded to the client, only its actual answer text.
+
+`POST /api/chat` takes the full message history (stateless, like the underlying chat API) and
+streams the reply back as plain text, running a manual tool-use loop server-side
+(`apps/server/src/routes/chat.ts`) capped at 8 iterations. Requires `OPENAI_API_KEY` and
+`OPENAI_BASE_URL`; without either the endpoint returns 503 and the rest of the app is unaffected.
 
 ## Deploying on Minato
 
