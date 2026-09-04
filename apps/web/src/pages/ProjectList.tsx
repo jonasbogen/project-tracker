@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import Table from '@intility/bifrost-react/Table';
 import Badge from '@intility/bifrost-react/Badge';
 import Button from '@intility/bifrost-react/Button';
+import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Input from '@intility/bifrost-react/Input';
 import Message from '@intility/bifrost-react/Message';
@@ -46,7 +47,7 @@ export default function ProjectList() {
   const teamOptions: Option[] = teams.map((t) => ({ value: t, label: t }));
 
   return (
-    <>
+    <div className="stack">
       <div className="page-header">
         <h1 className="bf-h1">Prosjekter</h1>
         <Button variant="filled" onClick={() => navigate('/projects/new')}>
@@ -55,83 +56,85 @@ export default function ProjectList() {
         </Button>
       </div>
 
-      <div className="filter-row">
-        <Input
-          label="Søk"
-          hideLabel
-          icon={faMagnifyingGlass}
-          placeholder="Søk på navn eller kunde…"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-        {teamOptions.length > 0 && (
-          <Select
-            label="Filtrer på team"
+      <Card padding="medium">
+        <div className="filter-row">
+          <Input
+            label="Søk"
             hideLabel
-            options={teamOptions}
-            value={team ? { value: team, label: team } : null}
-            onChange={(opt) => setTeam((opt as Option | null)?.value ?? '')}
-            isClearable
-            placeholder="Alle team"
+            icon={faMagnifyingGlass}
+            placeholder="Søk på navn eller kunde…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
+          {teamOptions.length > 0 && (
+            <Select
+              label="Filtrer på team"
+              hideLabel
+              options={teamOptions}
+              value={team ? { value: team, label: team } : null}
+              onChange={(opt) => setTeam((opt as Option | null)?.value ?? '')}
+              isClearable
+              placeholder="Alle team"
+            />
+          )}
+        </div>
+
+        {loading && <Icon.Spinner aria-label="Laster prosjekter" />}
+
+        {error && (
+          <Message state="alert" header="Kunne ikke laste prosjekter">
+            {error}
+          </Message>
         )}
-      </div>
 
-      {loading && <Icon.Spinner aria-label="Laster prosjekter" />}
+        {!loading && !error && projects.length === 0 && (search || team) && (
+          <Message header="Ingen prosjekter matcher">Prøv et annet søk eller fjern filteret.</Message>
+        )}
 
-      {error && (
-        <Message state="alert" header="Kunne ikke laste prosjekter">
-          {error}
-        </Message>
-      )}
+        {!loading && !error && projects.length === 0 && !search && !team && (
+          <Message header="Ingen prosjekter enda">
+            Opprett ditt første prosjekt for å komme i gang.
+          </Message>
+        )}
 
-      {!loading && !error && projects.length === 0 && (search || team) && (
-        <Message header="Ingen prosjekter matcher">Prøv et annet søk eller fjern filteret.</Message>
-      )}
-
-      {!loading && !error && projects.length === 0 && !search && !team && (
-        <Message header="Ingen prosjekter enda">
-          Opprett ditt første prosjekt for å komme i gang.
-        </Message>
-      )}
-
-      {!loading && !error && projects.length > 0 && (
-        <Table>
-          <Table.Header>
-            <Table.Row>
-              <Table.HeaderCell>Navn</Table.HeaderCell>
-              <Table.HeaderCell>Kunde</Table.HeaderCell>
-              <Table.HeaderCell>Team</Table.HeaderCell>
-              <Table.HeaderCell>Status</Table.HeaderCell>
-              <Table.HeaderCell>Ansvarlig</Table.HeaderCell>
-              <Table.HeaderCell>Tidslinje</Table.HeaderCell>
-              <Table.HeaderCell>Saker</Table.HeaderCell>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {projects.map((p) => (
-              <Table.Row key={p.id} onClick={() => navigate(`/projects/${p.id}`)}>
-                <Table.Cell>
-                  {p.name}
-                  {p.github_repo && (
-                    <Badge state="neutral" style={{ marginLeft: 8 }}>
-                      GitHub
-                    </Badge>
-                  )}
-                </Table.Cell>
-                <Table.Cell>{p.customer}</Table.Cell>
-                <Table.Cell>{p.team || <span className="muted">–</span>}</Table.Cell>
-                <Table.Cell>
-                  <Badge state={projectBadgeState(p.status)}>{p.status}</Badge>
-                </Table.Cell>
-                <Table.Cell>{p.responsible}</Table.Cell>
-                <Table.Cell>{formatTimeline(p.start_date, p.end_date)}</Table.Cell>
-                <Table.Cell>{p.case_count}</Table.Cell>
+        {!loading && !error && projects.length > 0 && (
+          <Table>
+            <Table.Header>
+              <Table.Row>
+                <Table.HeaderCell>Navn</Table.HeaderCell>
+                <Table.HeaderCell>Kunde</Table.HeaderCell>
+                <Table.HeaderCell>Team</Table.HeaderCell>
+                <Table.HeaderCell>Status</Table.HeaderCell>
+                <Table.HeaderCell>Ansvarlig</Table.HeaderCell>
+                <Table.HeaderCell>Tidslinje</Table.HeaderCell>
+                <Table.HeaderCell>Saker</Table.HeaderCell>
               </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
-      )}
-    </>
+            </Table.Header>
+            <Table.Body>
+              {projects.map((p) => (
+                <Table.Row key={p.id} onClick={() => navigate(`/projects/${p.id}`)}>
+                  <Table.Cell>
+                    {p.name}
+                    {p.github_repo && (
+                      <Badge state="neutral" style={{ marginLeft: 8 }}>
+                        GitHub
+                      </Badge>
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>{p.customer}</Table.Cell>
+                  <Table.Cell>{p.team || <span className="muted">–</span>}</Table.Cell>
+                  <Table.Cell>
+                    <Badge state={projectBadgeState(p.status)}>{p.status}</Badge>
+                  </Table.Cell>
+                  <Table.Cell>{p.responsible}</Table.Cell>
+                  <Table.Cell>{formatTimeline(p.start_date, p.end_date)}</Table.Cell>
+                  <Table.Cell>{p.case_count}</Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+        )}
+      </Card>
+    </div>
   );
 }

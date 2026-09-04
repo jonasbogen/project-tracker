@@ -183,35 +183,39 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      <div className="detail-grid">
-        <div>
-          <div className="field-label">Kunde</div>
-          <div>{project.customer}</div>
-        </div>
-        <div>
-          <div className="field-label">Status</div>
-          <Badge state={projectBadgeState(project.status)}>{project.status}</Badge>
-        </div>
-        <div>
-          <div className="field-label">Ansvarlig</div>
-          <div>{project.responsible}</div>
-        </div>
-        <div>
-          <div className="field-label">Team</div>
-          <div>{project.team || <span className="muted">–</span>}</div>
-        </div>
-        <div>
-          <div className="field-label">Tidslinje</div>
-          <div>{formatTimeline(project.start_date, project.end_date)}</div>
-        </div>
-      </div>
+      <Card padding="medium">
+        <div className="stack-sm">
+          <div className="detail-grid">
+            <div>
+              <div className="field-label">Kunde</div>
+              <div>{project.customer}</div>
+            </div>
+            <div>
+              <div className="field-label">Status</div>
+              <Badge state={projectBadgeState(project.status)}>{project.status}</Badge>
+            </div>
+            <div>
+              <div className="field-label">Ansvarlig</div>
+              <div>{project.responsible}</div>
+            </div>
+            <div>
+              <div className="field-label">Team</div>
+              <div>{project.team || <span className="muted">–</span>}</div>
+            </div>
+            <div>
+              <div className="field-label">Tidslinje</div>
+              <div>{formatTimeline(project.start_date, project.end_date)}</div>
+            </div>
+          </div>
 
-      <div>
-        <div className="field-label">Utfordringer</div>
-        <div style={{ whiteSpace: 'pre-wrap' }}>
-          {project.challenges ? project.challenges : <span className="muted">Ingen registrert.</span>}
+          <div>
+            <div className="field-label">Utfordringer</div>
+            <div style={{ whiteSpace: 'pre-wrap' }}>
+              {project.challenges ? project.challenges : <span className="muted">Ingen registrert.</span>}
+            </div>
+          </div>
         </div>
-      </div>
+      </Card>
 
       <div className="dashboard-grid">
         <Card padding="medium">
@@ -231,7 +235,7 @@ export default function ProjectDetail() {
         </Card>
       </div>
 
-      <section className="stack-sm">
+      <Card padding="medium" className="stack-sm">
         <h2 className="bf-h2">Saker</h2>
         {cases.length === 0 ? (
           <Message noIcon header="Ingen saker knyttet til prosjektet enda." />
@@ -308,9 +312,9 @@ export default function ProjectDetail() {
             </Table.Body>
           </Table>
         )}
-      </section>
+      </Card>
 
-      <section className="stack-sm">
+      <Card padding="medium" className="stack-sm">
         <h2 className="bf-h2">Legg til sak</h2>
         {formError && (
           <Message state="alert" header="Kunne ikke legge til sak">
@@ -373,7 +377,7 @@ export default function ProjectDetail() {
             </Button>
           </div>
         </form>
-      </section>
+      </Card>
     </div>
   );
 }

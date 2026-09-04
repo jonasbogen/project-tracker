@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import Button from '@intility/bifrost-react/Button';
+import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Input from '@intility/bifrost-react/Input';
 import TextArea from '@intility/bifrost-react/TextArea';
@@ -112,66 +113,68 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
         </Message>
       )}
 
-      <form onSubmit={handleSubmit} className="stack-sm">
-        <div className="form-grid">
-          <Input
-            label="Navn"
-            required
-            value={form.name}
-            onChange={(e) => update('name', e.target.value)}
-          />
-          <Input
-            label="Kunde"
-            required
-            value={form.customer}
-            onChange={(e) => update('customer', e.target.value)}
-          />
-          <Select
-            label="Status"
-            options={statusOptions}
-            value={form.status ? { value: form.status, label: form.status } : null}
-            onChange={(opt) => update('status', (opt as Option | null)?.value ?? '')}
-            required
-          />
-          <Input
-            label="Ansvarlig"
-            required
-            value={form.responsible}
-            onChange={(e) => update('responsible', e.target.value)}
-          />
-          <Input
-            label="Team"
+      <Card padding="medium">
+        <form onSubmit={handleSubmit} className="stack-sm">
+          <div className="form-grid">
+            <Input
+              label="Navn"
+              required
+              value={form.name}
+              onChange={(e) => update('name', e.target.value)}
+            />
+            <Input
+              label="Kunde"
+              required
+              value={form.customer}
+              onChange={(e) => update('customer', e.target.value)}
+            />
+            <Select
+              label="Status"
+              options={statusOptions}
+              value={form.status ? { value: form.status, label: form.status } : null}
+              onChange={(opt) => update('status', (opt as Option | null)?.value ?? '')}
+              required
+            />
+            <Input
+              label="Ansvarlig"
+              required
+              value={form.responsible}
+              onChange={(e) => update('responsible', e.target.value)}
+            />
+            <Input
+              label="Team"
+              optional
+              value={form.team ?? ''}
+              onChange={(e) => update('team', e.target.value)}
+            />
+            <Input
+              label="Startdato"
+              type="date"
+              optional
+              value={form.start_date ?? ''}
+              onChange={(e) => update('start_date', e.target.value)}
+            />
+            <Input
+              label="Sluttdato"
+              type="date"
+              optional
+              value={form.end_date ?? ''}
+              onChange={(e) => update('end_date', e.target.value)}
+            />
+          </div>
+          <TextArea
+            label="Utfordringer"
             optional
-            value={form.team ?? ''}
-            onChange={(e) => update('team', e.target.value)}
+            value={form.challenges ?? ''}
+            onChange={(e) => update('challenges', e.target.value)}
           />
-          <Input
-            label="Startdato"
-            type="date"
-            optional
-            value={form.start_date ?? ''}
-            onChange={(e) => update('start_date', e.target.value)}
-          />
-          <Input
-            label="Sluttdato"
-            type="date"
-            optional
-            value={form.end_date ?? ''}
-            onChange={(e) => update('end_date', e.target.value)}
-          />
-        </div>
-        <TextArea
-          label="Utfordringer"
-          optional
-          value={form.challenges ?? ''}
-          onChange={(e) => update('challenges', e.target.value)}
-        />
-        <div className="form-actions">
-          <Button type="submit" variant="filled" state={saving ? 'inactive' : 'default'}>
-            {mode === 'create' ? 'Opprett prosjekt' : 'Lagre endringer'}
-          </Button>
-        </div>
-      </form>
+          <div className="form-actions">
+            <Button type="submit" variant="filled" state={saving ? 'inactive' : 'default'}>
+              {mode === 'create' ? 'Opprett prosjekt' : 'Lagre endringer'}
+            </Button>
+          </div>
+        </form>
+      </Card>
     </div>
   );
 }

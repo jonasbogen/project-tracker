@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import Table from '@intility/bifrost-react/Table';
 import Badge from '@intility/bifrost-react/Badge';
 import Button from '@intility/bifrost-react/Button';
+import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -49,64 +50,66 @@ export default function PersonCases() {
         </h1>
       </div>
 
-      {loading && <Icon.Spinner aria-label="Laster saker" />}
+      <Card padding="medium">
+        {loading && <Icon.Spinner aria-label="Laster saker" />}
 
-      {error && (
-        <Message state="alert" header="Kunne ikke laste saker">
-          {error}
-        </Message>
-      )}
+        {error && (
+          <Message state="alert" header="Kunne ikke laste saker">
+            {error}
+          </Message>
+        )}
 
-      {!loading && !error && cases.length === 0 && (
-        <Message header="Ingen aktive saker">
-          {owner} eier ingen åpne eller pågående saker akkurat nå.
-        </Message>
-      )}
+        {!loading && !error && cases.length === 0 && (
+          <Message header="Ingen aktive saker">
+            {owner} eier ingen åpne eller pågående saker akkurat nå.
+          </Message>
+        )}
 
-      {!loading && !error && cases.length > 0 && (
-        <Table>
-          <Table.Header>
-            <Table.Row>
-              <Table.HeaderCell>Sak</Table.HeaderCell>
-              <Table.HeaderCell>Prosjekt</Table.HeaderCell>
-              <Table.HeaderCell>Status</Table.HeaderCell>
-              <Table.HeaderCell>Dato</Table.HeaderCell>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {cases.map((c) => {
-              const issueUrl =
-                c.github_repo && c.github_issue_number
-                  ? githubIssueUrl(c.github_repo, c.github_issue_number)
-                  : null;
-              return (
-                <Table.Row
-                  key={c.id}
-                  onClick={() =>
-                    issueUrl
-                      ? window.open(issueUrl, '_blank', 'noopener,noreferrer')
-                      : navigate(`/projects/${c.project_id}`)
-                  }
-                >
-                  <Table.Cell>
-                    {c.title}
-                    {c.github_repo && (
-                      <Badge state="neutral" style={{ marginLeft: 8 }}>
-                        GitHub
-                      </Badge>
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>{c.project_name}</Table.Cell>
-                  <Table.Cell>
-                    <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
-                  </Table.Cell>
-                  <Table.Cell>{formatDate(c.case_date)}</Table.Cell>
-                </Table.Row>
-              );
-            })}
-          </Table.Body>
-        </Table>
-      )}
+        {!loading && !error && cases.length > 0 && (
+          <Table>
+            <Table.Header>
+              <Table.Row>
+                <Table.HeaderCell>Sak</Table.HeaderCell>
+                <Table.HeaderCell>Prosjekt</Table.HeaderCell>
+                <Table.HeaderCell>Status</Table.HeaderCell>
+                <Table.HeaderCell>Dato</Table.HeaderCell>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {cases.map((c) => {
+                const issueUrl =
+                  c.github_repo && c.github_issue_number
+                    ? githubIssueUrl(c.github_repo, c.github_issue_number)
+                    : null;
+                return (
+                  <Table.Row
+                    key={c.id}
+                    onClick={() =>
+                      issueUrl
+                        ? window.open(issueUrl, '_blank', 'noopener,noreferrer')
+                        : navigate(`/projects/${c.project_id}`)
+                    }
+                  >
+                    <Table.Cell>
+                      {c.title}
+                      {c.github_repo && (
+                        <Badge state="neutral" style={{ marginLeft: 8 }}>
+                          GitHub
+                        </Badge>
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>{c.project_name}</Table.Cell>
+                    <Table.Cell>
+                      <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
+                    </Table.Cell>
+                    <Table.Cell>{formatDate(c.case_date)}</Table.Cell>
+                  </Table.Row>
+                );
+              })}
+            </Table.Body>
+          </Table>
+        )}
+      </Card>
     </div>
   );
 }
