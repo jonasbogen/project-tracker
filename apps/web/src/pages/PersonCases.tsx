@@ -7,7 +7,7 @@ import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { api, type CaseWithProject } from '../api';
-import { caseBadgeState, formatDate } from '../status';
+import { caseBadgeState, formatDate, githubIssueUrl } from '../status';
 
 export default function PersonCases() {
   const { owner = '' } = useParams();
@@ -74,16 +74,36 @@ export default function PersonCases() {
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {cases.map((c) => (
-              <Table.Row key={c.id} onClick={() => navigate(`/projects/${c.project_id}`)}>
-                <Table.Cell>{c.title}</Table.Cell>
-                <Table.Cell>{c.project_name}</Table.Cell>
-                <Table.Cell>
-                  <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
-                </Table.Cell>
-                <Table.Cell>{formatDate(c.case_date)}</Table.Cell>
-              </Table.Row>
-            ))}
+            {cases.map((c) => {
+              const issueUrl =
+                c.github_repo && c.github_issue_number
+                  ? githubIssueUrl(c.github_repo, c.github_issue_number)
+                  : null;
+              return (
+                <Table.Row
+                  key={c.id}
+                  onClick={() =>
+                    issueUrl
+                      ? window.open(issueUrl, '_blank', 'noopener,noreferrer')
+                      : navigate(`/projects/${c.project_id}`)
+                  }
+                >
+                  <Table.Cell>
+                    {c.title}
+                    {c.github_repo && (
+                      <Badge state="neutral" style={{ marginLeft: 8 }}>
+                        GitHub
+                      </Badge>
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>{c.project_name}</Table.Cell>
+                  <Table.Cell>
+                    <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
+                  </Table.Cell>
+                  <Table.Cell>{formatDate(c.case_date)}</Table.Cell>
+                </Table.Row>
+              );
+            })}
           </Table.Body>
         </Table>
       )}

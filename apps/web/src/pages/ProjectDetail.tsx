@@ -11,7 +11,14 @@ import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faArrowLeft, faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { api, type Assignee, type Case, type Project } from '../api';
-import { caseBadgeState, caseStatusColor, formatDate, formatTimeline, projectBadgeState } from '../status';
+import {
+  caseBadgeState,
+  caseStatusColor,
+  formatDate,
+  formatTimeline,
+  githubIssueUrl,
+  projectBadgeState,
+} from '../status';
 import BarChart from '../charts/BarChart';
 import Calendar from '../components/Calendar';
 
@@ -241,8 +248,17 @@ export default function ProjectDetail() {
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {cases.map((c) => (
-                <Table.Row key={c.id}>
+              {cases.map((c) => {
+                const issueUrl =
+                  c.github_repo && c.github_issue_number
+                    ? githubIssueUrl(c.github_repo, c.github_issue_number)
+                    : null;
+                return (
+                <Table.Row
+                  key={c.id}
+                  onClick={issueUrl ? () => window.open(issueUrl, '_blank', 'noopener,noreferrer') : undefined}
+                  style={issueUrl ? { cursor: 'pointer' } : undefined}
+                >
                   <Table.Cell>
                     {c.title}
                     {c.github_repo && (
@@ -278,13 +294,17 @@ export default function ProjectDetail() {
                       variant="flat"
                       state="alert"
                       aria-label="Fjern sak"
-                      onClick={() => handleDeleteCase(c.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteCase(c.id);
+                      }}
                     >
                       <Icon icon={faTrash} />
                     </Button>
                   </Table.Cell>
                 </Table.Row>
-              ))}
+                );
+              })}
             </Table.Body>
           </Table>
         )}

@@ -53,3 +53,12 @@ export function formatTimeline(start: string | null, end: string | null): string
   if (!start && !end) return '–';
   return `${formatDate(start)} – ${formatDate(end)}`;
 }
+
+// The org is fixed for this deployment (see GITHUB_ORG on the server, default
+// "intility") — there's no per-request way for the frontend to know it, so it's
+// hardcoded here to match.
+const GITHUB_ORG = 'intility';
+
+export function githubIssueUrl(repo: string, issueNumber: number): string {
+  return `https://github.com/${GITHUB_ORG}/${repo}/issues/${issueNumber}`;
+}

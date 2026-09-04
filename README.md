@@ -13,7 +13,7 @@ customer, the person responsible, and cases linked to each project.
   timeline, customer, responsible owner, a calendar of the project's deadline and case activity,
   a case-status breakdown, and the list of cases tied to that project (each case shows its GitHub
   assignee as "Eier" when synced). Cases can be added and removed from the detail page.
-- **Spør AI** – a floating chat widget (bottom-right, on every page, not a route of its own) that
+- **Chat bot** – a floating chat widget (bottom-right, on every page, not a route of its own) that
   can search projects and cases and answer questions, or suggest next steps / draft comments.
   Read-only: it has no way to write anything back. See "AI chat" below.
 
@@ -96,7 +96,7 @@ Tests mock the database layer, so no Postgres instance is required to run them.
 | `GITHUB_TOKEN` | No | A GitHub token (read + write on issues/milestones) for the source repo below — write is needed to create milestones for app-created projects. Without it, GitHub sync is skipped (logged, not fatal). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
 | `GITHUB_ORG` | No | GitHub org that owns the source repo. Defaults to `intility`. |
 | `GITHUB_REPO` | No | Repo to sync from. Defaults to `Prosjektmappe` — the OT/Edge Platform project tracker repo, one milestone per customer project. |
-| `OPENAI_API_KEY` | No | API key for the "Spør AI" chat's model backend (an OpenAI-compatible endpoint — currently an internal GLM deployment, not OpenAI itself). Without it (or `OPENAI_BASE_URL`), `/api/chat` returns 503 (the rest of the app is unaffected). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
+| `OPENAI_API_KEY` | No | API key for the Chat bot's model backend (an OpenAI-compatible endpoint — currently an internal GLM deployment, not OpenAI itself). Without it (or `OPENAI_BASE_URL`), `/api/chat` returns 503 (the rest of the app is unaffected). **Secret** — set via the Minato portal or `minato secrets set`, never in plain env. |
 | `OPENAI_BASE_URL` | No | Base URL of that OpenAI-compatible endpoint, e.g. `https://<gateway>.ai.intility.app/v1`. |
 | `OPENAI_MODEL` | No | Model id to request. Defaults to `glm-5-2-fp8`. |
 
@@ -140,7 +140,7 @@ plain text field otherwise.
 
 ## AI chat
 
-"Spør AI" (`apps/web/src/components/ChatWidget.tsx`) is a floating chat widget mounted once at the
+"Chat bot" (`apps/web/src/components/ChatWidget.tsx`) is a floating chat widget mounted once at the
 app root (in `App.tsx`, alongside `<Routes>`, not inside them) so it persists — open/closed state
 and the conversation survive page navigation — and always renders bottom-right regardless of which
 page is open. It's an AI assistant with five read-only tools over this app's own data:
