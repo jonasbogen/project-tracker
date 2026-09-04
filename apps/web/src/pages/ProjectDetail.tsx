@@ -10,7 +10,7 @@ import TextArea from '@intility/bifrost-react/TextArea';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faArrowLeft, faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { api, type Assignee, type Case, type Project } from '../api';
+import { api, type Assignee, type Case, type Project, type ServiceUmbrella } from '../api';
 import {
   caseBadgeState,
   caseStatusColor,
@@ -37,6 +37,8 @@ export default function ProjectDetail() {
   const [cases, setCases] = useState<Case[]>([]);
   const [caseStatuses, setCaseStatuses] = useState<string[]>([]);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
+  const [customerOptions, setCustomerOptions] = useState<string[]>([]);
+  const [serviceUmbrellas, setServiceUmbrellas] = useState<ServiceUmbrella[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -47,6 +49,8 @@ export default function ProjectDetail() {
   const [caseStatus, setCaseStatus] = useState<string>('');
   const [caseDate, setCaseDate] = useState('');
   const [owner, setOwner] = useState('');
+  const [kunde, setKunde] = useState('');
+  const [tjenesteparaply, setTjenesteparaply] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -54,15 +58,20 @@ export default function ProjectDetail() {
     setLoading(true);
     setError(null);
     try {
-      const [data, meta, assigneeList] = await Promise.all([
+      const [data, meta, assigneeList, customerList, umbrellaList] = await Promise.all([
         api.getProject(projectId),
         api.getMeta(),
         api.listAssignees(),
+        api.listCustomerOptions(),
+        api.listServiceUmbrellas(),
       ]);
       setProject(data.project);
       setCases(data.cases);
       setCaseStatuses(meta.caseStatuses);
       setAssignees(assigneeList);
+      setCustomerOptions(customerList);
+      setServiceUmbrellas(umbrellaList);
+      setKunde((prev) => prev || data.project.customer);
     } catch (e) {
       const err = e as Error & { message: string };
       if (err.message.includes('finnes ikke')) setNotFound(true);
@@ -83,7 +92,7 @@ export default function ProjectDetail() {
   }, [projectId]);
 
   async function handleDeleteProject() {
-    if (!confirm('Slette dette prosjektet og alle tilhørende saker?')) return;
+    if (!confirm('Slette dette prosjektet og alle tilhørende issuer?')) return;
     try {
       await api.deleteProject(projectId);
       navigate('/projects');
@@ -99,6 +108,18 @@ export default function ProjectDetail() {
       setFormError('Tittel er påkrevd.');
       return;
     }
+    if (!description.trim()) {
+      setFormError('Beskrivelse er påkrevd.');
+      return;
+    }
+    if (!kunde.trim()) {
+      setFormError('Kunde er påkrevd.');
+      return;
+    }
+    if (!tjenesteparaply.trim()) {
+      setFormError('Tjenesteparaply er påkrevd.');
+      return;
+    }
     setSubmitting(true);
     try {
       await api.createCase(projectId, {
@@ -107,12 +128,15 @@ export default function ProjectDetail() {
         status: caseStatus || undefined,
         case_date: caseDate || null,
         owner: owner || undefined,
+        kunde: kunde.trim(),
+        tjenesteparaply: tjenesteparaply.trim(),
       });
       setTitle('');
       setDescription('');
       setCaseStatus('');
       setCaseDate('');
       setOwner('');
+      setTjenesteparaply('');
       await load();
     } catch (err) {
       setFormError((err as Error).message);
@@ -122,7 +146,7 @@ export default function ProjectDetail() {
   }
 
   async function handleDeleteCase(caseId: number) {
-    if (!confirm('Fjerne denne saken?')) return;
+    if (!confirm('Fjerne denne issuen?')) return;
     try {
       await api.deleteCase(projectId, caseId);
       setCases((prev) => prev.filter((c) => c.id !== caseId));
@@ -251,7 +275,7 @@ export default function ProjectDetail() {
 
           <h3 className="bf-h3 recent-activity-heading">Siste aktivitet</h3>
           {cases.length === 0 ? (
-            <p className="muted">Ingen saker registrert enda.</p>
+            <p className="muted">Ingen issuer registrert enda.</p>
           ) : (
             <div className="deadline-list">
               {[...cases]
@@ -282,22 +306,22 @@ export default function ProjectDetail() {
           )}
         </Card>
         <Card padding="medium">
-          <h2 className="bf-h2">Saker per status</h2>
+          <h2 className="bf-h2">Issuer per status</h2>
           <BarChart
             items={caseStatuses.map((status) => ({
               label: status,
               value: cases.filter((c) => c.status === status).length,
               color: caseStatusColor(status),
             }))}
-            emptyText="Ingen saker registrert enda."
+            emptyText="Ingen issuer registrert enda."
           />
         </Card>
       </div>
 
       <Card padding="medium" className="stack-sm">
-        <h2 className="bf-h2">Saker</h2>
+        <h2 className="bf-h2">Issuer</h2>
         {cases.length === 0 ? (
-          <Message noIcon header="Ingen saker knyttet til prosjektet enda." />
+          <Message noIcon header="Ingen issuer knyttet til prosjektet enda." />
         ) : (
           <Table>
             <Table.Header>
@@ -364,7 +388,7 @@ export default function ProjectDetail() {
                       small
                       variant="flat"
                       state="alert"
-                      aria-label="Fjern sak"
+                      aria-label="Fjern issue"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteCase(c.id);
@@ -382,9 +406,10 @@ export default function ProjectDetail() {
       </Card>
 
       <Card padding="medium" className="stack-sm">
-        <h2 className="bf-h2">Legg til sak</h2>
+        <h2 className="bf-h2">Legg til issue</h2>
+        <p className="muted">Opprettes automatisk som en issue på GitHub.</p>
         {formError && (
-          <Message state="alert" header="Kunne ikke legge til sak">
+          <Message state="alert" header="Kunne ikke opprette issue">
             {formError}
           </Message>
         )}
@@ -423,15 +448,51 @@ export default function ProjectDetail() {
                 placeholder="GitHub-brukernavn"
               />
             )}
+            {customerOptions.length > 0 ? (
+              <Select
+                label="Kunde"
+                required
+                options={customerOptions.map((c) => ({ value: c, label: c }))}
+                value={kunde ? { value: kunde, label: kunde } : null}
+                onChange={(opt) => setKunde((opt as Option | null)?.value ?? '')}
+                placeholder="Velg kunde"
+              />
+            ) : (
+              <Input
+                label="Kunde"
+                required
+                value={kunde}
+                onChange={(e) => setKunde(e.target.value)}
+              />
+            )}
+            {serviceUmbrellas.length > 0 ? (
+              <Select
+                label="Tjenesteparaply"
+                required
+                options={serviceUmbrellas.map((u) => ({ value: u.title, label: u.title }))}
+                value={tjenesteparaply ? { value: tjenesteparaply, label: tjenesteparaply } : null}
+                onChange={(opt) => setTjenesteparaply((opt as Option | null)?.value ?? '')}
+                placeholder="Velg tjenesteparaply"
+              />
+            ) : (
+              <Input
+                label="Tjenesteparaply"
+                required
+                value={tjenesteparaply}
+                onChange={(e) => setTjenesteparaply(e.target.value)}
+                placeholder="F.eks. Network"
+              />
+            )}
           </div>
           <TextArea
             label="Beskrivelse"
-            optional
+            required
+            placeholder="Hva skal gjøres, og hva er kriteriene for ferdig?"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
           <Input
-            label="Dato"
+            label="Frist"
             type="date"
             optional
             value={caseDate}
@@ -440,7 +501,7 @@ export default function ProjectDetail() {
           <div className="form-actions">
             <Button type="submit" variant="filled" state={submitting ? 'inactive' : 'default'}>
               <Icon icon={faPlus} marginRight />
-              Legg til sak
+              Legg til issue
             </Button>
           </div>
         </form>

@@ -13,6 +13,7 @@ vi.mock('./repo.js', async (importActual) => {
     setProjectGithubLink: vi.fn(),
     listCases: vi.fn(),
     createCase: vi.fn(),
+    setCaseGithubLink: vi.fn(),
     listTeam: vi.fn(),
     getDashboardStats: vi.fn(),
     listAllCases: vi.fn(),
@@ -27,8 +28,14 @@ vi.mock('./repo.js', async (importActual) => {
 // Keeps this suite hermetic: no test here should ever reach the real GitHub API.
 vi.mock('./github-sync.js', () => ({
   createGithubMilestone: vi.fn().mockResolvedValue(null),
+  createGithubIssue: vi.fn().mockResolvedValue(null),
   listGithubAssignees: vi.fn().mockResolvedValue([]),
+  listCustomerOptions: vi.fn().mockResolvedValue([]),
+  listServiceUmbrellas: vi.fn().mockResolvedValue([]),
+  listOpenMilestones: vi.fn().mockResolvedValue([]),
   githubRepoName: vi.fn().mockReturnValue('Prosjektmappe'),
+  syncGithubProjects: vi.fn().mockResolvedValue({ projects: 0, cases: 0 }),
+  verifyGithubWebhookSignature: vi.fn().mockReturnValue(false),
 }));
 
 const app = createApp();
@@ -200,6 +207,55 @@ describe('project-tracker API', () => {
     expect(body.github_milestone_number).toBe(42);
   });
 
+  it('POST /api/projects links to an existing milestone instead of creating a new one', async () => {
+    vi.mocked(repo.createProject).mockResolvedValue({
+      id: 8,
+      name: 'Eksisterende milestone',
+      customer: 'Acme',
+      status: 'Planlagt',
+      responsible: 'Jonas',
+      team: '',
+      start_date: null,
+      end_date: null,
+      challenges: '',
+      github_repo: null,
+      github_milestone_number: null,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    vi.mocked(repo.setProjectGithubLink).mockResolvedValue({
+      id: 8,
+      name: 'Eksisterende milestone',
+      customer: 'Acme',
+      status: 'Planlagt',
+      responsible: 'Jonas',
+      team: '',
+      start_date: null,
+      end_date: null,
+      challenges: '',
+      github_repo: 'Prosjektmappe',
+      github_milestone_number: 99,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+
+    const res = await app.request('/api/projects', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Eksisterende milestone',
+        customer: 'Acme',
+        responsible: 'Jonas',
+        status: 'Planlagt',
+        github_milestone_number: 99,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    expect(githubSync.createGithubMilestone).not.toHaveBeenCalled();
+    expect(repo.setProjectGithubLink).toHaveBeenCalledWith(8, 'Prosjektmappe', 99);
+    const body = await res.json();
+    expect(body.github_milestone_number).toBe(99);
+  });
+
   it('POST /api/projects/:id/cases passes the chosen owner through', async () => {
     vi.mocked(repo.getProject).mockResolvedValue({
       id: 1,
@@ -238,6 +294,114 @@ describe('project-tracker API', () => {
     expect(repo.createCase).toHaveBeenCalledWith(
       1,
       expect.objectContaining({ owner: 'endsan' }),
+    );
+  });
+
+  it('POST /api/projects/:id/cases pushes the new case to GitHub as an issue and links it back', async () => {
+    vi.mocked(repo.getProject).mockResolvedValue({
+      id: 1,
+      name: 'Kundeprosjekt',
+      customer: 'Acme',
+      status: 'Pågår',
+      responsible: 'Jonas',
+      team: 'OT',
+      start_date: null,
+      end_date: null,
+      challenges: '',
+      github_repo: 'Prosjektmappe',
+      github_milestone_number: 42,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    vi.mocked(repo.createCase).mockResolvedValue({
+      id: 9,
+      project_id: 1,
+      title: 'Ny issue',
+      description: 'Beskrivelse',
+      status: 'Åpen',
+      case_date: null,
+      owner: 'endsan',
+      github_repo: null,
+      github_issue_number: null,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    vi.mocked(githubSync.createGithubIssue).mockResolvedValue({ number: 101 });
+    vi.mocked(repo.setCaseGithubLink).mockResolvedValue({
+      id: 9,
+      project_id: 1,
+      title: 'Ny issue',
+      description: 'Beskrivelse',
+      status: 'Åpen',
+      case_date: null,
+      owner: 'endsan',
+      github_repo: 'Prosjektmappe',
+      github_issue_number: 101,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+
+    const res = await app.request('/api/projects/1/cases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Ny issue',
+        description: 'Beskrivelse',
+        owner: 'endsan',
+        kunde: 'Acme',
+        tjenesteparaply: 'Network',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    expect(githubSync.createGithubIssue).toHaveBeenCalledWith({
+      title: 'Ny issue',
+      description: 'Beskrivelse',
+      status: 'Åpen',
+      owner: 'endsan',
+      frist: null,
+      kunde: 'Acme',
+      tjenesteparaply: 'Network',
+      milestoneNumber: 42,
+    });
+    expect(repo.setCaseGithubLink).toHaveBeenCalledWith(1, 9, 'Prosjektmappe', 101);
+    const body = await res.json();
+    expect(body.github_issue_number).toBe(101);
+  });
+
+  it('POST /api/projects/:id/cases defaults Kunde to the project customer when not given', async () => {
+    vi.mocked(repo.getProject).mockResolvedValue({
+      id: 1,
+      name: 'Kundeprosjekt',
+      customer: 'Acme',
+      status: 'Pågår',
+      responsible: 'Jonas',
+      team: '',
+      start_date: null,
+      end_date: null,
+      challenges: '',
+      github_repo: null,
+      github_milestone_number: null,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    vi.mocked(repo.createCase).mockResolvedValue({
+      id: 2,
+      project_id: 1,
+      title: 'Ny issue',
+      description: '',
+      status: 'Åpen',
+      case_date: null,
+      owner: '',
+      github_repo: null,
+      github_issue_number: null,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+
+    await app.request('/api/projects/1/cases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'Ny issue' }),
+    });
+
+    expect(githubSync.createGithubIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ kunde: 'Acme' }),
     );
   });
 
@@ -318,6 +482,56 @@ describe('project-tracker API', () => {
     const res = await app.request('/api/does-not-exist');
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: 'Not found' });
+  });
+
+  it('POST /api/webhooks/github rejects an unverified signature without syncing', async () => {
+    delete process.env.GITHUB_WEBHOOK_SECRET;
+    vi.mocked(githubSync.verifyGithubWebhookSignature).mockReturnValue(false);
+
+    const res = await app.request('/api/webhooks/github', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-github-event': 'issues' },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(404);
+    expect(githubSync.syncGithubProjects).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/webhooks/github triggers an immediate sync for a verified issues event', async () => {
+    process.env.GITHUB_WEBHOOK_SECRET = 'test-secret';
+    vi.mocked(githubSync.verifyGithubWebhookSignature).mockReturnValue(true);
+
+    const res = await app.request('/api/webhooks/github', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'issues',
+        'x-hub-signature-256': 'sha256=whatever',
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(202);
+    expect(githubSync.syncGithubProjects).toHaveBeenCalledTimes(1);
+  });
+
+  it('POST /api/webhooks/github does not sync for an unrelated verified event', async () => {
+    process.env.GITHUB_WEBHOOK_SECRET = 'test-secret';
+    vi.mocked(githubSync.verifyGithubWebhookSignature).mockReturnValue(true);
+
+    const res = await app.request('/api/webhooks/github', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'star',
+        'x-hub-signature-256': 'sha256=whatever',
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(202);
+    expect(githubSync.syncGithubProjects).not.toHaveBeenCalled();
   });
 });
 

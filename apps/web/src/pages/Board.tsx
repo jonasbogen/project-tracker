@@ -41,10 +41,10 @@ export default function Board() {
   }, [projectId, owner]);
 
   const heading = projectId
-    ? `Saker for ${project?.name ?? 'prosjekt'}`
+    ? `Issuer for ${project?.name ?? 'prosjekt'}`
     : owner
-      ? `Saker eid av ${owner}`
-      : 'Alle saker';
+      ? `Issuer eid av ${owner}`
+      : 'Alle issuer';
 
   return (
     <div className="stack">
@@ -57,10 +57,10 @@ export default function Board() {
 
       <h1 className="bf-h1">{heading}</h1>
 
-      {loading && <Icon.Spinner aria-label="Laster saker" />}
+      {loading && <Icon.Spinner aria-label="Laster issuer" />}
 
       {error && (
-        <Message state="alert" header="Kunne ikke laste saker">
+        <Message state="alert" header="Kunne ikke laste issuer">
           {error}
         </Message>
       )}
@@ -76,7 +76,7 @@ export default function Board() {
                   <Badge state={caseBadgeState(status)}>{columnCases.length}</Badge>
                 </div>
                 <div className="board-column-body">
-                  {columnCases.length === 0 && <p className="muted">Ingen saker.</p>}
+                  {columnCases.length === 0 && <p className="muted">Ingen issuer.</p>}
                   {columnCases.map((c) => {
                     const issueUrl =
                       c.github_repo && c.github_issue_number

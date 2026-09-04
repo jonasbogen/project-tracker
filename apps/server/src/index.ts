@@ -4,7 +4,10 @@ import { initSchema } from './db.js';
 import { syncGithubProjects } from './github-sync.js';
 
 const PORT = Number(process.env.PORT) || 8080;
-const GITHUB_SYNC_INTERVAL_MS = 60 * 60 * 1000; // hourly
+// The webhook (see POST /api/webhooks/github) makes changes appear near-instantly
+// when it's configured; this is just the fallback for when it isn't (or a delivery
+// is missed), so a few minutes' staleness at worst is fine.
+const GITHUB_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 function runGithubSync(): void {
   if (!process.env.GITHUB_TOKEN) {

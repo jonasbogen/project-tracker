@@ -63,6 +63,27 @@ export function githubIssueUrl(repo: string, issueNumber: number): string {
   return `https://github.com/${GITHUB_ORG}/${repo}/issues/${issueNumber}`;
 }
 
+export function githubMilestoneUrl(repo: string, milestoneNumber: number): string {
+  return `https://github.com/${GITHUB_ORG}/${repo}/milestone/${milestoneNumber}`;
+}
+
+// Coarse relative time ("nå", "3t siden", "5d siden") for the activity feed — falls
+// back to a plain date once it's more than a week old, where "X uker siden" stops
+// being more useful than the date itself.
+export function timeAgo(value: string): string {
+  const then = new Date(value).getTime();
+  if (Number.isNaN(then)) return '–';
+  const seconds = Math.round((Date.now() - then) / 1000);
+  if (seconds < 60) return 'nå';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min siden`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}t siden`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d siden`;
+  return formatDate(value);
+}
+
 export function daysUntil(date: string): number {
   const ms = new Date(date).getTime() - new Date().setHours(0, 0, 0, 0);
   return Math.round(ms / (1000 * 60 * 60 * 24));

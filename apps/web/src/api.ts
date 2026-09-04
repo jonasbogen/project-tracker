@@ -46,6 +46,18 @@ export interface Assignee {
   avatar_url: string;
 }
 
+export interface ServiceUmbrella {
+  number: number;
+  title: string;
+}
+
+export interface OpenMilestone {
+  number: number;
+  title: string;
+  due_on: string | null;
+  description: string | null;
+}
+
 export interface Customer {
   customer: string;
   project_count: number;
@@ -68,11 +80,23 @@ export interface PriceInput {
   description?: string;
 }
 
+export interface ActivityItem {
+  type: 'project' | 'case';
+  id: number;
+  title: string;
+  project_id: number | null;
+  project_name: string | null;
+  github_repo: string | null;
+  github_number: number | null;
+  created_at: string;
+}
+
 export interface DashboardStats {
   projectStatusCounts: { status: string; count: number }[];
   caseStatusCounts: { status: string; count: number }[];
   upcomingDeadlines: { id: number; name: string; customer: string; end_date: string }[];
   topOwners: TeamMember[];
+  recentActivity: ActivityItem[];
 }
 
 export interface ProjectInput {
@@ -92,6 +116,8 @@ export interface CaseInput {
   status?: string;
   case_date?: string | null;
   owner?: string;
+  kunde?: string;
+  tjenesteparaply?: string;
 }
 
 export interface Meta {
@@ -136,6 +162,9 @@ export const api = {
   listTeams: () => request<string[]>('/api/teams'),
   listTeam: () => request<TeamMember[]>('/api/team'),
   listAssignees: () => request<Assignee[]>('/api/assignees'),
+  listCustomerOptions: () => request<string[]>('/api/customer-options'),
+  listServiceUmbrellas: () => request<ServiceUmbrella[]>('/api/service-umbrellas'),
+  listOpenMilestones: () => request<OpenMilestone[]>('/api/milestones'),
   getStats: () => request<DashboardStats>('/api/stats'),
   listCases: (filters: { projectId?: number; owner?: string } = {}) => {
     const params = new URLSearchParams();
@@ -152,8 +181,13 @@ export const api = {
     request<Price>(`/api/prices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePrice: (id: number) => request<void>(`/api/prices/${id}`, { method: 'DELETE' }),
   getProject: (id: number) => request<{ project: Project; cases: Case[] }>(`/api/projects/${id}`),
-  createProject: (data: ProjectInput) =>
-    request<Project>('/api/projects', { method: 'POST', body: JSON.stringify(data) }),
+  createProject: (data: ProjectInput, existingMilestoneNumber?: number) =>
+    request<Project>('/api/projects', {
+      method: 'POST',
+      body: JSON.stringify(
+        existingMilestoneNumber ? { ...data, github_milestone_number: existingMilestoneNumber } : data,
+      ),
+    }),
   updateProject: (id: number, data: ProjectInput) =>
     request<Project>(`/api/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteProject: (id: number) =>

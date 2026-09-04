@@ -1,7 +1,19 @@
 import { Hono } from 'hono';
 import * as repo from '../repo.js';
 import type { CaseInput, PriceInput, ProjectInput } from '../repo.js';
-import { createGithubMilestone, githubRepoName, listGithubAssignees } from '../github-sync.js';
+import {
+  createGithubIssue,
+  createGithubMilestone,
+  githubRepoName,
+  listCustomerOptions,
+  listGithubAssignees,
+  listOpenMilestones,
+  listServiceUmbrellas,
+  syncGithubProjects,
+  verifyGithubWebhookSignature,
+} from '../github-sync.js';
+
+const WEBHOOK_SYNC_EVENTS = new Set(['issues', 'milestone', 'label']);
 
 export const api = new Hono();
 
@@ -66,7 +78,7 @@ api.get('/team', async (c) => {
 });
 
 // GET /api/cases — every case (any status), optionally narrowed to one project and/or
-// one owner. Backs the "Saker"-board that every case counter in the app links to.
+// one owner. Backs the "Issuer"-board that every case counter in the app links to.
 api.get('/cases', async (c) => {
   const projectId = parseId(c.req.query('project') ?? undefined);
   const owner = c.req.query('owner');
@@ -138,28 +150,68 @@ api.get('/assignees', async (c) => {
   return c.json(assignees);
 });
 
+// GET /api/customer-options — the "Kunde" dropdown's live options, for the issue
+// form. Empty list (not an error) when GITHUB_TOKEN is unset.
+api.get('/customer-options', async (c) => {
+  const options = await listCustomerOptions();
+  return c.json(options);
+});
+
+// GET /api/service-umbrellas — the "Tjenesteparaply" dropdown's live options
+// (open GitHub issues labeled "tjeneste"), for the issue form. Empty list (not an
+// error) when GITHUB_TOKEN is unset.
+api.get('/service-umbrellas', async (c) => {
+  const umbrellas = await listServiceUmbrellas();
+  return c.json(umbrellas);
+});
+
+// GET /api/milestones — open GitHub milestones not yet linked to a project here,
+// for the "koble til eksisterende milestone" picker on project creation.
+api.get('/milestones', async (c) => {
+  const [milestones, projects] = await Promise.all([listOpenMilestones(), repo.listProjects()]);
+  const used = new Set(
+    projects.filter((p) => p.github_milestone_number != null).map((p) => p.github_milestone_number),
+  );
+  return c.json(milestones.filter((m) => !used.has(m.number)));
+});
+
 // GET /api/stats — aggregate counts for the dashboard.
 api.get('/stats', async (c) => {
   const stats = await repo.getDashboardStats();
   return c.json(stats);
 });
 
-// POST /api/projects — create a project, then push it to GitHub as a milestone (the
-// app -> GitHub half of the two-way sync). The GitHub call is best-effort: creation in
-// the app always succeeds even if GITHUB_TOKEN is absent, read-only, or GitHub is down.
+// POST /api/projects — create a project, then either link it to an existing open
+// GitHub milestone (when the client passes github_milestone_number, from the
+// "koble til eksisterende milestone" picker) or push it to GitHub as a brand new
+// milestone (the app -> GitHub half of the two-way sync). The GitHub call is
+// best-effort: creation in the app always succeeds even if GITHUB_TOKEN is absent,
+// read-only, or GitHub is down.
 api.post('/projects', async (c) => {
   const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
   const data = projectFromBody(body);
   if ('error' in data) return c.json({ error: data.error }, 400);
   let project = await repo.createProject(data);
 
-  const milestone = await createGithubMilestone({
-    title: project.name,
-    description: project.challenges,
-    due_on: project.end_date,
-  });
-  if (milestone) {
-    project = (await repo.setProjectGithubLink(project.id, githubRepoName(), milestone.number)) ?? project;
+  const existingMilestoneNumber =
+    typeof body.github_milestone_number === 'number' &&
+    Number.isInteger(body.github_milestone_number) &&
+    body.github_milestone_number > 0
+      ? body.github_milestone_number
+      : null;
+
+  if (existingMilestoneNumber) {
+    project =
+      (await repo.setProjectGithubLink(project.id, githubRepoName(), existingMilestoneNumber)) ?? project;
+  } else {
+    const milestone = await createGithubMilestone({
+      title: project.name,
+      description: project.challenges,
+      due_on: project.end_date,
+    });
+    if (milestone) {
+      project = (await repo.setProjectGithubLink(project.id, githubRepoName(), milestone.number)) ?? project;
+    }
   }
 
   return c.json(project, 201);
@@ -195,7 +247,11 @@ api.delete('/projects/:id', async (c) => {
   return c.body(null, 204);
 });
 
-// POST /api/projects/:id/cases — add a case to a project.
+// POST /api/projects/:id/cases — add a case to a project, then push it to GitHub as an
+// issue (the app -> GitHub half of the two-way sync), linked to the project's milestone
+// when it has one, with the same Frist/Kunde/Tjenesteparaply fields as the repo's own
+// "Ny Issue" form. The GitHub call is best-effort: creation in the app always succeeds
+// even if GITHUB_TOKEN is absent, read-only, or GitHub is down.
 api.post('/projects/:id/cases', async (c) => {
   const id = parseId(c.req.param('id'));
   if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
@@ -217,8 +273,47 @@ api.post('/projects/:id/cases', async (c) => {
     case_date: body.case_date ? String(body.case_date) : null,
     owner: String(body.owner ?? '').trim(),
   };
-  const created = await repo.createCase(id, data);
+  const kunde = String(body.kunde ?? '').trim() || project.customer;
+  const tjenesteparaply = String(body.tjenesteparaply ?? '').trim();
+  let created = await repo.createCase(id, data);
+
+  const issue = await createGithubIssue({
+    title: created.title,
+    description: created.description,
+    status: created.status,
+    owner: created.owner,
+    frist: created.case_date ? created.case_date.slice(0, 10) : null,
+    kunde,
+    tjenesteparaply,
+    milestoneNumber: project.github_milestone_number,
+  });
+  if (issue) {
+    created = (await repo.setCaseGithubLink(id, created.id, githubRepoName(), issue.number)) ?? created;
+  }
+
   return c.json(created, 201);
+});
+
+// POST /api/webhooks/github — lets a change on GitHub (a new/edited issue or
+// milestone) reach the app within seconds instead of waiting for the next
+// scheduled pull. Configure a webhook on the repo (content type
+// application/json, events: Issues, Milestones, Labels) pointed at this URL, with
+// its "Secret" set to GITHUB_WEBHOOK_SECRET here. A missing/misconfigured secret,
+// or a bad signature, gets the same generic 404 as any unrecognized /api path —
+// never a hint that the endpoint exists at all.
+api.post('/webhooks/github', async (c) => {
+  const secret = process.env.GITHUB_WEBHOOK_SECRET;
+  const raw = await c.req.text();
+  const signature = c.req.header('x-hub-signature-256') ?? null;
+  if (!secret || !verifyGithubWebhookSignature(secret, raw, signature)) {
+    return c.json({ error: 'Not found' }, 404);
+  }
+
+  const event = c.req.header('x-github-event') ?? '';
+  if (WEBHOOK_SYNC_EVENTS.has(event)) {
+    syncGithubProjects().catch((err) => console.error('GitHub webhook sync failed', err));
+  }
+  return c.body(null, 202);
 });
 
 // DELETE /api/projects/:id/cases/:caseId — remove a case from a project.

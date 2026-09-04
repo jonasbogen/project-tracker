@@ -24,7 +24,7 @@ export default function Team() {
     <div className="stack">
       <h1 className="bf-h1">Team</h1>
       <p className="muted">
-        Personer som er satt som eier (assignee) på minst én sak fra GitHub, med antall saker de
+        Personer som er satt som eier (assignee) på minst én issue fra GitHub, med antall issuer de
         eier.
       </p>
 
@@ -39,7 +39,7 @@ export default function Team() {
 
         {!loading && !error && team.length === 0 && (
           <Message header="Ingen eiere registrert enda">
-            Saker synkronisert fra GitHub viser eier her når issuene har en assignee.
+            Issuer synkronisert fra GitHub viser eier her når issuene har en assignee.
           </Message>
         )}
 
@@ -48,7 +48,7 @@ export default function Team() {
             <Table.Header>
               <Table.Row>
                 <Table.HeaderCell>Person</Table.HeaderCell>
-                <Table.HeaderCell>Åpne saker</Table.HeaderCell>
+                <Table.HeaderCell>Åpne issuer</Table.HeaderCell>
                 <Table.HeaderCell>Totalt</Table.HeaderCell>
               </Table.Row>
             </Table.Header>

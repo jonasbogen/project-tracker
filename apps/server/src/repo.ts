@@ -270,15 +270,52 @@ export async function listTeam(): Promise<TeamMember[]> {
   return rows;
 }
 
+export interface ActivityItem {
+  type: 'project' | 'case';
+  id: number;
+  title: string;
+  project_id: number | null;
+  project_name: string | null;
+  github_repo: string | null;
+  github_number: number | null;
+  created_at: string;
+}
+
+// The 10 (by default) most recent changes across the whole tool, whether they came
+// in from GitHub (sync) or were created directly in the app — projects and cases
+// merged into one feed and sorted by created_at. Backs the "Siste endringer" panel
+// on the dashboard.
+export async function getRecentActivity(limit = 10): Promise<ActivityItem[]> {
+  const { rows } = await pool.query<ActivityItem>(
+    `SELECT * FROM (
+       SELECT 'project'::text AS type, id, name AS title, NULL::int AS project_id,
+              NULL::text AS project_name, github_repo, github_milestone_number AS github_number,
+              created_at
+       FROM projects
+       UNION ALL
+       SELECT 'case'::text AS type, c.id, c.title, c.project_id,
+              p.name AS project_name, c.github_repo, c.github_issue_number AS github_number,
+              c.created_at
+       FROM cases c
+       JOIN projects p ON p.id = c.project_id
+     ) activity
+     ORDER BY created_at DESC
+     LIMIT $1`,
+    [limit],
+  );
+  return rows;
+}
+
 export interface DashboardStats {
   projectStatusCounts: { status: string; count: number }[];
   caseStatusCounts: { status: string; count: number }[];
   upcomingDeadlines: { id: number; name: string; customer: string; end_date: string }[];
   topOwners: TeamMember[];
+  recentActivity: ActivityItem[];
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const [projectStatusRows, caseStatusRows, deadlineRows, owners] = await Promise.all([
+  const [projectStatusRows, caseStatusRows, deadlineRows, owners, recentActivity] = await Promise.all([
     pool.query<{ status: string; count: number }>(
       `SELECT status, count(*)::int AS count FROM projects GROUP BY status`,
     ),
@@ -292,6 +329,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
        LIMIT 5`,
     ),
     listTeam(),
+    getRecentActivity(10),
   ]);
 
   return {
@@ -299,6 +337,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     caseStatusCounts: caseStatusRows.rows,
     upcomingDeadlines: deadlineRows.rows,
     topOwners: owners.slice(0, 6),
+    recentActivity,
   };
 }
 
@@ -331,6 +370,21 @@ export async function deleteCase(projectId: number, caseId: number): Promise<voi
   await pool.query('DELETE FROM cases WHERE id = $1 AND project_id = $2', [caseId, projectId]);
 }
 
+// Links an app-created case to the GitHub issue minted for it (the app -> GitHub
+// half of the two-way sync), so the next pull recognizes it and updates in place.
+export async function setCaseGithubLink(
+  projectId: number,
+  caseId: number,
+  githubRepo: string,
+  githubIssueNumber: number,
+): Promise<Case | undefined> {
+  const { rows } = await pool.query<Case>(
+    `UPDATE cases SET github_repo = $1, github_issue_number = $2 WHERE id = $3 AND project_id = $4 RETURNING *`,
+    [githubRepo, githubIssueNumber, caseId, projectId],
+  );
+  return rows[0];
+}
+
 export interface CaseWithProject extends Case {
   project_name: string;
 }
@@ -361,7 +415,7 @@ export interface CaseFilters {
 
 // Every case (any status) across every project, optionally narrowed to one project
 // and/or one owner, with the parent project's name and customer for display. Backs
-// the "Saker"-board — the click-through target for every case counter in the app.
+// the "Issuer"-board — the click-through target for every case counter in the app.
 export async function listAllCases(filters: CaseFilters): Promise<CaseWithProjectInfo[]> {
   const conditions: string[] = [];
   const params: (string | number)[] = [];

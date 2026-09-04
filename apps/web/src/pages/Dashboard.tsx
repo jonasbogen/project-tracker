@@ -4,10 +4,18 @@ import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import Badge from '@intility/bifrost-react/Badge';
+import { faCodeBranch, faDiagramProject } from '@fortawesome/free-solid-svg-icons';
 import { api, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import HeroBackground from '../components/HeroBackground';
-import { daysUntil, formatDate, projectStatusColor } from '../status';
+import {
+  daysUntil,
+  formatDate,
+  githubIssueUrl,
+  githubMilestoneUrl,
+  projectStatusColor,
+  timeAgo,
+} from '../status';
 
 function StatTile({
   label,
@@ -97,7 +105,7 @@ export default function Dashboard() {
             value={countByStatus(stats.projectStatusCounts, 'Forsinket')}
             onClick={() => navigate('/projects?status=Forsinket')}
           />
-          <StatTile label="Åpne saker" value={totalOpenCases} onClick={() => navigate('/board')} />
+          <StatTile label="Åpne issuer" value={totalOpenCases} onClick={() => navigate('/board')} />
         </div>
 
         <div className="dashboard-grid">
@@ -113,10 +121,10 @@ export default function Dashboard() {
           </Card>
 
           <Card padding="medium">
-            <h2 className="bf-h2">Saker per eier</h2>
+            <h2 className="bf-h2">Issuer per eier</h2>
             <BarChart
               items={stats.topOwners.map((o) => ({ label: o.owner, value: o.total_cases }))}
-              emptyText="Ingen saker har en eier fra GitHub enda."
+              emptyText="Ingen issuer har en eier fra GitHub enda."
               onItemClick={(owner) => navigate(`/board?owner=${encodeURIComponent(owner)}`)}
             />
           </Card>
@@ -145,6 +153,53 @@ export default function Dashboard() {
                       <Badge state={days <= 7 ? 'warning' : 'neutral'}>
                         {days === 0 ? 'I dag' : `${days} dager`}
                       </Badge>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+
+        <Card padding="medium">
+          <h2 className="bf-h2">Siste endringer</h2>
+          {stats.recentActivity.length === 0 ? (
+            <p className="muted">Ingen endringer registrert enda.</p>
+          ) : (
+            <div className="deadline-list">
+              {stats.recentActivity.map((a) => {
+                const githubUrl =
+                  a.github_repo && a.github_number
+                    ? a.type === 'case'
+                      ? githubIssueUrl(a.github_repo, a.github_number)
+                      : githubMilestoneUrl(a.github_repo, a.github_number)
+                    : null;
+                return (
+                  <button
+                    key={`${a.type}-${a.id}`}
+                    className="deadline-row"
+                    onClick={() =>
+                      githubUrl
+                        ? window.open(githubUrl, '_blank', 'noopener,noreferrer')
+                        : navigate(`/projects/${a.type === 'project' ? a.id : a.project_id}`)
+                    }
+                  >
+                    <div>
+                      <div className="deadline-name">
+                        <Icon icon={a.type === 'project' ? faDiagramProject : faCodeBranch} marginRight />
+                        {a.title}
+                        {a.github_repo && (
+                          <Badge state="neutral" style={{ marginLeft: 8 }}>
+                            GitHub
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="muted">
+                        {a.type === 'project' ? 'Nytt prosjekt' : `Issue i ${a.project_name}`}
+                      </div>
+                    </div>
+                    <div className="deadline-when">
+                      <span>{timeAgo(a.created_at)}</span>
                     </div>
                   </button>
                 );

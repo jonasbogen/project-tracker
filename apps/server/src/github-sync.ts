@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import {
   getProjectIdByGithubMilestone,
   upsertCaseFromGithub,
@@ -204,4 +205,198 @@ export async function createGithubMilestone(
 
 export function githubRepoName(): string {
   return REPO;
+}
+
+export interface OpenMilestone {
+  number: number;
+  title: string;
+  due_on: string | null;
+  description: string | null;
+}
+
+// Open milestones in the source repo, for the "koble til eksisterende milestone"
+// picker on project creation — an alternative to always minting a new one. Read
+// live so a milestone created moments ago on GitHub is selectable immediately,
+// without waiting on the periodic pull. Empty (never throws) when GITHUB_TOKEN is
+// absent.
+export async function listOpenMilestones(): Promise<OpenMilestone[]> {
+  if (!process.env.GITHUB_TOKEN) return [];
+  try {
+    const milestones = await paginate<GithubMilestone>(`/repos/${ORG}/${REPO}/milestones?state=open`);
+    return milestones
+      .map((m) => ({ number: m.number, title: m.title, due_on: m.due_on, description: m.description }))
+      .sort((a, b) => a.title.localeCompare(b.title, 'nb'));
+  } catch (err) {
+    console.error('GitHub sync: failed to list open milestones', err);
+    return [];
+  }
+}
+
+// Verifies a GitHub webhook delivery's HMAC-SHA256 signature against
+// GITHUB_WEBHOOK_SECRET (the "Secret" configured on the repo's webhook), so the
+// endpoint that triggers an immediate sync can't be poked by anyone who finds the
+// URL. `signatureHeader` is the raw "x-hub-signature-256" header value
+// ("sha256=<hex>"); `payload` is the exact raw request body GitHub signed.
+export function verifyGithubWebhookSignature(
+  secret: string,
+  payload: string,
+  signatureHeader: string | null,
+): boolean {
+  if (!signatureHeader) return false;
+  const expected = `sha256=${createHmac('sha256', secret).update(payload).digest('hex')}`;
+  const expectedBuf = Buffer.from(expected);
+  const actualBuf = Buffer.from(signatureHeader);
+  return expectedBuf.length === actualBuf.length && timingSafeEqual(expectedBuf, actualBuf);
+}
+
+export interface NewIssueInput {
+  title: string;
+  description: string;
+  status: string;
+  owner: string;
+  frist: string | null;
+  kunde: string;
+  tjenesteparaply: string;
+  milestoneNumber: number | null;
+}
+
+// The app -> GitHub half of the two-way sync for cases: an issue created in the UI
+// becomes a real GitHub issue immediately, with the exact same "### Frist" /
+// "### Kunde" / "### Tjenesteparaply" / "### Beskrivelse" body sections the repo's
+// own "Ny Issue" form (.github/ISSUE_TEMPLATE/oppgave.yml) renders. That's enough
+// for the repo's own automation — "Auto-kobling" and "Sett prosjektfelt", both
+// triggered on any issues:opened event, form-submitted or not — to pick it up and
+// do the rest exactly as it would for a form submission: link it as a sub-issue
+// under the chosen Tjenesteparaply, set Kunde as a project field, set Frist as an
+// issue field. We only set the milestone directly (the template's "sidepanel"
+// concept), which that automation always leaves alone once it's already set.
+// A heading is omitted entirely when its value is empty, matching how the repo's
+// own automation treats a skipped optional field (never a literal placeholder
+// value, which it would otherwise try to act on). Returns null (never throws) when
+// GITHUB_TOKEN is absent or the GitHub call fails — issue creation in the app must
+// succeed either way.
+export async function createGithubIssue(
+  input: NewIssueInput,
+): Promise<{ number: number } | null> {
+  if (!process.env.GITHUB_TOKEN) return null;
+  try {
+    const sections: string[] = [];
+    if (input.frist) sections.push(`### Frist\n\n${input.frist}`);
+    if (input.kunde) sections.push(`### Kunde\n\n${input.kunde}`);
+    if (input.tjenesteparaply) sections.push(`### Tjenesteparaply\n\n${input.tjenesteparaply}`);
+    sections.push(`### Beskrivelse\n\n${input.description}`);
+
+    const body: Record<string, unknown> = {
+      title: input.title,
+      body: sections.join('\n\n'),
+    };
+    if (input.milestoneNumber) body.milestone = input.milestoneNumber;
+    if (input.owner) body.assignees = [input.owner];
+
+    const issue = await githubFetch<{ number: number }>(`/repos/${ORG}/${REPO}/issues`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    if (input.status === 'Løst') {
+      await githubFetch(`/repos/${ORG}/${REPO}/issues/${issue.number}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ state: 'closed' }),
+      });
+    }
+
+    return issue;
+  } catch (err) {
+    console.error('GitHub sync: failed to create issue', err);
+    return null;
+  }
+}
+
+export interface ServiceUmbrella {
+  number: number;
+  title: string;
+}
+
+// The "Tjenesteparaply" dropdown's options: every open issue labeled "tjeneste" in
+// the source repo — the same set the repo's own "Auto-kobling" workflow searches
+// against when linking a new issue as a sub-issue. Read live (not from the cached
+// list in oppgave.yml, which only refreshes on a schedule) so a brand-new umbrella
+// is selectable immediately. Empty (never throws) when GITHUB_TOKEN is absent.
+export async function listServiceUmbrellas(): Promise<ServiceUmbrella[]> {
+  if (!process.env.GITHUB_TOKEN) return [];
+  try {
+    const issues = await paginate<GithubIssue>(
+      `/repos/${ORG}/${REPO}/issues?labels=tjeneste&state=open`,
+    );
+    return issues
+      .filter((i) => !i.pull_request)
+      .map((i) => ({ number: i.number, title: i.title }))
+      .sort((a, b) => a.title.localeCompare(b.title, 'nb'));
+  } catch (err) {
+    console.error('GitHub sync: failed to list service umbrellas', err);
+    return [];
+  }
+}
+
+// Turns a label slug ("ng-nordic") into a display name ("NG Nordic"), the same way
+// the repo's own "Synk skjema" workflow does for its label-based Kunde fallback.
+function displayNameFromLabelSlug(slug: string): string {
+  const knownAcronyms: Record<string, string> = { ng: 'NG', sro: 'SRO', lan: 'LAN' };
+  return slug
+    .split('-')
+    .map((part) => knownAcronyms[part] ?? part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+// The canonical "Kunde" list lives in a Kunde single-select field on the org's
+// Projects V2 board (org project #318), which needs an org-Projects-scoped token
+// most GITHUB_TOKEN values don't have — same reason the repo's own "Synk skjema"
+// workflow reads it with a separate PROJECT_TOKEN secret. Set PROJECT_TOKEN here to
+// get the full list; without it this returns nothing and the caller falls back.
+async function fetchCustomerOptionsFromProjectField(): Promise<string[]> {
+  const token = process.env.PROJECT_TOKEN;
+  if (!token) return [];
+  try {
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        query:
+          'query($org:String!,$num:Int!,$felt:String!){organization(login:$org){projectV2(number:$num){field(name:$felt){... on ProjectV2SingleSelectField{options{name}}}}}}',
+        variables: { org: ORG, num: 318, felt: 'Kunde' },
+      }),
+    });
+    const json = (await res.json()) as {
+      data?: { organization?: { projectV2?: { field?: { options?: { name: string }[] } } } };
+    };
+    return json.data?.organization?.projectV2?.field?.options?.map((o) => o.name) ?? [];
+  } catch (err) {
+    console.error('GitHub sync: failed to read the Kunde project field', err);
+    return [];
+  }
+}
+
+// The "Synk skjema" workflow's own fallback when it has no PROJECT_TOKEN: repo
+// labels described exactly "Kunde", slug-cased names turned back into display names.
+async function fetchCustomerOptionsFromLabels(): Promise<string[]> {
+  try {
+    const labels = await paginate<{ name: string; description: string | null }>(
+      `/repos/${ORG}/${REPO}/labels`,
+    );
+    return labels.filter((l) => l.description === 'Kunde').map((l) => displayNameFromLabelSlug(l.name));
+  } catch (err) {
+    console.error('GitHub sync: failed to list customer labels', err);
+    return [];
+  }
+}
+
+// The "Kunde" dropdown's options, read live with the exact same fallback chain the
+// repo's own "Synk skjema" workflow uses to regenerate the real issue form: the org
+// Projects V2 "Kunde" field when a PROJECT_TOKEN is configured, else repo labels
+// described "Kunde". Empty (never throws) when GITHUB_TOKEN is absent.
+export async function listCustomerOptions(): Promise<string[]> {
+  if (!process.env.GITHUB_TOKEN) return [];
+  const fromProjectField = await fetchCustomerOptionsFromProjectField();
+  const options = fromProjectField.length ? fromProjectField : await fetchCustomerOptionsFromLabels();
+  return [...options].sort((a, b) => a.localeCompare(b, 'nb'));
 }

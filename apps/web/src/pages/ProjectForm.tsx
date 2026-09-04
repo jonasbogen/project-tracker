@@ -8,7 +8,7 @@ import TextArea from '@intility/bifrost-react/TextArea';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import { api, type ProjectInput } from '../api';
+import { api, type OpenMilestone, type ProjectInput } from '../api';
 
 interface Option {
   value: string;
@@ -33,6 +33,8 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
 
   const [form, setForm] = useState<ProjectInput>(EMPTY);
   const [statuses, setStatuses] = useState<string[]>([]);
+  const [milestones, setMilestones] = useState<OpenMilestone[]>([]);
+  const [linkMilestone, setLinkMilestone] = useState<OpenMilestone | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -56,6 +58,7 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
           });
         } else {
           setForm((f) => ({ ...f, status: meta.projectStatuses[0] ?? '' }));
+          setMilestones(await api.listOpenMilestones());
         }
       } catch (e) {
         setError((e as Error).message);
@@ -78,7 +81,7 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
     try {
       const saved =
         mode === 'create'
-          ? await api.createProject(form)
+          ? await api.createProject(form, linkMilestone?.number)
           : await api.updateProject(projectId, form);
       navigate(`/projects/${saved.id}`);
     } catch (err) {
@@ -115,6 +118,29 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
 
       <Card padding="medium">
         <form onSubmit={handleSubmit} className="stack-sm">
+          {mode === 'create' && milestones.length > 0 && (
+            <Select
+              label="Koble til eksisterende milestone"
+              optional
+              options={milestones.map((m) => ({ value: String(m.number), label: m.title }))}
+              value={linkMilestone ? { value: String(linkMilestone.number), label: linkMilestone.title } : null}
+              onChange={(opt) => {
+                const value = (opt as Option | null)?.value;
+                const selected = value ? milestones.find((m) => m.number === Number(value)) ?? null : null;
+                setLinkMilestone(selected);
+                if (selected) {
+                  setForm((f) => ({
+                    ...f,
+                    name: selected.title,
+                    end_date: selected.due_on ? selected.due_on.slice(0, 10) : f.end_date,
+                    challenges: selected.description ?? f.challenges,
+                  }));
+                }
+              }}
+              isClearable
+              placeholder="La stå tom for å opprette en ny milestone på GitHub"
+            />
+          )}
           <div className="form-grid">
             <Input
               label="Navn"
