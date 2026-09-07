@@ -348,6 +348,19 @@
   flex-shrink: 0;
 }
 
+.company-logo-image {
+  background: #fff;
+  padding: 3px;
+  box-shadow: inset 0 0 0 1px var(--bfc-base-dimmed);
+}
+
+.company-logo-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+}
+
 /* Calendar */
 
 .calendar-header {
