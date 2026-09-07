@@ -63,11 +63,15 @@ export interface RepoTeam {
   name: string;
 }
 
-export interface OpenPullRequest {
+export interface RecentPullRequest {
   number: number;
   title: string;
   html_url: string;
   draft: boolean;
+  state: 'open' | 'closed';
+  merged_at: string | null;
+  updated_at: string;
+  user: string;
 }
 
 export interface MilestoneBoardIssue {
@@ -201,7 +205,7 @@ export const api = {
   listOpenMilestones: () => request<OpenMilestone[]>('/api/milestones'),
   listRepoTeams: () => request<RepoTeam[]>('/api/repo-teams'),
   listTeamMembers: (slug: string) => request<Assignee[]>(`/api/repo-teams/${encodeURIComponent(slug)}/members`),
-  listOpenPullRequests: () => request<OpenPullRequest[]>('/api/pull-requests'),
+  listRecentPullRequests: () => request<RecentPullRequest[]>('/api/pull-requests'),
   getStats: () => request<DashboardStats>('/api/stats'),
   listCases: (filters: { projectId?: number; owner?: string } = {}) => {
     const params = new URLSearchParams();

@@ -564,6 +564,23 @@
   background: var(--bfc-base-2);
 }
 
+.pr-bell-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pr-bell-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-bell-item-meta {
+  font-size: 0.8125rem;
+}
+
 /* Chat widget - floating, fixed to the viewport, mounted once at the app
    root so it survives page navigation. */
 

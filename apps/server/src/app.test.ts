@@ -33,7 +33,7 @@ vi.mock('./github-sync.js', () => ({
   listCustomerOptions: vi.fn().mockResolvedValue([]),
   listServiceUmbrellas: vi.fn().mockResolvedValue([]),
   listOpenMilestones: vi.fn().mockResolvedValue([]),
-  listOpenPullRequests: vi.fn().mockResolvedValue([]),
+  listRecentPullRequests: vi.fn().mockResolvedValue([]),
   getMilestoneBoard: vi.fn().mockResolvedValue({ statusCounts: [], groups: [] }),
   listRepoTeams: vi.fn().mockResolvedValue([]),
   listTeamMembers: vi.fn().mockResolvedValue([]),
@@ -547,25 +547,20 @@ describe('project-tracker API', () => {
   });
 
   it('GET /api/pull-requests returns the github-sync result', async () => {
-    vi.mocked(githubSync.listOpenPullRequests).mockResolvedValue([
-      { number: 12, title: 'Fiks synk', html_url: 'https://github.com/intility/Prosjektmappe/pull/12', draft: false },
-    ]);
+    const pull = {
+      number: 12,
+      title: 'Fiks synk',
+      html_url: 'https://github.com/intility/Prosjektmappe/pull/12',
+      draft: false,
+      state: 'closed' as const,
+      merged_at: '2026-09-04T13:45:41Z',
+      updated_at: '2026-09-04T13:45:41Z',
+      user: 'endsan',
+    };
+    vi.mocked(githubSync.listRecentPullRequests).mockResolvedValue([pull]);
     const res = await app.request('/api/pull-requests');
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual([
-      { number: 12, title: 'Fiks synk', html_url: 'https://github.com/intility/Prosjektmappe/pull/12', draft: false },
-    ]);
-  });
-
-  it('GET /api/pull-requests returns the github-sync result', async () => {
-    vi.mocked(githubSync.listOpenPullRequests).mockResolvedValue([
-      { number: 12, title: 'Fix noe', html_url: 'https://github.com/x/y/pull/12', draft: false },
-    ]);
-    const res = await app.request('/api/pull-requests');
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual([
-      { number: 12, title: 'Fix noe', html_url: 'https://github.com/x/y/pull/12', draft: false },
-    ]);
+    expect(await res.json()).toEqual([pull]);
   });
 
   it('unknown /api routes return JSON 404', async () => {

@@ -9,7 +9,7 @@ import {
   listActiveIssueOwners,
   listCustomerOptions,
   listOpenMilestones,
-  listOpenPullRequests,
+  listRecentPullRequests,
   listRepoTeams,
   listServiceUmbrellas,
   listTeamMembers,
@@ -195,10 +195,11 @@ api.get('/milestones', async (c) => {
   return c.json(milestones.filter((m) => !used.has(m.number)));
 });
 
-// GET /api/pull-requests — open pull requests on the source repo, for the "bell"
-// notification on the dashboard.
+// GET /api/pull-requests — the most recently updated pull requests (open and
+// recently merged/closed) on the source repo, for the "bell" notification on
+// the dashboard.
 api.get('/pull-requests', async (c) => {
-  const pulls = await listOpenPullRequests();
+  const pulls = await listRecentPullRequests();
   return c.json(pulls);
 });
 

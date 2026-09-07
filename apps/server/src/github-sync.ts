@@ -249,23 +249,55 @@ export function githubRepoName(): string {
   return REPO;
 }
 
-export interface OpenPullRequest {
+export interface RecentPullRequest {
   number: number;
   title: string;
   html_url: string;
   draft: boolean;
+  state: 'open' | 'closed';
+  merged_at: string | null;
+  updated_at: string;
+  user: string;
 }
 
-// Open pull requests on the source repo, for the "bell" notification on the
-// dashboard — a nudge that something is ready to review/merge on GitHub, not
-// something this app can act on itself. Empty (never throws) when GITHUB_TOKEN
-// is absent.
-export async function listOpenPullRequests(): Promise<OpenPullRequest[]> {
+interface RawPullRequest {
+  number: number;
+  title: string;
+  html_url: string;
+  draft: boolean;
+  state: 'open' | 'closed';
+  merged_at: string | null;
+  updated_at: string;
+  user: { login: string } | null;
+}
+
+// The most recently updated pull requests on the source repo — open ones (a
+// nudge that something is ready to review/merge on GitHub) and recently
+// merged/closed ones (so "nothing to review" doesn't read as "nothing
+// happened"), for the "bell" notification on the dashboard. Not something this
+// app can act on itself — every entry just links out to GitHub. A single
+// request capped at `limit`, not the usual paginate-everything helper: with
+// state=all a repo's full PR history could be hundreds of pages, and only the
+// most recent handful matter here. Empty (never throws) when GITHUB_TOKEN is
+// absent.
+export async function listRecentPullRequests(limit = 10): Promise<RecentPullRequest[]> {
   if (!process.env.GITHUB_TOKEN) return [];
   try {
-    return await paginate<OpenPullRequest>(`/repos/${ORG}/${REPO}/pulls?state=open`);
+    const pulls = await githubFetch<RawPullRequest[]>(
+      `/repos/${ORG}/${REPO}/pulls?state=all&sort=updated&direction=desc&per_page=${limit}`,
+    );
+    return pulls.map((p) => ({
+      number: p.number,
+      title: p.title,
+      html_url: p.html_url,
+      draft: p.draft,
+      state: p.state,
+      merged_at: p.merged_at,
+      updated_at: p.updated_at,
+      user: p.user?.login ?? '',
+    }));
   } catch (err) {
-    console.error('GitHub sync: failed to list open pull requests', err);
+    console.error('GitHub sync: failed to list recent pull requests', err);
     return [];
   }
 }
