@@ -69,25 +69,25 @@ export default function ChatWidget() {
       <button
         className="chat-widget-fab"
         onClick={() => setOpen(true)}
-        aria-label="Åpne Chat bot"
+        aria-label="Åpne Chat bOT"
       >
         <Icon icon={faRobot} size="lg" />
-        <span>Chat bot</span>
+        <span>Chat bOT</span>
       </button>
     );
   }
 
   return (
-    <div className="chat-widget-panel" role="dialog" aria-label="Chat bot">
+    <div className="chat-widget-panel" role="dialog" aria-label="Chat bOT">
       <div className="chat-widget-header">
         <span className="chat-widget-title">
           <Icon icon={faRobot} marginRight />
-          Chat bot
+          Chat bOT
         </span>
         <button
           className="chat-widget-close"
           onClick={() => setOpen(false)}
-          aria-label="Lukk Chat bot"
+          aria-label="Lukk Chat bOT"
         >
           <Icon icon={faXmark} />
         </button>

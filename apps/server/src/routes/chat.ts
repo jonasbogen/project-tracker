@@ -120,12 +120,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
   }
 }
 
-// This is a general-purpose assistant ("Chat bot"), not domain-locked - it can
+// This is a general-purpose assistant ("Chat bOT"), not domain-locked - it can
 // answer anything, not just questions about this tool. The tools below are
 // just extra reach into this specific tool's live data; use them whenever a
 // question is actually about a project, case, or person in here, but never
 // treat them as the boundary of what you're allowed to discuss.
-const SYSTEM_PROMPT = `Du er en hjelpsom AI-assistent integrert som "Chat bot" i "Prosjektsporing" - et internt verktøy for Intility som sporer OT/Edge Platform-kundeprosjekter.
+const SYSTEM_PROMPT = `Du er en hjelpsom AI-assistent integrert som "Chat bOT" i "Prosjektsporing" - et internt verktøy for Intility som sporer OT/Edge Platform-kundeprosjekter.
 
 Du kan svare på hva som helst - generell kunnskap, kode, forklaringer, skriving, resonnering, alt - ikke bare spørsmål om dette verktøyet.
 

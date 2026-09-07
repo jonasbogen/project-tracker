@@ -31,6 +31,39 @@ interface Option {
   label: string;
 }
 
+// Strip diacritics/punctuation and drop short filler words, so "Bytt switcher i
+// nettverket" can match an option titled "Network" on shared meaningful words.
+function significantWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 3);
+}
+
+// Best-guess match for a not-yet-chosen category field: the option whose own
+// words have the highest share appearing in the title, so a short, specific
+// option name (e.g. "Network") isn't drowned out by one long shared word.
+function suggestFromTitle<T>(title: string, options: T[], labelOf: (o: T) => string): string {
+  const titleWords = new Set(significantWords(title));
+  if (titleWords.size === 0) return '';
+  let best = '';
+  let bestScore = 0;
+  for (const option of options) {
+    const label = labelOf(option);
+    const optionWords = significantWords(label);
+    if (optionWords.length === 0) continue;
+    const shared = optionWords.filter((w) => titleWords.has(w)).length;
+    const score = shared / optionWords.length;
+    if (score > bestScore) {
+      bestScore = score;
+      best = label;
+    }
+  }
+  return bestScore > 0 ? best : '';
+}
+
 export default function ProjectDetail() {
   const { id } = useParams();
   const projectId = Number(id);
@@ -56,8 +89,23 @@ export default function ProjectDetail() {
   const [kunde, setKunde] = useState('');
   const [tjenesteparaply, setTjenesteparaply] = useState('');
   const [label, setLabel] = useState('');
+  const [tjenesteparaplyTouched, setTjenesteparaplyTouched] = useState(false);
+  const [labelTouched, setLabelTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Auto-suggest Tjenesteparaply/Label from the title's own words, as long as
+  // the person hasn't picked one themselves - a manual choice always wins and
+  // is never overwritten while they keep typing the title.
+  useEffect(() => {
+    if (tjenesteparaplyTouched) return;
+    setTjenesteparaply(suggestFromTitle(title, serviceUmbrellas, (u) => u.title));
+  }, [title, serviceUmbrellas, tjenesteparaplyTouched]);
+
+  useEffect(() => {
+    if (labelTouched) return;
+    setLabel(suggestFromTitle(title, repoLabels, (l) => l.name));
+  }, [title, repoLabels, labelTouched]);
 
   async function load() {
     setLoading(true);
@@ -146,6 +194,8 @@ export default function ProjectDetail() {
       setOwner('');
       setTjenesteparaply('');
       setLabel('');
+      setTjenesteparaplyTouched(false);
+      setLabelTouched(false);
       await load();
     } catch (err) {
       setFormError((err as Error).message);
@@ -485,43 +535,65 @@ export default function ProjectDetail() {
                 onChange={(e) => setKunde(e.target.value)}
               />
             )}
-            {serviceUmbrellas.length > 0 ? (
-              <Select
-                label="Tjenesteparaply"
-                required
-                options={serviceUmbrellas.map((u) => ({ value: u.title, label: u.title }))}
-                value={tjenesteparaply ? { value: tjenesteparaply, label: tjenesteparaply } : null}
-                onChange={(opt) => setTjenesteparaply((opt as Option | null)?.value ?? '')}
-                placeholder="Velg tjenesteparaply"
-              />
-            ) : (
-              <Input
-                label="Tjenesteparaply"
-                required
-                value={tjenesteparaply}
-                onChange={(e) => setTjenesteparaply(e.target.value)}
-                placeholder="F.eks. Network"
-              />
-            )}
-            {repoLabels.length > 0 ? (
-              <Select
-                label="Label"
-                optional
-                options={repoLabels.map((l) => ({ value: l.name, label: l.name }))}
-                value={label ? { value: label, label } : null}
-                onChange={(opt) => setLabel((opt as Option | null)?.value ?? '')}
-                isClearable
-                placeholder="Velg label fra GitHub"
-              />
-            ) : (
-              <Input
-                label="Label"
-                optional
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder="Navn på GitHub-label"
-              />
-            )}
+            <div>
+              {serviceUmbrellas.length > 0 ? (
+                <Select
+                  label="Tjenesteparaply"
+                  required
+                  options={serviceUmbrellas.map((u) => ({ value: u.title, label: u.title }))}
+                  value={tjenesteparaply ? { value: tjenesteparaply, label: tjenesteparaply } : null}
+                  onChange={(opt) => {
+                    setTjenesteparaplyTouched(true);
+                    setTjenesteparaply((opt as Option | null)?.value ?? '');
+                  }}
+                  placeholder="Velg tjenesteparaply"
+                />
+              ) : (
+                <Input
+                  label="Tjenesteparaply"
+                  required
+                  value={tjenesteparaply}
+                  onChange={(e) => {
+                    setTjenesteparaplyTouched(true);
+                    setTjenesteparaply(e.target.value);
+                  }}
+                  placeholder="F.eks. Network"
+                />
+              )}
+              {!tjenesteparaplyTouched && tjenesteparaply && (
+                <span className="muted form-field-hint">Foreslått fra tittelen</span>
+              )}
+            </div>
+            <div>
+              {repoLabels.length > 0 ? (
+                <Select
+                  label="Label"
+                  optional
+                  options={repoLabels.map((l) => ({ value: l.name, label: l.name }))}
+                  value={label ? { value: label, label } : null}
+                  onChange={(opt) => {
+                    setLabelTouched(true);
+                    setLabel((opt as Option | null)?.value ?? '');
+                  }}
+                  isClearable
+                  placeholder="Velg label fra GitHub"
+                />
+              ) : (
+                <Input
+                  label="Label"
+                  optional
+                  value={label}
+                  onChange={(e) => {
+                    setLabelTouched(true);
+                    setLabel(e.target.value);
+                  }}
+                  placeholder="Navn på GitHub-label"
+                />
+              )}
+              {!labelTouched && label && (
+                <span className="muted form-field-hint">Foreslått fra tittelen</span>
+              )}
+            </div>
           </div>
           <TextArea
             label="Beskrivelse"
