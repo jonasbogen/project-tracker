@@ -81,7 +81,7 @@ export default function Dashboard() {
       <HeroBackground />
       <div className="stack">
         <div className="page-header">
-          <h1 className="bf-h1">Oversikt</h1>
+          <h1 className="bf-h1">OT Projects</h1>
           <PullRequestBell />
         </div>
 

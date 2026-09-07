@@ -2,9 +2,11 @@ import { pool } from './db.js';
 
 export const PROJECT_STATUSES = ['Planlagt', 'Pågår', 'Forsinket', 'Fullført'] as const;
 export const CASE_STATUSES = ['Åpen', 'Under arbeid', 'Løst'] as const;
+export const OFFER_STATUSES = ['Sendt tilbud', 'Godkjent', 'Levert', 'Fakturert'] as const;
 
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 export type CaseStatus = (typeof CASE_STATUSES)[number];
+export type OfferStatus = (typeof OFFER_STATUSES)[number];
 
 export interface Project {
   id: number;
@@ -532,4 +534,82 @@ export async function updatePrice(id: number, data: PriceInput): Promise<Price |
 
 export async function deletePrice(id: number): Promise<void> {
   await pool.query('DELETE FROM prices WHERE id = $1', [id]);
+}
+
+export interface Offer {
+  id: number;
+  customer: string;
+  project_id: number | null;
+  title: string;
+  description: string;
+  amount: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OfferWithProject extends Offer {
+  project_name: string | null;
+}
+
+export interface OfferInput {
+  customer: string;
+  project_id?: number | null;
+  title: string;
+  description?: string;
+  amount: number;
+  status?: string;
+}
+
+// Every quote in the funnel, with the linked project's name (if any) for display.
+// Backs the "Tilbud" page - the step where the price list meets a customer.
+export async function listOffers(): Promise<OfferWithProject[]> {
+  const { rows } = await pool.query<OfferWithProject>(
+    `SELECT o.*, p.name AS project_name
+     FROM offers o
+     LEFT JOIN projects p ON p.id = o.project_id
+     ORDER BY o.created_at DESC`,
+  );
+  return rows;
+}
+
+export async function createOffer(data: OfferInput): Promise<Offer> {
+  const { rows } = await pool.query<Offer>(
+    `INSERT INTO offers (customer, project_id, title, description, amount, status)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING *`,
+    [
+      data.customer,
+      data.project_id || null,
+      data.title,
+      data.description || '',
+      data.amount,
+      data.status || 'Sendt tilbud',
+    ],
+  );
+  return rows[0];
+}
+
+export async function updateOffer(id: number, data: OfferInput): Promise<Offer | undefined> {
+  const { rows } = await pool.query<Offer>(
+    `UPDATE offers
+     SET customer = $1, project_id = $2, title = $3, description = $4,
+         amount = $5, status = $6, updated_at = now()
+     WHERE id = $7
+     RETURNING *`,
+    [
+      data.customer,
+      data.project_id || null,
+      data.title,
+      data.description || '',
+      data.amount,
+      data.status || 'Sendt tilbud',
+      id,
+    ],
+  );
+  return rows[0];
+}
+
+export async function deleteOffer(id: number): Promise<void> {
+  await pool.query('DELETE FROM offers WHERE id = $1', [id]);
 }

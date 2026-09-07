@@ -84,6 +84,33 @@ export interface RecentPullRequestsResult {
   error: string | null;
 }
 
+export interface WeeklyReport {
+  number: number;
+  title: string;
+  html_url: string;
+  created_at: string;
+  body: string;
+}
+
+export interface WeeklyReportsResult {
+  reports: WeeklyReport[];
+  error: string | null;
+}
+
+export interface StatusdeckRun {
+  id: number;
+  created_at: string;
+  status: string;
+  conclusion: string | null;
+  html_url: string;
+  artifactExpired: boolean | null;
+}
+
+export interface StatusdeckRunsResult {
+  runs: StatusdeckRun[];
+  error: string | null;
+}
+
 export interface MilestoneBoardIssue {
   number: number;
   title: string;
@@ -173,6 +200,29 @@ export interface CaseInput {
 export interface Meta {
   projectStatuses: string[];
   caseStatuses: string[];
+  offerStatuses: string[];
+}
+
+export interface Offer {
+  id: number;
+  customer: string;
+  project_id: number | null;
+  project_name: string | null;
+  title: string;
+  description: string;
+  amount: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OfferInput {
+  customer: string;
+  project_id?: number | null;
+  title: string;
+  description?: string;
+  amount: number;
+  status?: string;
 }
 
 export interface ChatMessage {
@@ -220,6 +270,8 @@ export const api = {
   listRepoLabels: () => request<RepoLabel[]>('/api/repo-labels'),
   listTeamMembers: (slug: string) => request<Assignee[]>(`/api/repo-teams/${encodeURIComponent(slug)}/members`),
   listRecentPullRequests: () => request<RecentPullRequestsResult>('/api/pull-requests'),
+  listWeeklyReports: () => request<WeeklyReportsResult>('/api/reports/weekly'),
+  listStatusdeckRuns: () => request<StatusdeckRunsResult>('/api/reports/statusdeck'),
   getStats: () => request<DashboardStats>('/api/stats'),
   listCases: (filters: { projectId?: number; owner?: string } = {}) => {
     const params = new URLSearchParams();
@@ -252,6 +304,12 @@ export const api = {
     request<Case>(`/api/projects/${projectId}/cases`, { method: 'POST', body: JSON.stringify(data) }),
   deleteCase: (projectId: number, caseId: number) =>
     request<void>(`/api/projects/${projectId}/cases/${caseId}`, { method: 'DELETE' }),
+  listOffers: () => request<Offer[]>('/api/offers'),
+  createOffer: (data: OfferInput) =>
+    request<Offer>('/api/offers', { method: 'POST', body: JSON.stringify(data) }),
+  updateOffer: (id: number, data: OfferInput) =>
+    request<Offer>(`/api/offers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteOffer: (id: number) => request<void>(`/api/offers/${id}`, { method: 'DELETE' }),
   // Streams the assistant's reply as plain text chunks via `onChunk`, resolving
   // once the stream ends. Not routed through `request()`: this is a text stream,
   // not a single JSON body.

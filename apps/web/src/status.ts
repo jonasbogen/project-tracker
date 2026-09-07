@@ -13,12 +13,29 @@ const CASE_BADGE: Record<string, BadgeState> = {
   Løst: 'success',
 };
 
+const OFFER_BADGE: Record<string, BadgeState> = {
+  'Sendt tilbud': 'neutral',
+  Godkjent: 'chill',
+  Levert: 'attn',
+  Fakturert: 'success',
+};
+
 export function projectBadgeState(status: string): BadgeState {
   return PROJECT_BADGE[status] ?? 'default';
 }
 
 export function caseBadgeState(status: string): BadgeState {
   return CASE_BADGE[status] ?? 'default';
+}
+
+export function offerBadgeState(status: string): BadgeState {
+  return OFFER_BADGE[status] ?? 'default';
+}
+
+export function formatAmount(amount: string): string {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return amount;
+  return `${n.toLocaleString('nb-NO')} kr`;
 }
 
 const BADGE_STATE_COLOR: Record<BadgeState, string> = {

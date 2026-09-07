@@ -701,3 +701,112 @@ export async function getMilestoneBoard(milestoneNumber: number): Promise<Milest
     return { statusCounts: [], groups: [] };
   }
 }
+
+export interface WeeklyReport {
+  number: number;
+  title: string;
+  html_url: string;
+  created_at: string;
+  body: string;
+}
+
+export interface WeeklyReportsResult {
+  reports: WeeklyReport[];
+  error: string | null;
+}
+
+// "Ukesrapport" - one plain GitHub issue per week (.github/workflows/ukesrapport.yml),
+// posted every Friday and never closed. Search (not the milestone-scoped sync, which
+// skips issues without a milestone entirely) is the simplest way to find the last
+// `limit` of them regardless of state. Empty (never throws) when GITHUB_TOKEN is
+// absent; a real fetch failure is surfaced as `error` rather than hidden as empty.
+export async function listWeeklyReports(limit = 12): Promise<WeeklyReportsResult> {
+  if (!process.env.GITHUB_TOKEN) return { reports: [], error: null };
+  try {
+    const query = `repo:${ORG}/${REPO} in:title Ukesrapport type:issue`;
+    const result = await githubFetch<{
+      items: { number: number; title: string; html_url: string; created_at: string; body: string | null }[];
+    }>(`/search/issues?q=${encodeURIComponent(query)}&sort=created&order=desc&per_page=${limit}`);
+    return {
+      error: null,
+      reports: result.items.map((i) => ({
+        number: i.number,
+        title: i.title,
+        html_url: i.html_url,
+        created_at: i.created_at,
+        body: i.body ?? '',
+      })),
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Ukjent feil';
+    console.error('GitHub sync: failed to list weekly reports', err);
+    return { reports: [], error: message };
+  }
+}
+
+export interface StatusdeckRun {
+  id: number;
+  created_at: string;
+  status: string;
+  conclusion: string | null;
+  html_url: string;
+  // null when no "statusdeck-uke" artifact was found at all (e.g. a failed run) -
+  // distinct from `false`, which means the artifact exists and is still downloadable.
+  artifactExpired: boolean | null;
+}
+
+export interface StatusdeckRunsResult {
+  runs: StatusdeckRun[];
+  error: string | null;
+}
+
+// "Statusdeck" - a weekly workflow run (.github/workflows/statusdeck.yml) whose
+// pptx/md/json output is a run *artifact*, not a repo file, and expires after its
+// own `retention-days: 30` - well short of the 12 weeks of history wanted here. The
+// run list itself has no such expiry, so older weeks still show up here (with a
+// link to GitHub) even once their artifact is gone; only `artifactExpired` reflects
+// the artifact's own life span. Needs a token with the Actions: Read permission - a
+// plain Issues-scoped GITHUB_TOKEN gets a 403 here, surfaced as `error`.
+export async function listStatusdeckRuns(limit = 12): Promise<StatusdeckRunsResult> {
+  if (!process.env.GITHUB_TOKEN) return { runs: [], error: null };
+  try {
+    const runsResult = await githubFetch<{
+      workflow_runs: {
+        id: number;
+        created_at: string;
+        status: string;
+        conclusion: string | null;
+        html_url: string;
+      }[];
+    }>(`/repos/${ORG}/${REPO}/actions/workflows/statusdeck.yml/runs?per_page=${limit}`);
+
+    const runs = await Promise.all(
+      runsResult.workflow_runs.map(async (run) => {
+        let artifactExpired: boolean | null = null;
+        try {
+          const artifacts = await githubFetch<{ artifacts: { name: string; expired: boolean }[] }>(
+            `/repos/${ORG}/${REPO}/actions/runs/${run.id}/artifacts`,
+          );
+          const artifact = artifacts.artifacts.find((a) => a.name === 'statusdeck-uke');
+          if (artifact) artifactExpired = artifact.expired;
+        } catch {
+          // Leave artifactExpired null - the run itself still shows.
+        }
+        return {
+          id: run.id,
+          created_at: run.created_at,
+          status: run.status,
+          conclusion: run.conclusion,
+          html_url: run.html_url,
+          artifactExpired,
+        };
+      }),
+    );
+
+    return { error: null, runs };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Ukjent feil';
+    console.error('GitHub sync: failed to list statusdeck runs', err);
+    return { runs: [], error: message };
+  }
+}

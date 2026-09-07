@@ -1014,3 +1014,34 @@
   align-items: center;
   gap: 6px;
 }
+
+/* Rapporter (weekly report / statusdeck archive) */
+
+.report-item {
+  border: 1px solid var(--bfc-base-3);
+  border-radius: var(--bf-radius-m);
+  padding: 8px 12px;
+}
+
+.report-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 0;
+}
+
+.report-item-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.weekly-report-body {
+  padding-top: 8px;
+  overflow-x: auto;
+}
+
+.weekly-report-body table {
+  margin-bottom: 16px;
+}

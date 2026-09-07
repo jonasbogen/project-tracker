@@ -13,7 +13,9 @@ import {
   listRepoLabels,
   listRepoTeams,
   listServiceUmbrellas,
+  listStatusdeckRuns,
   listTeamMembers,
+  listWeeklyReports,
   syncGithubProjects,
   verifyGithubWebhookSignature,
 } from '../github-sync.js';
@@ -57,6 +59,7 @@ api.get('/meta', (c) =>
   c.json({
     projectStatuses: repo.PROJECT_STATUSES,
     caseStatuses: repo.CASE_STATUSES,
+    offerStatuses: repo.OFFER_STATUSES,
   }),
 );
 
@@ -215,6 +218,19 @@ api.get('/milestones', async (c) => {
 // the dashboard.
 api.get('/pull-requests', async (c) => {
   const result = await listRecentPullRequests();
+  return c.json(result);
+});
+
+// GET /api/reports/weekly — the last 12 "Ukesrapport" issues, for the Rapporter archive.
+api.get('/reports/weekly', async (c) => {
+  const result = await listWeeklyReports();
+  return c.json(result);
+});
+
+// GET /api/reports/statusdeck — the last 12 Statusdeck workflow runs, for the
+// Rapporter archive.
+api.get('/reports/statusdeck', async (c) => {
+  const result = await listStatusdeckRuns();
   return c.json(result);
 });
 
@@ -385,5 +401,60 @@ api.delete('/projects/:id/cases/:caseId', async (c) => {
   const caseId = parseId(c.req.param('caseId'));
   if (id === null || caseId === null) return c.json({ error: 'Ugyldig id.' }, 400);
   await repo.deleteCase(id, caseId);
+  return c.body(null, 204);
+});
+
+function offerFromBody(body: Record<string, unknown>): repo.OfferInput | { error: string } {
+  const customer = String(body.customer ?? '').trim();
+  const title = String(body.title ?? '').trim();
+  const amount = Number(body.amount);
+  const status = String(body.status ?? '').trim();
+  if (!customer) return { error: 'Kunde er påkrevd.' };
+  if (!title) return { error: 'Tittel er påkrevd.' };
+  if (!Number.isFinite(amount) || amount < 0) return { error: 'Ugyldig beløp.' };
+  if (status && !repo.OFFER_STATUSES.includes(status as never)) return { error: 'Ugyldig status.' };
+  const projectId = parseId(body.project_id != null ? String(body.project_id) : undefined);
+  return {
+    customer,
+    title,
+    amount,
+    status: status || undefined,
+    description: String(body.description ?? '').trim(),
+    project_id: projectId,
+  };
+}
+
+// GET /api/offers — every quote in the funnel, newest first.
+api.get('/offers', async (c) => {
+  const offers = await repo.listOffers();
+  return c.json(offers);
+});
+
+// POST /api/offers — add a quote to the funnel.
+api.post('/offers', async (c) => {
+  const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
+  const data = offerFromBody(body);
+  if ('error' in data) return c.json({ error: data.error }, 400);
+  const offer = await repo.createOffer(data);
+  return c.json(offer, 201);
+});
+
+// PUT /api/offers/:id — edit a quote, including moving it to the next funnel stage.
+api.put('/offers/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
+  const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
+  const data = offerFromBody(body);
+  if ('error' in data) return c.json({ error: data.error }, 400);
+  const offer = await repo.updateOffer(id, data);
+  if (!offer) return c.json({ error: 'Fant ikke tilbudet.' }, 404);
+  return c.json(offer);
+});
+
+// DELETE /api/offers/:id — remove a quote.
+api.delete('/offers/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
+  await repo.deleteOffer(id);
   return c.body(null, 204);
 });

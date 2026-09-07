@@ -64,6 +64,22 @@ CREATE TABLE IF NOT EXISTS prices (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- The step where the price list meets a customer: one row per quote, moved
+-- through the funnel (Sendt tilbud -> Godkjent -> Levert -> Fakturert) as the
+-- deal progresses. project_id is optional - a quote can exist before there's a
+-- project yet, and stays put (never cascades) if the project is later deleted.
+CREATE TABLE IF NOT EXISTS offers (
+  id SERIAL PRIMARY KEY,
+  customer TEXT NOT NULL,
+  project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  amount NUMERIC(12, 2) NOT NULL,
+  status TEXT NOT NULL DEFAULT 'Sendt tilbud',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- One-off migrations that must run exactly once, ever — never on every
 -- startup like the ALTER TABLEs above. Tracked by key so each runs once.
 CREATE TABLE IF NOT EXISTS schema_migrations (

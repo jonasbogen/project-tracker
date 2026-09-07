@@ -5,11 +5,15 @@ import Inline from '@intility/bifrost-react/Inline';
 import {
   faBuilding,
   faDiagramProject,
+  faFileInvoiceDollar,
+  faFileLines,
   faGaugeHigh,
+  faListCheck,
   faTags,
   faUsers,
 } from '@fortawesome/free-solid-svg-icons';
 import Dashboard from './pages/Dashboard';
+import MyTasks from './pages/MyTasks';
 import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
 import ProjectForm from './pages/ProjectForm';
@@ -18,6 +22,8 @@ import TeamMember from './pages/TeamMember';
 import Board from './pages/Board';
 import Customers from './pages/Customers';
 import Prices from './pages/Prices';
+import Offers from './pages/Offers';
+import Reports from './pages/Reports';
 import NotFound from './pages/NotFound';
 import ChatWidget from './components/ChatWidget';
 
@@ -39,10 +45,13 @@ export default function App() {
       side={
         <>
           <NavLink to="/" end>
-            <Nav.Item icon={faGaugeHigh}>Oversikt</Nav.Item>
+            <Nav.Item icon={faGaugeHigh}>OT Projects</Nav.Item>
+          </NavLink>
+          <NavLink to="/mine-oppgaver">
+            <Nav.Item icon={faListCheck}>Mine oppgaver</Nav.Item>
           </NavLink>
           <NavLink to="/projects">
-            <Nav.Item icon={faDiagramProject}>Milestones</Nav.Item>
+            <Nav.Item icon={faDiagramProject}>Prosjekter</Nav.Item>
           </NavLink>
           <NavLink to="/team">
             <Nav.Item icon={faUsers}>Team</Nav.Item>
@@ -53,12 +62,19 @@ export default function App() {
           <NavLink to="/prices">
             <Nav.Item icon={faTags}>Prisliste</Nav.Item>
           </NavLink>
+          <NavLink to="/offers">
+            <Nav.Item icon={faFileInvoiceDollar}>Tilbud</Nav.Item>
+          </NavLink>
+          <NavLink to="/reports">
+            <Nav.Item icon={faFileLines}>Rapporter</Nav.Item>
+          </NavLink>
         </>
       }
     >
       <div className="page">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/mine-oppgaver" element={<MyTasks />} />
           <Route path="/projects" element={<ProjectList />} />
           <Route path="/projects/new" element={<ProjectForm mode="create" />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
@@ -68,6 +84,8 @@ export default function App() {
           <Route path="/board" element={<Board />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/prices" element={<Prices />} />
+          <Route path="/offers" element={<Offers />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

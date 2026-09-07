@@ -22,6 +22,10 @@ vi.mock('./repo.js', async (importActual) => {
     createPrice: vi.fn(),
     updatePrice: vi.fn(),
     deletePrice: vi.fn(),
+    listOffers: vi.fn(),
+    createOffer: vi.fn(),
+    updateOffer: vi.fn(),
+    deleteOffer: vi.fn(),
   };
 });
 
@@ -56,6 +60,7 @@ describe('project-tracker API', () => {
     expect(await res.json()).toEqual({
       projectStatuses: repo.PROJECT_STATUSES,
       caseStatuses: repo.CASE_STATUSES,
+      offerStatuses: repo.OFFER_STATUSES,
     });
   });
 
@@ -576,6 +581,100 @@ describe('project-tracker API', () => {
     const res = await app.request('/api/prices/1', { method: 'DELETE' });
     expect(res.status).toBe(204);
     expect(repo.deletePrice).toHaveBeenCalledWith(1);
+  });
+
+  it('GET /api/offers returns the repo result', async () => {
+    vi.mocked(repo.listOffers).mockResolvedValue([
+      {
+        id: 1,
+        customer: 'Acme',
+        project_id: null,
+        project_name: null,
+        title: 'Sikkerhetsgjennomgang',
+        description: '',
+        amount: '50000.00',
+        status: 'Sendt tilbud',
+        created_at: '2026-09-01T00:00:00Z',
+        updated_at: '2026-09-01T00:00:00Z',
+      },
+    ]);
+    const res = await app.request('/api/offers');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveLength(1);
+  });
+
+  it('POST /api/offers validates required fields', async () => {
+    const res = await app.request('/api/offers', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ customer: '', title: '', amount: 'not-a-number' }),
+    });
+    expect(res.status).toBe(400);
+    expect(repo.createOffer).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/offers creates a valid quote', async () => {
+    vi.mocked(repo.createOffer).mockResolvedValue({
+      id: 1,
+      customer: 'Acme',
+      project_id: null,
+      title: 'Sikkerhetsgjennomgang',
+      description: '',
+      amount: '50000.00',
+      status: 'Sendt tilbud',
+      created_at: '2026-09-01T00:00:00Z',
+      updated_at: '2026-09-01T00:00:00Z',
+    });
+    const res = await app.request('/api/offers', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ customer: 'Acme', title: 'Sikkerhetsgjennomgang', amount: 50000 }),
+    });
+    expect(res.status).toBe(201);
+    expect(repo.createOffer).toHaveBeenCalledWith({
+      customer: 'Acme',
+      title: 'Sikkerhetsgjennomgang',
+      amount: 50000,
+      status: undefined,
+      description: '',
+      project_id: null,
+    });
+  });
+
+  it('PUT /api/offers/:id moves a quote to the next funnel stage', async () => {
+    vi.mocked(repo.updateOffer).mockResolvedValue({
+      id: 1,
+      customer: 'Acme',
+      project_id: null,
+      title: 'Sikkerhetsgjennomgang',
+      description: '',
+      amount: '50000.00',
+      status: 'Godkjent',
+      created_at: '2026-09-01T00:00:00Z',
+      updated_at: '2026-09-02T00:00:00Z',
+    });
+    const res = await app.request('/api/offers/1', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        customer: 'Acme',
+        title: 'Sikkerhetsgjennomgang',
+        amount: 50000,
+        status: 'Godkjent',
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(repo.updateOffer).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ status: 'Godkjent' }),
+    );
+  });
+
+  it('DELETE /api/offers/:id removes the quote', async () => {
+    const res = await app.request('/api/offers/1', { method: 'DELETE' });
+    expect(res.status).toBe(204);
+    expect(repo.deleteOffer).toHaveBeenCalledWith(1);
   });
 
   it('GET /api/assignees returns the github-sync result', async () => {
