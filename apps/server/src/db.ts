@@ -63,8 +63,34 @@ CREATE TABLE IF NOT EXISTS prices (
   description TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- One-off migrations that must run exactly once, ever — never on every
+-- startup like the ALTER TABLEs above. Tracked by key so each runs once.
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  key TEXT PRIMARY KEY,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 `;
+
+// The updated_at columns above default to now() at ALTER TABLE time, which
+// stamped every pre-existing row with that single moment instead of its real
+// last-change time — the next sync then found itself unable to tell "genuinely
+// changed since" from "just got backdated", and the dashboard's activity feed
+// briefly showed everything as changed at once. Backfills updated_at back to
+// created_at for rows that predate the updated_at column, once.
+const BACKFILL_UPDATED_AT_KEY = 'backfill_updated_at_2026_09_07';
+
+async function runOneOffMigrations(): Promise<void> {
+  const { rows } = await pool.query('SELECT 1 FROM schema_migrations WHERE key = $1', [
+    BACKFILL_UPDATED_AT_KEY,
+  ]);
+  if (rows.length > 0) return;
+  await pool.query('UPDATE projects SET updated_at = created_at');
+  await pool.query('UPDATE cases SET updated_at = created_at');
+  await pool.query('INSERT INTO schema_migrations (key) VALUES ($1)', [BACKFILL_UPDATED_AT_KEY]);
+}
 
 export async function initSchema(): Promise<void> {
   await pool.query(SCHEMA);
+  await runOneOffMigrations();
 }

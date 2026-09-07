@@ -4,7 +4,6 @@ import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import Badge from '@intility/bifrost-react/Badge';
-import { faCodeBranch, faDiagramProject } from '@fortawesome/free-solid-svg-icons';
 import { api, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import HeroBackground from '../components/HeroBackground';
@@ -191,7 +190,9 @@ export default function Dashboard() {
                   >
                     <div>
                       <div className="deadline-name">
-                        <Icon icon={a.type === 'project' ? faDiagramProject : faCodeBranch} marginRight />
+                        <Badge state={a.type === 'project' ? 'brand' : 'chill'} style={{ marginRight: 8 }}>
+                          {a.type === 'project' ? 'Prosjekt' : 'Issue'}
+                        </Badge>
                         {a.title}
                         {a.github_repo && (
                           <Badge state="neutral" style={{ marginLeft: 8 }}>
@@ -200,13 +201,8 @@ export default function Dashboard() {
                         )}
                       </div>
                       <div className="muted">
-                        {a.updated_at === a.created_at
-                          ? a.type === 'project'
-                            ? 'Nytt prosjekt'
-                            : `Issue i ${a.project_name}`
-                          : a.type === 'project'
-                            ? 'Oppdatert prosjekt'
-                            : `Oppdatert issue i ${a.project_name}`}
+                        {a.updated_at === a.created_at ? 'Opprettet' : 'Oppdatert'}
+                        {a.type === 'case' && a.project_name ? ` · ${a.project_name}` : ''}
                       </div>
                     </div>
                     <div className="deadline-when">
