@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react';
 
 // Decorative, ambient background for the dashboard: three large soft blobs in the
-// Bifrost brand/chill/attn hues, drifting at different rates as the page scrolls
-// (fixed + z-index behind every Card, which stays opaque, so it only shows through
-// the gaps — data stays the loudest thing on screen). Skips the scroll listener
-// entirely under prefers-reduced-motion, leaving a static backdrop.
+// Bifrost brand/chill/attn hues (fixed + z-index behind every Card, which stays
+// opaque, so it only shows through the gaps — data stays the loudest thing on
+// screen). Each blob continuously drifts/pulses on its own (CSS animation, always
+// running) *and* parallax-shifts at a different rate as the page scrolls (JS, on
+// a separate wrapper element so the two transforms don't fight over the same
+// property). Skips the scroll listener under prefers-reduced-motion; the CSS
+// animation itself is disabled there too (see index.css).
 export default function HeroBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -33,9 +36,15 @@ export default function HeroBackground() {
 
   return (
     <div className="hero-background" ref={containerRef} aria-hidden="true">
-      <div className="hero-blob hero-blob-brand" data-speed="0.12" />
-      <div className="hero-blob hero-blob-chill" data-speed="-0.08" />
-      <div className="hero-blob hero-blob-attn" data-speed="0.05" />
+      <div className="hero-blob-wrap hero-blob-wrap-brand" data-speed="0.12">
+        <div className="hero-blob hero-blob-brand" />
+      </div>
+      <div className="hero-blob-wrap hero-blob-wrap-chill" data-speed="-0.08">
+        <div className="hero-blob hero-blob-chill" />
+      </div>
+      <div className="hero-blob-wrap hero-blob-wrap-attn" data-speed="0.05">
+        <div className="hero-blob hero-blob-attn" />
+      </div>
     </div>
   );
 }

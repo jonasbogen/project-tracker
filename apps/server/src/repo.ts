@@ -172,14 +172,20 @@ export interface GithubMilestoneInput {
   challenges: string;
   github_repo: string;
   github_milestone_number: number;
+  // GitHub's own last-modified timestamp for the milestone - the single
+  // source of truth for "did this actually change", since it already reflects
+  // everything GitHub itself considers a change (title, description, due
+  // date, state). Stored directly as our updated_at instead of us trying to
+  // detect changes field-by-field.
+  github_updated_at: string;
 }
 
 // One row per (github_repo, github_milestone_number); re-running the sync updates
 // the GitHub-derived fields but leaves team as 'OT' and never touches unrelated projects.
 export async function upsertProjectFromGithub(data: GithubMilestoneInput): Promise<Project> {
   const { rows } = await pool.query<Project>(
-    `INSERT INTO projects (name, customer, status, responsible, team, end_date, challenges, github_repo, github_milestone_number)
-     VALUES ($1, $2, $3, $4, 'OT', $5, $6, $7, $8)
+    `INSERT INTO projects (name, customer, status, responsible, team, end_date, challenges, github_repo, github_milestone_number, updated_at)
+     VALUES ($1, $2, $3, $4, 'OT', $5, $6, $7, $8, $9)
      ON CONFLICT (github_repo, github_milestone_number) DO UPDATE
        SET name = EXCLUDED.name,
            customer = EXCLUDED.customer,
@@ -187,11 +193,7 @@ export async function upsertProjectFromGithub(data: GithubMilestoneInput): Promi
            responsible = EXCLUDED.responsible,
            end_date = EXCLUDED.end_date,
            challenges = EXCLUDED.challenges,
-           updated_at = CASE
-             WHEN (projects.name, projects.customer, projects.status, projects.responsible, projects.end_date, projects.challenges)
-                  IS DISTINCT FROM
-                  (EXCLUDED.name, EXCLUDED.customer, EXCLUDED.status, EXCLUDED.responsible, EXCLUDED.end_date, EXCLUDED.challenges)
-             THEN now() ELSE projects.updated_at END
+           updated_at = EXCLUDED.updated_at
      RETURNING *`,
     [
       data.name,
@@ -202,6 +204,7 @@ export async function upsertProjectFromGithub(data: GithubMilestoneInput): Promi
       data.challenges,
       data.github_repo,
       data.github_milestone_number,
+      data.github_updated_at,
     ],
   );
   return rows[0];
@@ -226,6 +229,13 @@ export interface GithubIssueInput {
   owner: string;
   github_repo: string;
   github_issue_number: number;
+  // GitHub's own last-modified timestamp for the issue - the single source of
+  // truth for "did this actually change". Unlike comparing our own tracked
+  // fields (title/status/owner/etc.), this already reflects *everything*
+  // GitHub itself considers activity, including a new comment - which never
+  // touches any field we track ourselves, but does bump the issue's own
+  // updated_at. Stored directly as our updated_at.
+  github_updated_at: string;
 }
 
 // One row per (github_repo, github_issue_number); re-running the sync updates the
@@ -235,8 +245,8 @@ export async function upsertCaseFromGithub(
   data: GithubIssueInput,
 ): Promise<Case> {
   const { rows } = await pool.query<Case>(
-    `INSERT INTO cases (project_id, title, description, status, case_date, owner, github_repo, github_issue_number)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO cases (project_id, title, description, status, case_date, owner, github_repo, github_issue_number, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (github_repo, github_issue_number) DO UPDATE
        SET project_id = EXCLUDED.project_id,
            title = EXCLUDED.title,
@@ -244,11 +254,7 @@ export async function upsertCaseFromGithub(
            status = EXCLUDED.status,
            case_date = EXCLUDED.case_date,
            owner = EXCLUDED.owner,
-           updated_at = CASE
-             WHEN (cases.project_id, cases.title, cases.description, cases.status, cases.case_date, cases.owner)
-                  IS DISTINCT FROM
-                  (EXCLUDED.project_id, EXCLUDED.title, EXCLUDED.description, EXCLUDED.status, EXCLUDED.case_date, EXCLUDED.owner)
-             THEN now() ELSE cases.updated_at END
+           updated_at = EXCLUDED.updated_at
      RETURNING *`,
     [
       projectId,
@@ -259,6 +265,7 @@ export async function upsertCaseFromGithub(
       data.owner,
       data.github_repo,
       data.github_issue_number,
+      data.github_updated_at,
     ],
   );
   return rows[0];
@@ -296,12 +303,13 @@ export interface ActivityItem {
 }
 
 // The 10 (by default) most recent changes across the whole tool — both brand
-// new projects/issues and existing ones that changed (title, status, owner,
-// etc., whether edited in the app or picked up from the next GitHub sync) —
-// merged into one feed and sorted by updated_at. upsertProjectFromGithub /
-// upsertCaseFromGithub only bump updated_at when a value actually differs, so
-// a sync pass that finds nothing new doesn't make everything look "just
-// changed". Backs the "Siste endringer" panel on the dashboard.
+// new projects/issues and existing ones that changed — merged into one feed
+// and sorted by updated_at. For GitHub-synced rows, updated_at is GitHub's own
+// last-modified timestamp (see upsertProjectFromGithub / upsertCaseFromGithub),
+// so it reflects anything GitHub itself considers activity - including a new
+// comment, which touches none of our own tracked fields but does bump the
+// issue's timestamp - without a sync pass that found nothing new making
+// everything look "just changed". Backs the "Siste endringer" panel.
 export async function getRecentActivity(limit = 10): Promise<ActivityItem[]> {
   const { rows } = await pool.query<ActivityItem>(
     `SELECT * FROM (

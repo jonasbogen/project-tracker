@@ -8,14 +8,7 @@ import { api, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import HeroBackground from '../components/HeroBackground';
 import PullRequestBell from '../components/PullRequestBell';
-import {
-  daysUntil,
-  formatDate,
-  githubIssueUrl,
-  githubMilestoneUrl,
-  projectStatusColor,
-  timeAgo,
-} from '../status';
+import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
 function StatTile({
   label,
@@ -172,21 +165,11 @@ export default function Dashboard() {
           ) : (
             <div className="deadline-list">
               {stats.recentActivity.map((a) => {
-                const githubUrl =
-                  a.github_repo && a.github_number
-                    ? a.type === 'case'
-                      ? githubIssueUrl(a.github_repo, a.github_number)
-                      : githubMilestoneUrl(a.github_repo, a.github_number)
-                    : null;
                 return (
                   <button
                     key={`${a.type}-${a.id}`}
                     className="deadline-row"
-                    onClick={() =>
-                      githubUrl
-                        ? window.open(githubUrl, '_blank', 'noopener,noreferrer')
-                        : navigate(`/projects/${a.type === 'project' ? a.id : a.project_id}`)
-                    }
+                    onClick={() => navigate(`/projects/${a.type === 'project' ? a.id : a.project_id}`)}
                   >
                     <div>
                       <div className="deadline-name">

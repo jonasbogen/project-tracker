@@ -31,7 +31,14 @@ describe('syncGithubProjects', () => {
       // milestones (fewer than 100 -> single page)
       .mockResolvedValueOnce(
         jsonResponse([
-          { number: 1, title: 'Arbion – Del 2', description: 'frist 30. nov', state: 'open', due_on: '2026-11-30T00:00:00Z' },
+          {
+            number: 1,
+            title: 'Arbion – Del 2',
+            description: 'frist 30. nov',
+            state: 'open',
+            due_on: '2026-11-30T00:00:00Z',
+            updated_at: '2026-08-10T00:00:00Z',
+          },
         ]),
       )
       // issues (fewer than 100 -> single page)
@@ -43,6 +50,7 @@ describe('syncGithubProjects', () => {
             body: '### Prosjekt (milestone)\n\nArbion – Del 2\n\n### Kunde\n\nArbion\n\n### Beskrivelse\n\nBytt ut gammelt utstyr',
             state: 'open',
             created_at: '2026-08-01T00:00:00Z',
+            updated_at: '2026-08-05T00:00:00Z',
             milestone: { number: 1 },
             assignees: [{ login: 'endsan' }],
           },
@@ -82,6 +90,7 @@ describe('syncGithubProjects', () => {
       challenges: 'frist 30. nov',
       github_repo: 'Prosjektmappe',
       github_milestone_number: 1,
+      github_updated_at: '2026-08-10T00:00:00Z',
     });
     expect(vi.mocked(repo.upsertCaseFromGithub)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(repo.upsertCaseFromGithub)).toHaveBeenCalledWith(42, {
@@ -92,6 +101,7 @@ describe('syncGithubProjects', () => {
       owner: 'endsan',
       github_repo: 'Prosjektmappe',
       github_issue_number: 36,
+      github_updated_at: '2026-08-05T00:00:00Z',
     });
   });
 

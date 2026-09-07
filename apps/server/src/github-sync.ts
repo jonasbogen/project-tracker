@@ -17,6 +17,7 @@ interface GithubMilestone {
   description: string | null;
   state: 'open' | 'closed';
   due_on: string | null;
+  updated_at: string;
 }
 
 interface GithubIssue {
@@ -25,6 +26,7 @@ interface GithubIssue {
   body: string | null;
   state: 'open' | 'closed';
   created_at: string;
+  updated_at: string;
   milestone: { number: number } | null;
   assignees: { login: string; avatar_url: string }[];
   pull_request?: unknown;
@@ -125,6 +127,7 @@ export async function syncGithubProjects(): Promise<SyncResult> {
       challenges: milestone.description ?? '',
       github_repo: REPO,
       github_milestone_number: milestone.number,
+      github_updated_at: milestone.updated_at,
     });
   }
 
@@ -144,6 +147,7 @@ export async function syncGithubProjects(): Promise<SyncResult> {
         owner: issue.assignees[0]?.login ?? '',
         github_repo: REPO,
         github_issue_number: issue.number,
+        github_updated_at: issue.updated_at,
       });
       caseCount += 1;
     } catch (err) {
