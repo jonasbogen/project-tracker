@@ -338,16 +338,87 @@ export async function getRecentActivity(limit = 10): Promise<ActivityItem[]> {
   return rows;
 }
 
+export interface CalendarItem {
+  type: 'project' | 'case';
+  id: number;
+  project_id: number;
+  title: string;
+  customer: string;
+  date: string;
+  github_repo: string | null;
+  github_number: number | null;
+}
+
+// Every deadline the app knows about, project (milestone due date) and case
+// (Frist) alike, on one timeline - backs the Kalender page. Resolved cases are
+// left out (their Frist is no longer "approaching"); every project with an end
+// date stays in regardless of status, since a milestone's due date is still
+// meaningful history once it's done.
+export async function listUpcomingDeadlines(): Promise<CalendarItem[]> {
+  const { rows } = await pool.query<CalendarItem>(
+    `SELECT * FROM (
+       SELECT 'project'::text AS type, id, id AS project_id, name AS title, customer,
+              end_date AS date, github_repo, github_milestone_number AS github_number
+       FROM projects
+       WHERE end_date IS NOT NULL
+       UNION ALL
+       SELECT 'case'::text AS type, c.id, c.project_id, c.title, p.customer,
+              c.case_date AS date, c.github_repo, c.github_issue_number AS github_number
+       FROM cases c
+       JOIN projects p ON p.id = c.project_id
+       WHERE c.case_date IS NOT NULL AND c.status <> 'Løst'
+     ) deadlines
+     ORDER BY date ASC`,
+  );
+  return rows;
+}
+
+export interface WeeklyTrendPoint {
+  weekStart: string;
+  resolved: number;
+}
+
+// Issues resolved per week over the last `weeks` weeks (aligned to ISO weeks,
+// Monday-start), zero-filled so a quiet week shows as a real dip rather than a
+// gap - backs the dashboard's "Ukes-trend". updated_at is GitHub's own
+// last-modified timestamp (see upsertCaseFromGithub), so it reflects the moment
+// an issue was actually closed.
+export async function getWeeklyTrend(weeks = 8): Promise<WeeklyTrendPoint[]> {
+  const { rows } = await pool.query<{ week_start: string; count: number }>(
+    `SELECT date_trunc('week', updated_at)::date AS week_start, count(*)::int AS count
+     FROM cases
+     WHERE status = 'Løst' AND updated_at >= now() - make_interval(weeks => $1)
+     GROUP BY week_start`,
+    [weeks],
+  );
+  // date_trunc(...)::date comes back as a JS Date object at runtime (node-postgres's
+  // real DATE shape), not the string it looks like - normalize before using as a map key.
+  const byWeek = new Map(rows.map((r) => [new Date(r.week_start).toISOString().slice(0, 10), r.count]));
+
+  const now = new Date();
+  const dayOfWeek = (now.getUTCDay() + 6) % 7; // 0 = Monday
+  const thisWeekMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - dayOfWeek));
+  const points: WeeklyTrendPoint[] = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const d = new Date(thisWeekMonday);
+    d.setUTCDate(d.getUTCDate() - i * 7);
+    const key = d.toISOString().slice(0, 10);
+    points.push({ weekStart: key, resolved: byWeek.get(key) ?? 0 });
+  }
+  return points;
+}
+
 export interface DashboardStats {
   projectStatusCounts: { status: string; count: number }[];
   caseStatusCounts: { status: string; count: number }[];
   upcomingDeadlines: { id: number; name: string; customer: string; end_date: string }[];
   topOwners: TeamMember[];
   recentActivity: ActivityItem[];
+  weeklyTrend: WeeklyTrendPoint[];
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const [projectStatusRows, caseStatusRows, deadlineRows, owners, recentActivity] = await Promise.all([
+  const [projectStatusRows, caseStatusRows, deadlineRows, owners, recentActivity, weeklyTrend] = await Promise.all([
     pool.query<{ status: string; count: number }>(
       `SELECT status, count(*)::int AS count FROM projects GROUP BY status`,
     ),
@@ -362,6 +433,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     ),
     listTeam(),
     getRecentActivity(10),
+    getWeeklyTrend(8),
   ]);
 
   return {
@@ -370,6 +442,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     upcomingDeadlines: deadlineRows.rows,
     topOwners: owners.slice(0, 6),
     recentActivity,
+    weeklyTrend,
   };
 }
 

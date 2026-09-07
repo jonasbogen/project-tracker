@@ -166,6 +166,51 @@ describe('syncGithubProjects', () => {
     );
   });
 
+  it('uses the "### Frist" field from the issue body as case_date, not created_at', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse([{ number: 9, title: 'Med frist', description: null, state: 'open', due_on: null }]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            number: 70,
+            title: 'Har en frist satt',
+            body: '### Frist\n\n2026-12-24\n\n### Kunde\n\nAcme',
+            state: 'open',
+            created_at: '2026-08-01T00:00:00Z',
+            milestone: { number: 9 },
+            assignees: [],
+          },
+          {
+            number: 71,
+            title: 'Ingen frist satt',
+            body: '### Kunde\n\nAcme',
+            state: 'open',
+            created_at: '2026-08-02T00:00:00Z',
+            milestone: { number: 9 },
+            assignees: [],
+          },
+        ]),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(repo.getProjectIdByGithubMilestone).mockResolvedValue(11);
+
+    await syncGithubProjects();
+
+    expect(vi.mocked(repo.upsertCaseFromGithub)).toHaveBeenNthCalledWith(
+      1,
+      11,
+      expect.objectContaining({ case_date: '2026-12-24' }),
+    );
+    expect(vi.mocked(repo.upsertCaseFromGithub)).toHaveBeenNthCalledWith(
+      2,
+      11,
+      expect.objectContaining({ case_date: '2026-08-02' }),
+    );
+  });
+
   it('skips a case sync it cannot resolve back to a project without failing the whole run', async () => {
     const fetchMock = vi
       .fn()

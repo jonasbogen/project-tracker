@@ -92,6 +92,18 @@ function extractDescription(body: string | null): string {
   return '';
 }
 
+// The real deadline for a case is the "### Frist" field from the issue body (the
+// same field the app's own issue form writes, and the repo's issue-form template
+// asks for) - never the issue's created_at, which is when the task was logged,
+// not when it's due. Falls back to created_at only when no Frist is set at all,
+// so older/frist-less issues still sort somewhere instead of vanishing from
+// anything ordered by case_date. This is what previously made "upcoming
+// deadlines" views for issues (the calendar) show the wrong dates.
+function extractFristDate(body: string | null, fallback: string): string {
+  const raw = extractField(body, 'Frist').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : fallback.slice(0, 10);
+}
+
 // The "Kunde" field is filled in per-issue, not per-milestone; use whichever linked
 // issue has it set, falling back to the milestone title itself.
 function findCustomer(issues: GithubIssue[], milestoneNumber: number): string {
@@ -143,7 +155,7 @@ export async function syncGithubProjects(): Promise<SyncResult> {
         title: issue.title,
         description,
         status: issue.state === 'closed' ? 'Løst' : 'Åpen',
-        case_date: issue.created_at.slice(0, 10),
+        case_date: extractFristDate(issue.body, issue.created_at),
         owner: issue.assignees[0]?.login ?? '',
         github_repo: REPO,
         github_issue_number: issue.number,
@@ -699,6 +711,88 @@ export async function getMilestoneBoard(milestoneNumber: number): Promise<Milest
   } catch (err) {
     console.error(`GitHub sync: failed to build the milestone board for #${milestoneNumber}`, err);
     return { statusCounts: [], groups: [] };
+  }
+}
+
+export interface BlockedIssue {
+  number: number;
+  title: string;
+  blockedByOwners: string[];
+}
+
+export interface BlockedIssuesResult {
+  issues: BlockedIssue[];
+  error: string | null;
+}
+
+// Open issues currently blocked by another open issue - GitHub's native issue
+// dependency link (the same "blockedBy" relation the repo's own Statusdeck
+// workflow reads), not a Projects V2 field, so a plain GITHUB_TOKEN with Issues
+// read access is enough; no PROJECT_TOKEN needed. "Blokkert" on the dashboard is
+// the single most actionable number the team doesn't otherwise see, per the
+// Statusdeck workflow's own "Står fast" section which currently only reaches
+// Teams. Empty (never throws) when GITHUB_TOKEN is absent; a real failure is
+// surfaced as `error`.
+export async function listBlockedIssues(): Promise<BlockedIssuesResult> {
+  if (!process.env.GITHUB_TOKEN) return { issues: [], error: null };
+  try {
+    const token = process.env.GITHUB_TOKEN;
+    const blocked: BlockedIssue[] = [];
+    let cursor: string | null = null;
+    let hasNextPage = true;
+    while (hasNextPage) {
+      const res = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query: `query($owner:String!,$repo:String!,$cursor:String){
+            repository(owner:$owner,name:$repo){
+              issues(states:OPEN, first:100, after:$cursor){
+                pageInfo{ hasNextPage endCursor }
+                nodes{
+                  number
+                  title
+                  blockedBy(first:10){ nodes{ number state assignees(first:5){ nodes{ login } } } }
+                }
+              }
+            }
+          }`,
+          variables: { owner: ORG, repo: REPO, cursor },
+        }),
+      });
+      const json = (await res.json()) as {
+        errors?: unknown;
+        data?: {
+          repository?: {
+            issues?: {
+              pageInfo: { hasNextPage: boolean; endCursor: string | null };
+              nodes: {
+                number: number;
+                title: string;
+                blockedBy: { nodes: { number: number; state: string; assignees: { nodes: { login: string }[] } }[] };
+              }[];
+            };
+          };
+        };
+      };
+      if (json.errors) throw new Error(JSON.stringify(json.errors));
+      const page = json.data?.repository?.issues;
+      if (!page) break;
+      for (const issue of page.nodes) {
+        const openBlockers = issue.blockedBy.nodes.filter((b) => b.state === 'OPEN');
+        if (openBlockers.length === 0) continue;
+        const owners = new Set<string>();
+        for (const b of openBlockers) for (const a of b.assignees.nodes) owners.add(a.login);
+        blocked.push({ number: issue.number, title: issue.title, blockedByOwners: [...owners] });
+      }
+      hasNextPage = page.pageInfo.hasNextPage;
+      cursor = page.pageInfo.endCursor;
+    }
+    return { issues: blocked, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Ukjent feil';
+    console.error('GitHub sync: failed to list blocked issues', err);
+    return { issues: [], error: message };
   }
 }
 

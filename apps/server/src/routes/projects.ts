@@ -10,6 +10,7 @@ import {
   listCustomerOptions,
   listOpenMilestones,
   listRecentPullRequests,
+  listBlockedIssues,
   listRepoLabels,
   listRepoTeams,
   listServiceUmbrellas,
@@ -238,6 +239,37 @@ api.get('/reports/statusdeck', async (c) => {
 api.get('/stats', async (c) => {
   const stats = await repo.getDashboardStats();
   return c.json(stats);
+});
+
+// GET /api/blocked — open issues currently blocked by another open issue (GitHub's
+// native issue-dependency link), cross-referenced with our own cases for project
+// context. The single most actionable dashboard number: what's stuck, and on whom.
+api.get('/blocked', async (c) => {
+  const result = await listBlockedIssues();
+  if (result.error) return c.json({ items: [], error: result.error });
+  const cases = await repo.listAllCases({});
+  const byNumber = new Map(
+    cases.filter((cs) => cs.github_issue_number != null).map((cs) => [cs.github_issue_number, cs]),
+  );
+  const items = result.issues.map((issue) => {
+    const match = byNumber.get(issue.number);
+    return {
+      number: issue.number,
+      title: issue.title,
+      blockedByOwners: issue.blockedByOwners,
+      project_id: match?.project_id ?? null,
+      project_name: match?.project_name ?? null,
+    };
+  });
+  return c.json({ items, error: null });
+});
+
+// GET /api/calendar — every upcoming deadline across the tool: open project end
+// dates (milestones) and open case deadlines (Frist), so the calendar page can
+// place both kinds of deadline on the same days without a separate live fetch.
+api.get('/calendar', async (c) => {
+  const items = await repo.listUpcomingDeadlines();
+  return c.json(items);
 });
 
 // POST /api/projects — create a project, then either link it to an existing open

@@ -4,6 +4,7 @@ import Badge from '@intility/bifrost-react/Badge';
 import Inline from '@intility/bifrost-react/Inline';
 import {
   faBuilding,
+  faCalendarDays,
   faDiagramProject,
   faFileInvoiceDollar,
   faFileLines,
@@ -14,6 +15,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import Dashboard from './pages/Dashboard';
 import MyTasks from './pages/MyTasks';
+import CalendarPage from './pages/Calendar';
 import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
 import ProjectForm from './pages/ProjectForm';
@@ -50,6 +52,9 @@ export default function App() {
           <NavLink to="/mine-oppgaver">
             <Nav.Item icon={faListCheck}>Mine oppgaver</Nav.Item>
           </NavLink>
+          <NavLink to="/calendar">
+            <Nav.Item icon={faCalendarDays}>Kalender</Nav.Item>
+          </NavLink>
           <NavLink to="/projects">
             <Nav.Item icon={faDiagramProject}>Prosjekter</Nav.Item>
           </NavLink>
@@ -75,6 +80,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/mine-oppgaver" element={<MyTasks />} />
+          <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/projects" element={<ProjectList />} />
           <Route path="/projects/new" element={<ProjectForm mode="create" />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />

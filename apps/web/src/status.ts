@@ -105,3 +105,15 @@ export function daysUntil(date: string): number {
   const ms = new Date(date).getTime() - new Date().setHours(0, 0, 0, 0);
   return Math.round(ms / (1000 * 60 * 60 * 24));
 }
+
+// ISO week number, matching the exact algorithm the repo's own Ukesrapport/
+// Statusdeck workflows use, so "Uke 34" on the dashboard always means the same
+// week as "Ukesrapport – uke 34" on GitHub.
+export function isoWeekNumber(date: string): number {
+  const d = new Date(date);
+  const utc = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const day = utc.getUTCDay() || 7;
+  utc.setUTCDate(utc.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+  return Math.ceil((((utc.getTime() - yearStart.getTime()) / 86400000 + 1) / 7));
+}

@@ -26,6 +26,7 @@ vi.mock('./repo.js', async (importActual) => {
     createOffer: vi.fn(),
     updateOffer: vi.fn(),
     deleteOffer: vi.fn(),
+    listUpcomingDeadlines: vi.fn(),
   };
 });
 
@@ -42,6 +43,9 @@ vi.mock('./github-sync.js', () => ({
   listRepoTeams: vi.fn().mockResolvedValue([]),
   listRepoLabels: vi.fn().mockResolvedValue([]),
   listTeamMembers: vi.fn().mockResolvedValue([]),
+  listBlockedIssues: vi.fn().mockResolvedValue({ issues: [], error: null }),
+  listWeeklyReports: vi.fn().mockResolvedValue({ reports: [], error: null }),
+  listStatusdeckRuns: vi.fn().mockResolvedValue({ runs: [], error: null }),
   githubRepoName: vi.fn().mockReturnValue('Prosjektmappe'),
   syncGithubProjects: vi.fn().mockResolvedValue({ projects: 0, cases: 0 }),
   verifyGithubWebhookSignature: vi.fn().mockReturnValue(false),
@@ -729,6 +733,99 @@ describe('project-tracker API', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.error).toMatch(/403/);
+  });
+
+  it('GET /api/reports/weekly returns the github-sync result', async () => {
+    vi.mocked(githubSync.listWeeklyReports).mockResolvedValue({
+      reports: [
+        { number: 106, title: 'Ukesrapport – uke 36', html_url: 'https://github.com/x/y/issues/106', created_at: '2026-09-04T12:15:33Z', body: '# Ukesrapport – uke 36' },
+      ],
+      error: null,
+    });
+    const res = await app.request('/api/reports/weekly');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.reports).toHaveLength(1);
+  });
+
+  it('GET /api/reports/statusdeck returns the github-sync result', async () => {
+    vi.mocked(githubSync.listStatusdeckRuns).mockResolvedValue({
+      runs: [{ id: 1, created_at: '2026-09-07T05:04:01Z', status: 'completed', conclusion: 'success', html_url: 'https://github.com/x/y/actions/runs/1', artifactExpired: false }],
+      error: null,
+    });
+    const res = await app.request('/api/reports/statusdeck');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.runs).toHaveLength(1);
+  });
+
+  it('GET /api/blocked cross-references blocked GitHub issues with local cases', async () => {
+    vi.mocked(githubSync.listBlockedIssues).mockResolvedValue({
+      issues: [{ number: 36, title: 'Installer switcher', blockedByOwners: ['endsan'] }],
+      error: null,
+    });
+    vi.mocked(repo.listAllCases).mockResolvedValue([
+      {
+        id: 9,
+        project_id: 42,
+        title: 'Installer switcher',
+        description: '',
+        status: 'Åpen',
+        case_date: null,
+        owner: '',
+        github_repo: 'Prosjektmappe',
+        github_issue_number: 36,
+        created_at: '2026-08-01T00:00:00Z',
+        updated_at: '2026-08-01T00:00:00Z',
+        project_name: 'Arbion – Del 2',
+        customer: 'Arbion',
+      },
+    ]);
+    const res = await app.request('/api/blocked');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      items: [
+        {
+          number: 36,
+          title: 'Installer switcher',
+          blockedByOwners: ['endsan'],
+          project_id: 42,
+          project_name: 'Arbion – Del 2',
+        },
+      ],
+      error: null,
+    });
+  });
+
+  it('GET /api/blocked surfaces an error instead of hiding it', async () => {
+    vi.mocked(githubSync.listBlockedIssues).mockResolvedValue({
+      issues: [],
+      error: 'GitHub API request failed (403)',
+    });
+    const res = await app.request('/api/blocked');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.error).toMatch(/403/);
+    expect(repo.listAllCases).not.toHaveBeenCalled();
+  });
+
+  it('GET /api/calendar returns the repo result', async () => {
+    vi.mocked(repo.listUpcomingDeadlines).mockResolvedValue([
+      {
+        type: 'project',
+        id: 1,
+        project_id: 1,
+        title: 'Arbion – Del 2',
+        customer: 'Arbion',
+        date: '2026-11-30',
+        github_repo: 'Prosjektmappe',
+        github_number: 1,
+      },
+    ]);
+    const res = await app.request('/api/calendar');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveLength(1);
   });
 
   it('unknown /api routes return JSON 404', async () => {

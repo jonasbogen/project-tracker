@@ -4,11 +4,12 @@ import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import Badge from '@intility/bifrost-react/Badge';
-import { api, type DashboardStats } from '../api';
+import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
+import WeekTrendChart from '../charts/WeekTrendChart';
 import HeroBackground from '../components/HeroBackground';
 import PullRequestBell from '../components/PullRequestBell';
-import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
+import { daysUntil, formatDate, isoWeekNumber, projectStatusColor, timeAgo } from '../status';
 
 function StatTile({
   label,
@@ -35,15 +36,19 @@ function StatTile({
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [projectStatuses, setProjectStatuses] = useState<string[]>([]);
+  const [blocked, setBlocked] = useState<BlockedIssue[]>([]);
+  const [blockedError, setBlockedError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([api.getStats(), api.getMeta()])
-      .then(([s, meta]) => {
+    Promise.all([api.getStats(), api.getMeta(), api.listBlocked()])
+      .then(([s, meta, blockedResult]) => {
         setStats(s);
         setProjectStatuses(meta.projectStatuses);
+        setBlocked(blockedResult.items);
+        setBlockedError(blockedResult.error);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -102,7 +107,55 @@ export default function Dashboard() {
             onClick={() => navigate('/projects?status=Forsinket')}
           />
           <StatTile label="Åpne issuer" value={totalOpenCases} onClick={() => navigate('/board')} />
+          <StatTile
+            label="Blokkert"
+            value={blocked.length}
+            onClick={() =>
+              document.getElementById('blokkert-card')?.scrollIntoView({ behavior: 'smooth' })
+            }
+          />
         </div>
+
+        <Card padding="medium" id="blokkert-card" className="stack-sm">
+          <h2 className="bf-h2">Blokkert</h2>
+          {blockedError && (
+            <Message state="alert" header="Kunne ikke laste blokkerte issuer">
+              {blockedError}
+            </Message>
+          )}
+          {!blockedError && blocked.length === 0 && <p className="muted">Ingenting står fast.</p>}
+          {blocked.length > 0 && (
+            <div className="deadline-list">
+              {blocked.map((b) => (
+                <button
+                  key={b.number}
+                  className="deadline-row"
+                  onClick={() =>
+                    b.project_id
+                      ? navigate(`/projects/${b.project_id}`)
+                      : window.open(
+                          `https://github.com/intility/Prosjektmappe/issues/${b.number}`,
+                          '_blank',
+                          'noopener,noreferrer',
+                        )
+                  }
+                >
+                  <div>
+                    <div className="deadline-name">{b.title}</div>
+                    <div className="muted">{b.project_name ?? 'Ukjent prosjekt'}</div>
+                  </div>
+                  <div className="deadline-when">
+                    <Badge state="alert">
+                      {b.blockedByOwners.length > 0
+                        ? `Venter på ${b.blockedByOwners.join(', ')}`
+                        : 'Venter, ikke spesifisert'}
+                    </Badge>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
 
         <div className="dashboard-grid">
           <Card padding="medium">
@@ -123,6 +176,17 @@ export default function Dashboard() {
               items={stats.topOwners.map((o) => ({ label: o.owner, value: o.total_cases }))}
               emptyText="Ingen issuer har en eier fra GitHub enda."
               onItemClick={(owner) => navigate(`/board?owner=${encodeURIComponent(owner)}`)}
+            />
+          </Card>
+
+          <Card padding="medium">
+            <h2 className="bf-h2">Ukes-trend</h2>
+            <p className="muted" style={{ marginTop: -8 }}>Løste issuer per uke, siste 8 uker.</p>
+            <WeekTrendChart
+              items={stats.weeklyTrend.map((w) => ({
+                label: `U${isoWeekNumber(w.weekStart)}`,
+                value: w.resolved,
+              }))}
             />
           </Card>
         </div>

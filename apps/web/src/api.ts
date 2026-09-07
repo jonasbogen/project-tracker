@@ -167,12 +167,42 @@ export interface ActivityItem {
   updated_at: string;
 }
 
+export interface WeeklyTrendPoint {
+  weekStart: string;
+  resolved: number;
+}
+
 export interface DashboardStats {
   projectStatusCounts: { status: string; count: number }[];
   caseStatusCounts: { status: string; count: number }[];
   upcomingDeadlines: { id: number; name: string; customer: string; end_date: string }[];
   topOwners: TeamMember[];
   recentActivity: ActivityItem[];
+  weeklyTrend: WeeklyTrendPoint[];
+}
+
+export interface BlockedIssue {
+  number: number;
+  title: string;
+  blockedByOwners: string[];
+  project_id: number | null;
+  project_name: string | null;
+}
+
+export interface BlockedIssuesResult {
+  items: BlockedIssue[];
+  error: string | null;
+}
+
+export interface CalendarItem {
+  type: 'project' | 'case';
+  id: number;
+  project_id: number;
+  title: string;
+  customer: string;
+  date: string;
+  github_repo: string | null;
+  github_number: number | null;
 }
 
 export interface ProjectInput {
@@ -272,6 +302,8 @@ export const api = {
   listRecentPullRequests: () => request<RecentPullRequestsResult>('/api/pull-requests'),
   listWeeklyReports: () => request<WeeklyReportsResult>('/api/reports/weekly'),
   listStatusdeckRuns: () => request<StatusdeckRunsResult>('/api/reports/statusdeck'),
+  listBlocked: () => request<BlockedIssuesResult>('/api/blocked'),
+  listCalendar: () => request<CalendarItem[]>('/api/calendar'),
   getStats: () => request<DashboardStats>('/api/stats'),
   listCases: (filters: { projectId?: number; owner?: string } = {}) => {
     const params = new URLSearchParams();
