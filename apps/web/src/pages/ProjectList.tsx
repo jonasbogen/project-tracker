@@ -10,6 +10,7 @@ import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faMagnifyingGlass, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { api, type ProjectWithCount } from '../api';
+import CompanyLogo from '../components/CompanyLogo';
 import { projectBadgeState, formatTimeline } from '../status';
 
 interface Option {
@@ -143,7 +144,12 @@ export default function ProjectList() {
                       </Badge>
                     )}
                   </Table.Cell>
-                  <Table.Cell>{p.customer}</Table.Cell>
+                  <Table.Cell>
+                    <span className="team-member">
+                      <CompanyLogo name={p.customer} />
+                      {p.customer}
+                    </span>
+                  </Table.Cell>
                   <Table.Cell>{p.team || <span className="muted">–</span>}</Table.Cell>
                   <Table.Cell>
                     <Badge state={projectBadgeState(p.status)}>{p.status}</Badge>

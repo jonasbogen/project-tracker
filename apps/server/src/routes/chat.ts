@@ -1,74 +1,56 @@
 import { Hono } from 'hono';
 import { streamText } from 'hono/streaming';
-import OpenAI from 'openai';
-import type {
-  ChatCompletionMessageParam,
-  ChatCompletionTool,
-} from 'openai/resources/chat/completions';
+import Anthropic from '@anthropic-ai/sdk';
 import * as repo from '../repo.js';
 
 export const chat = new Hono();
 
-const MODEL = process.env.OPENAI_MODEL || 'glm-5-2-fp8';
+// ALWAYS use claude-opus-5 unless a different model is explicitly requested.
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
 const MAX_ITERATIONS = 8;
 
-const TOOLS: ChatCompletionTool[] = [
+const TOOLS: Anthropic.Tool[] = [
   {
-    type: 'function',
-    function: {
-      name: 'search_projects',
-      description:
-        'Search projects (customer engagements) by free text (matches project name or customer name) and/or an exact team name. Returns a compact list: id, name, customer, status, team, responsible, end_date, case_count. Call with no arguments to list every project. Use this first to find which project(s) a question is about.',
-      parameters: {
-        type: 'object',
-        properties: {
-          search: { type: 'string', description: 'Free text matched against project name or customer' },
-          team: { type: 'string', description: 'Exact team name to filter by, e.g. OT' },
-        },
+    name: 'search_projects',
+    description:
+      'Search projects (customer engagements) by free text (matches project name or customer name) and/or an exact team name. Returns a compact list: id, name, customer, status, team, responsible, end_date, case_count. Call with no arguments to list every project. Use this first to find which project(s) a question is about.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        search: { type: 'string', description: 'Free text matched against project name or customer' },
+        team: { type: 'string', description: 'Exact team name to filter by, e.g. OT' },
       },
     },
   },
   {
-    type: 'function',
-    function: {
-      name: 'get_project',
-      description:
-        'Get full details for one project by id, including every case (sub-task) under it: title, status, owner, description, and date.',
-      parameters: {
-        type: 'object',
-        properties: { id: { type: 'integer', description: 'Project id, from search_projects' } },
-        required: ['id'],
-      },
+    name: 'get_project',
+    description:
+      'Get full details for one project by id, including every case (sub-task) under it: title, status, owner, description, and date.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'integer', description: 'Project id, from search_projects' } },
+      required: ['id'],
     },
   },
   {
-    type: 'function',
-    function: {
-      name: 'list_team',
-      description: 'List everyone who owns at least one case, with their open and total case counts.',
-      parameters: { type: 'object', properties: {} },
+    name: 'list_team',
+    description: 'List everyone who owns at least one case, with their open and total case counts.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'list_cases_for_person',
+    description: 'List one person\'s active (not "Løst") cases across every project, by GitHub login.',
+    input_schema: {
+      type: 'object',
+      properties: { owner: { type: 'string', description: 'GitHub login' } },
+      required: ['owner'],
     },
   },
   {
-    type: 'function',
-    function: {
-      name: 'list_cases_for_person',
-      description: 'List one person\'s active (not "Løst") cases across every project, by GitHub login.',
-      parameters: {
-        type: 'object',
-        properties: { owner: { type: 'string', description: 'GitHub login' } },
-        required: ['owner'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'get_dashboard_stats',
-      description:
-        'Get aggregate counts across the whole tool: projects by status, cases by status, upcoming project deadlines, and the top case owners.',
-      parameters: { type: 'object', properties: {} },
-    },
+    name: 'get_dashboard_stats',
+    description:
+      'Get aggregate counts across the whole tool: projects by status, cases by status, upcoming project deadlines, and the top case owners.',
+    input_schema: { type: 'object', properties: {} },
   },
 ];
 
@@ -120,102 +102,89 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
   }
 }
 
-const SYSTEM_PROMPT = `Du er en hjelpsom AI-assistent integrert i "Prosjektsporing" - et internt verktøy for Intility som sporer OT/Edge Platform-kundeprosjekter.
+// This is Claude (Anthropic) itself, not a domain-locked bot - it can answer
+// anything Claude can (general knowledge, code, writing, explanations, etc.).
+// The tools below are just extra reach into this specific tool's live data;
+// use them whenever a question is actually about a project, case, or person in
+// here, but never treat them as the boundary of what you're allowed to discuss.
+const SYSTEM_PROMPT = `Du er Claude, en hjelpsom AI-assistent fra Anthropic, integrert som "Chat bot" i "Prosjektsporing" - et internt verktøy for Intility som sporer OT/Edge Platform-kundeprosjekter.
 
-Domenemodell:
+Du kan svare på hva som helst, akkurat som Claude ellers - generell kunnskap, kode, forklaringer, skriving, resonnering, alt - ikke bare spørsmål om dette verktøyet.
+
+I tillegg har du noen verktøy for å slå opp live data i selve Prosjektsporing-verktøyet:
 - Et "prosjekt" tilsvarer en GitHub-milestone: ett per kundeprosjekt, med status (Planlagt/Pågår/Forsinket/Fullført), kunde, ansvarlig, team, tidsfrist og en liste av "issuer".
 - En "issue" tilsvarer en GitHub-issue: en oppgave knyttet til ett prosjekt, med status (Åpen/Under arbeid/Løst) og en eier (GitHub-brukernavn). Issuer opprettet i appen blir automatisk opprettet som ekte issues i GitHub.
 
-Du har verktøy for å søke og lese denne dataen. De er skrivebeskyttet (read-only) - du kan ikke opprette, endre eller slette noe. Bruk verktøyene aktivt for å svare presist i stedet for å gjette, og vis til konkrete prosjekt- og saksnavn du fant. Når du foreslår neste steg eller et utkast til en kommentar, gjør det tydelig at det er et forslag brukeren selv må skrive inn - du har ingen måte å lagre det på. Svar kort, konkret og på norsk (bokmål).
+Bruk disse verktøyene når spørsmålet faktisk handler om et prosjekt, en issue eller en person i verktøyet - de er skrivebeskyttet (read-only), du kan ikke opprette, endre eller slette noe der. Vis til konkrete prosjekt- og saksnavn du fant i stedet for å gjette. Når du foreslår neste steg eller et utkast til en kommentar for noe i verktøyet, gjør det tydelig at det er et forslag brukeren selv må skrive inn - du har ingen måte å lagre det på.
 
-Spørsmål er ofte kort og upresise ("hvordan går det med Arbion", "hvem har mest å gjøre", "hva bør jeg se på nå"). Ikke be om presisering med mindre spørsmålet er reelt tvetydig mellom to helt ulike tolkninger - gjør i stedet en fornuftig antakelse ut fra konteksten, bruk verktøyene bredt (søk, sjekk flere prosjekter/personer om nødvendig) for å finne et nyttig svar, og nevn kort hvilken tolkning du la til grunn hvis den ikke er opplagt. Du skal kunne håndtere svært ulike typer spørsmål om dataene - oppsummeringer, sammenligninger, oppfølgingsforslag, "hva har endret seg" - ikke bare oppslag av ett prosjekt om gangen.`;
+Spørsmål om verktøyet er ofte korte og upresise ("hvordan går det med Arbion", "hvem har mest å gjøre"). Ikke be om presisering med mindre spørsmålet er reelt tvetydig mellom to helt ulike tolkninger - gjør heller en fornuftig antakelse, bruk verktøyene bredt (søk, sjekk flere prosjekter/personer om nødvendig), og nevn kort hvilken tolkning du la til grunn hvis den ikke er opplagt.
+
+Svar kort og konkret, og på norsk (bokmål) med mindre brukeren skriver på et annet språk.`;
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
-interface AccumulatedToolCall {
-  id: string;
-  name: string;
-  arguments: string;
+function client(): Anthropic {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
-function client(): OpenAI {
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    baseURL: process.env.OPENAI_BASE_URL,
-  });
-}
-
-// Drives the tool-use loop against the (OpenAI-compatible) chat completions API and
-// yields plain text chunks as they stream in, across every iteration (tool calls
-// happen silently in between; the model's internal "reasoning" delta is never
-// yielded - only its actual answer text is).
+// Drives the tool-use loop against the Claude Messages API and yields plain
+// text chunks as they stream in, across every iteration (tool calls happen
+// silently in between).
 export async function* streamChatReply(history: ChatMessage[]): AsyncGenerator<string> {
-  const openai = client();
-  const messages: ChatCompletionMessageParam[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
-    ...history.map((m): ChatCompletionMessageParam => ({ role: m.role, content: m.content })),
-  ];
+  const anthropic = client();
+  const messages: Anthropic.MessageParam[] = history.map((m) => ({
+    role: m.role,
+    content: m.content,
+  }));
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
-    const stream = await openai.chat.completions.create({
+    const stream = anthropic.messages.stream({
       model: MODEL,
-      messages,
+      max_tokens: 8192,
+      system: SYSTEM_PROMPT,
       tools: TOOLS,
-      stream: true,
+      messages,
     });
 
-    let content = '';
-    const toolCalls = new Map<number, AccumulatedToolCall>();
-    let finishReason: string | null = null;
-
-    for await (const chunk of stream) {
-      const choice = chunk.choices[0];
-      if (!choice) continue;
-
-      if (choice.delta.content) {
-        content += choice.delta.content;
-        yield choice.delta.content;
+    for await (const event of stream) {
+      if (
+        event.type === 'content_block_delta' &&
+        event.delta.type === 'text_delta'
+      ) {
+        yield event.delta.text;
       }
-
-      for (const tc of choice.delta.tool_calls ?? []) {
-        const existing = toolCalls.get(tc.index) ?? { id: '', name: '', arguments: '' };
-        if (tc.id) existing.id = tc.id;
-        if (tc.function?.name) existing.name += tc.function.name;
-        if (tc.function?.arguments) existing.arguments += tc.function.arguments;
-        toolCalls.set(tc.index, existing);
-      }
-
-      if (choice.finish_reason) finishReason = choice.finish_reason;
     }
 
-    const calls = [...toolCalls.entries()].sort(([a], [b]) => a - b).map(([, call]) => call);
+    const message = await stream.finalMessage();
 
-    if (calls.length === 0 || finishReason !== 'tool_calls') {
+    if (message.stop_reason === 'pause_turn') {
+      messages.push({ role: 'assistant', content: message.content });
+      continue;
+    }
+
+    if (message.stop_reason !== 'tool_use') {
       return;
     }
 
-    messages.push({
-      role: 'assistant',
-      content: content || null,
-      tool_calls: calls.map((c) => ({
-        id: c.id,
-        type: 'function',
-        function: { name: c.name, arguments: c.arguments },
-      })),
-    });
+    messages.push({ role: 'assistant', content: message.content });
 
-    for (const call of calls) {
+    const toolUseBlocks = message.content.filter(
+      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
+    );
+    const toolResults: Anthropic.ToolResultBlockParam[] = [];
+    for (const block of toolUseBlocks) {
       let result: unknown;
       try {
-        result = await executeTool(call.name, JSON.parse(call.arguments || '{}'));
+        result = await executeTool(block.name, block.input as Record<string, unknown>);
       } catch (err) {
         result = { error: err instanceof Error ? err.message : 'Ukjent feil' };
       }
-      messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });
+      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
     }
+    messages.push({ role: 'user', content: toolResults });
   }
 
   yield '\n\n[Samtalen ble for lang og ble stoppet. Prøv å stille et mer avgrenset spørsmål.]';
@@ -224,8 +193,8 @@ export async function* streamChatReply(history: ChatMessage[]): AsyncGenerator<s
 // POST /api/chat — a stateless chat turn: the client resends the full history
 // each time. Streams the reply as plain text.
 chat.post('/chat', async (c) => {
-  if (!process.env.OPENAI_API_KEY || !process.env.OPENAI_BASE_URL) {
-    return c.json({ error: 'AI-chat er ikke satt opp (mangler OPENAI_API_KEY/OPENAI_BASE_URL).' }, 503);
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return c.json({ error: 'AI-chat er ikke satt opp (mangler ANTHROPIC_API_KEY).' }, 503);
   }
 
   const body = await c.req.json<{ messages?: ChatMessage[] }>().catch(() => null);

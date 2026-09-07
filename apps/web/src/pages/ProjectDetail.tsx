@@ -22,6 +22,7 @@ import {
 } from '../status';
 import BarChart from '../charts/BarChart';
 import FormattedText from '../components/FormattedText';
+import CompanyLogo from '../components/CompanyLogo';
 import MilestoneBoard from '../components/MilestoneBoard';
 import MilestoneSidebar from '../components/MilestoneSidebar';
 
@@ -217,7 +218,10 @@ export default function ProjectDetail() {
           <div className="detail-grid">
             <div>
               <div className="field-label">Kunde</div>
-              <div>{project.customer}</div>
+              <div className="team-member">
+                <CompanyLogo name={project.customer} />
+                {project.customer}
+              </div>
             </div>
             <div>
               <div className="field-label">Status</div>

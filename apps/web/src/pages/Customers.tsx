@@ -5,6 +5,7 @@ import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import Table from '@intility/bifrost-react/Table';
 import { api, type Customer } from '../api';
+import CompanyLogo from '../components/CompanyLogo';
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -53,7 +54,12 @@ export default function Customers() {
                   key={c.customer}
                   onClick={() => navigate(`/projects?search=${encodeURIComponent(c.customer)}`)}
                 >
-                  <Table.Cell>{c.customer}</Table.Cell>
+                  <Table.Cell>
+                    <span className="team-member">
+                      <CompanyLogo name={c.customer} />
+                      {c.customer}
+                    </span>
+                  </Table.Cell>
                   <Table.Cell>{c.active_count}</Table.Cell>
                   <Table.Cell>{c.project_count}</Table.Cell>
                 </Table.Row>
