@@ -132,6 +132,7 @@ export interface ActivityItem {
   github_repo: string | null;
   github_number: number | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface DashboardStats {

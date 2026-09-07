@@ -200,11 +200,17 @@ export default function Dashboard() {
                         )}
                       </div>
                       <div className="muted">
-                        {a.type === 'project' ? 'Nytt prosjekt' : `Issue i ${a.project_name}`}
+                        {a.updated_at === a.created_at
+                          ? a.type === 'project'
+                            ? 'Nytt prosjekt'
+                            : `Issue i ${a.project_name}`
+                          : a.type === 'project'
+                            ? 'Oppdatert prosjekt'
+                            : `Oppdatert issue i ${a.project_name}`}
                       </div>
                     </div>
                     <div className="deadline-when">
-                      <span>{timeAgo(a.created_at)}</span>
+                      <span>{timeAgo(a.updated_at)}</span>
                     </div>
                   </button>
                 );

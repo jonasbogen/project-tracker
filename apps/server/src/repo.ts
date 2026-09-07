@@ -19,6 +19,7 @@ export interface Project {
   github_repo: string | null;
   github_milestone_number: number | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface ProjectWithCount extends Project {
@@ -36,6 +37,7 @@ export interface Case {
   github_repo: string | null;
   github_issue_number: number | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface ProjectInput {
@@ -124,7 +126,8 @@ export async function updateProject(id: number, data: ProjectInput): Promise<Pro
   const { rows } = await pool.query<Project>(
     `UPDATE projects
      SET name = $1, customer = $2, status = $3, responsible = $4,
-         team = $5, start_date = $6, end_date = $7, challenges = $8
+         team = $5, start_date = $6, end_date = $7, challenges = $8,
+         updated_at = now()
      WHERE id = $9
      RETURNING *`,
     [
@@ -183,7 +186,12 @@ export async function upsertProjectFromGithub(data: GithubMilestoneInput): Promi
            status = EXCLUDED.status,
            responsible = EXCLUDED.responsible,
            end_date = EXCLUDED.end_date,
-           challenges = EXCLUDED.challenges
+           challenges = EXCLUDED.challenges,
+           updated_at = CASE
+             WHEN (projects.name, projects.customer, projects.status, projects.responsible, projects.end_date, projects.challenges)
+                  IS DISTINCT FROM
+                  (EXCLUDED.name, EXCLUDED.customer, EXCLUDED.status, EXCLUDED.responsible, EXCLUDED.end_date, EXCLUDED.challenges)
+             THEN now() ELSE projects.updated_at END
      RETURNING *`,
     [
       data.name,
@@ -235,7 +243,12 @@ export async function upsertCaseFromGithub(
            description = EXCLUDED.description,
            status = EXCLUDED.status,
            case_date = EXCLUDED.case_date,
-           owner = EXCLUDED.owner
+           owner = EXCLUDED.owner,
+           updated_at = CASE
+             WHEN (cases.project_id, cases.title, cases.description, cases.status, cases.case_date, cases.owner)
+                  IS DISTINCT FROM
+                  (EXCLUDED.project_id, EXCLUDED.title, EXCLUDED.description, EXCLUDED.status, EXCLUDED.case_date, EXCLUDED.owner)
+             THEN now() ELSE cases.updated_at END
      RETURNING *`,
     [
       projectId,
@@ -279,27 +292,31 @@ export interface ActivityItem {
   github_repo: string | null;
   github_number: number | null;
   created_at: string;
+  updated_at: string;
 }
 
-// The 10 (by default) most recent changes across the whole tool, whether they came
-// in from GitHub (sync) or were created directly in the app — projects and cases
-// merged into one feed and sorted by created_at. Backs the "Siste endringer" panel
-// on the dashboard.
+// The 10 (by default) most recent changes across the whole tool — both brand
+// new projects/issues and existing ones that changed (title, status, owner,
+// etc., whether edited in the app or picked up from the next GitHub sync) —
+// merged into one feed and sorted by updated_at. upsertProjectFromGithub /
+// upsertCaseFromGithub only bump updated_at when a value actually differs, so
+// a sync pass that finds nothing new doesn't make everything look "just
+// changed". Backs the "Siste endringer" panel on the dashboard.
 export async function getRecentActivity(limit = 10): Promise<ActivityItem[]> {
   const { rows } = await pool.query<ActivityItem>(
     `SELECT * FROM (
        SELECT 'project'::text AS type, id, name AS title, NULL::int AS project_id,
               NULL::text AS project_name, github_repo, github_milestone_number AS github_number,
-              created_at
+              created_at, updated_at
        FROM projects
        UNION ALL
        SELECT 'case'::text AS type, c.id, c.title, c.project_id,
               p.name AS project_name, c.github_repo, c.github_issue_number AS github_number,
-              c.created_at
+              c.created_at, c.updated_at
        FROM cases c
        JOIN projects p ON p.id = c.project_id
      ) activity
-     ORDER BY created_at DESC
+     ORDER BY updated_at DESC
      LIMIT $1`,
     [limit],
   );
