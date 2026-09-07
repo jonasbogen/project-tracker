@@ -626,15 +626,19 @@ describe('project-tracker API', () => {
 });
 
 describe('POST /api/chat', () => {
-  const originalKey = process.env.ANTHROPIC_API_KEY;
+  const originalKey = process.env.OPENAI_API_KEY;
+  const originalBaseUrl = process.env.OPENAI_BASE_URL;
 
   afterEach(() => {
-    if (originalKey === undefined) delete process.env.ANTHROPIC_API_KEY;
-    else process.env.ANTHROPIC_API_KEY = originalKey;
+    if (originalKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalKey;
+    if (originalBaseUrl === undefined) delete process.env.OPENAI_BASE_URL;
+    else process.env.OPENAI_BASE_URL = originalBaseUrl;
   });
 
-  it('returns 503 when ANTHROPIC_API_KEY is not set', async () => {
-    delete process.env.ANTHROPIC_API_KEY;
+  it('returns 503 when OPENAI_API_KEY/OPENAI_BASE_URL are not set', async () => {
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_BASE_URL;
     const res = await app.request('/api/chat', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -644,7 +648,8 @@ describe('POST /api/chat', () => {
   });
 
   it('returns 400 for an empty message list', async () => {
-    process.env.ANTHROPIC_API_KEY = 'test-key';
+    process.env.OPENAI_API_KEY = 'test-key';
+    process.env.OPENAI_BASE_URL = 'https://example.test/v1';
     const res = await app.request('/api/chat', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

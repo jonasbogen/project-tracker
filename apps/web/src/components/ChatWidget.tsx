@@ -97,9 +97,9 @@ export default function ChatWidget() {
         {messages.length === 0 && (
           <div className="chat-empty">
             <p className="muted">
-              Jeg er Claude - spør om hva som helst, ikke bare om verktøyet. Om spørsmålet handler
-              om prosjektene eller issuene her, slår jeg opp i den samme dataen du ser ellers i
-              appen, men skriver aldri noe tilbake selv.
+              Spør om hva som helst, ikke bare om verktøyet. Om spørsmålet handler om prosjektene
+              eller issuene her, slår jeg opp i den samme dataen du ser ellers i appen, men
+              skriver aldri noe tilbake selv.
             </p>
             <div className="chat-suggestions">
               {SUGGESTIONS.map((s) => (
