@@ -9,6 +9,7 @@ import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { api, type Assignee, type OpenMilestone, type ProjectInput, type RepoTeam } from '../api';
+import CompanyLogo from '../components/CompanyLogo';
 
 interface Option {
   value: string;
@@ -174,23 +175,26 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
               value={form.name}
               onChange={(e) => update('name', e.target.value)}
             />
-            {customerOptions.length > 0 ? (
-              <Select
-                label="Kunde"
-                required
-                options={customerOptions.map((c) => ({ value: c, label: c }))}
-                value={form.customer ? { value: form.customer, label: form.customer } : null}
-                onChange={(opt) => update('customer', (opt as Option | null)?.value ?? '')}
-                placeholder="Velg kunde"
-              />
-            ) : (
-              <Input
-                label="Kunde"
-                required
-                value={form.customer}
-                onChange={(e) => update('customer', e.target.value)}
-              />
-            )}
+            <div className="form-field-with-logo">
+              {customerOptions.length > 0 ? (
+                <Select
+                  label="Kunde"
+                  required
+                  options={customerOptions.map((c) => ({ value: c, label: c }))}
+                  value={form.customer ? { value: form.customer, label: form.customer } : null}
+                  onChange={(opt) => update('customer', (opt as Option | null)?.value ?? '')}
+                  placeholder="Velg kunde"
+                />
+              ) : (
+                <Input
+                  label="Kunde"
+                  required
+                  value={form.customer}
+                  onChange={(e) => update('customer', e.target.value)}
+                />
+              )}
+              {form.customer && <CompanyLogo name={form.customer} size={40} />}
+            </div>
             <Select
               label="Status"
               options={statusOptions}

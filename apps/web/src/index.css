@@ -125,6 +125,17 @@
   gap: 16px;
 }
 
+.form-field-with-logo {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.form-field-with-logo > *:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .form-actions,
 .inline-actions {
   display: flex;
