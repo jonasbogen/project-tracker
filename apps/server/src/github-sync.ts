@@ -271,6 +271,14 @@ interface RawPullRequest {
   user: { login: string } | null;
 }
 
+export interface RecentPullRequestsResult {
+  pulls: RecentPullRequest[];
+  // Set when the fetch failed — distinct from a genuinely empty list, since a
+  // silent [] here is indistinguishable from "no PR activity" and the two need
+  // different fixes (nothing to do, vs. the token's permissions are wrong).
+  error: string | null;
+}
+
 // The most recently updated pull requests on the source repo — open ones (a
 // nudge that something is ready to review/merge on GitHub) and recently
 // merged/closed ones (so "nothing to review" doesn't read as "nothing
@@ -278,27 +286,30 @@ interface RawPullRequest {
 // app can act on itself — every entry just links out to GitHub. A single
 // request capped at `limit`, not the usual paginate-everything helper: with
 // state=all a repo's full PR history could be hundreds of pages, and only the
-// most recent handful matter here. Empty (never throws) when GITHUB_TOKEN is
-// absent.
-export async function listRecentPullRequests(limit = 10): Promise<RecentPullRequest[]> {
-  if (!process.env.GITHUB_TOKEN) return [];
+// most recent handful matter here.
+export async function listRecentPullRequests(limit = 10): Promise<RecentPullRequestsResult> {
+  if (!process.env.GITHUB_TOKEN) return { pulls: [], error: null };
   try {
     const pulls = await githubFetch<RawPullRequest[]>(
       `/repos/${ORG}/${REPO}/pulls?state=all&sort=updated&direction=desc&per_page=${limit}`,
     );
-    return pulls.map((p) => ({
-      number: p.number,
-      title: p.title,
-      html_url: p.html_url,
-      draft: p.draft,
-      state: p.state,
-      merged_at: p.merged_at,
-      updated_at: p.updated_at,
-      user: p.user?.login ?? '',
-    }));
+    return {
+      error: null,
+      pulls: pulls.map((p) => ({
+        number: p.number,
+        title: p.title,
+        html_url: p.html_url,
+        draft: p.draft,
+        state: p.state,
+        merged_at: p.merged_at,
+        updated_at: p.updated_at,
+        user: p.user?.login ?? '',
+      })),
+    };
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Ukjent feil';
     console.error('GitHub sync: failed to list recent pull requests', err);
-    return [];
+    return { pulls: [], error: message };
   }
 }
 

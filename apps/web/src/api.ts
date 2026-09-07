@@ -74,6 +74,11 @@ export interface RecentPullRequest {
   user: string;
 }
 
+export interface RecentPullRequestsResult {
+  pulls: RecentPullRequest[];
+  error: string | null;
+}
+
 export interface MilestoneBoardIssue {
   number: number;
   title: string;
@@ -205,7 +210,7 @@ export const api = {
   listOpenMilestones: () => request<OpenMilestone[]>('/api/milestones'),
   listRepoTeams: () => request<RepoTeam[]>('/api/repo-teams'),
   listTeamMembers: (slug: string) => request<Assignee[]>(`/api/repo-teams/${encodeURIComponent(slug)}/members`),
-  listRecentPullRequests: () => request<RecentPullRequest[]>('/api/pull-requests'),
+  listRecentPullRequests: () => request<RecentPullRequestsResult>('/api/pull-requests'),
   getStats: () => request<DashboardStats>('/api/stats'),
   listCases: (filters: { projectId?: number; owner?: string } = {}) => {
     const params = new URLSearchParams();

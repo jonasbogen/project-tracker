@@ -199,8 +199,8 @@ api.get('/milestones', async (c) => {
 // recently merged/closed) on the source repo, for the "bell" notification on
 // the dashboard.
 api.get('/pull-requests', async (c) => {
-  const pulls = await listRecentPullRequests();
-  return c.json(pulls);
+  const result = await listRecentPullRequests();
+  return c.json(result);
 });
 
 // GET /api/stats — aggregate counts for the dashboard.

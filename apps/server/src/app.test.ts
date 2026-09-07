@@ -33,7 +33,7 @@ vi.mock('./github-sync.js', () => ({
   listCustomerOptions: vi.fn().mockResolvedValue([]),
   listServiceUmbrellas: vi.fn().mockResolvedValue([]),
   listOpenMilestones: vi.fn().mockResolvedValue([]),
-  listRecentPullRequests: vi.fn().mockResolvedValue([]),
+  listRecentPullRequests: vi.fn().mockResolvedValue({ pulls: [], error: null }),
   getMilestoneBoard: vi.fn().mockResolvedValue({ statusCounts: [], groups: [] }),
   listRepoTeams: vi.fn().mockResolvedValue([]),
   listTeamMembers: vi.fn().mockResolvedValue([]),
@@ -557,10 +557,21 @@ describe('project-tracker API', () => {
       updated_at: '2026-09-04T13:45:41Z',
       user: 'endsan',
     };
-    vi.mocked(githubSync.listRecentPullRequests).mockResolvedValue([pull]);
+    vi.mocked(githubSync.listRecentPullRequests).mockResolvedValue({ pulls: [pull], error: null });
     const res = await app.request('/api/pull-requests');
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual([pull]);
+    expect(await res.json()).toEqual({ pulls: [pull], error: null });
+  });
+
+  it('GET /api/pull-requests surfaces a token-permission error instead of hiding it', async () => {
+    vi.mocked(githubSync.listRecentPullRequests).mockResolvedValue({
+      pulls: [],
+      error: 'GitHub API request failed (403): /repos/x/y/pulls — Resource not accessible by personal access token',
+    });
+    const res = await app.request('/api/pull-requests');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.error).toMatch(/403/);
   });
 
   it('unknown /api routes return JSON 404', async () => {

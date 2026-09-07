@@ -581,6 +581,14 @@
   font-size: 0.8125rem;
 }
 
+.pr-bell-error {
+  font-size: 0.8125rem;
+  color: hsl(var(--bfc-alert-hsl));
+  background: hsl(var(--bfc-alert-hsl) / 0.1);
+  border-radius: var(--bf-radius-s);
+  padding: 8px;
+}
+
 /* Chat widget - floating, fixed to the viewport, mounted once at the app
    root so it survives page navigation. */
 
