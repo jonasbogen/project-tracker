@@ -9,7 +9,10 @@ import { api, type ChatMessage } from '../api';
 const SUGGESTIONS = [
   'Hvilke prosjekter er forsinket akkurat nå?',
   'Oppsummer status for Arbion-prosjektene',
+  'Hvem har flest åpne issuer akkurat nå?',
   'Foreslå neste steg for et prosjekt uten nylig aktivitet',
+  'Skriv et utkast til en statusoppdatering jeg kan sende til en kunde',
+  'Forklar forskjellen på REST og GraphQL',
 ];
 
 // Mounted once at the app root (outside <Routes>), so it survives page
@@ -94,8 +97,9 @@ export default function ChatWidget() {
         {messages.length === 0 && (
           <div className="chat-empty">
             <p className="muted">
-              Spør om prosjektene og sakene i verktøyet. Jeg søker i den samme dataen du ser
-              ellers i appen, og skriver aldri noe tilbake selv.
+              Jeg er Claude - spør om hva som helst, ikke bare om verktøyet. Om spørsmålet handler
+              om prosjektene eller issuene her, slår jeg opp i den samme dataen du ser ellers i
+              appen, men skriver aldri noe tilbake selv.
             </p>
             <div className="chat-suggestions">
               {SUGGESTIONS.map((s) => (
