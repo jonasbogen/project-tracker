@@ -38,7 +38,7 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
   const [linkMilestone, setLinkMilestone] = useState<OpenMilestone | null>(null);
   const [customerOptions, setCustomerOptions] = useState<string[]>([]);
   const [repoTeams, setRepoTeams] = useState<RepoTeam[]>([]);
-  const [teamMembers, setTeamMembers] = useState<Assignee[]>([]);
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -46,14 +46,16 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
   useEffect(() => {
     async function load() {
       try {
-        const [meta, customerList, teamList] = await Promise.all([
+        const [meta, customerList, teamList, assigneeList] = await Promise.all([
           api.getMeta(),
           api.listCustomerOptions(),
           api.listRepoTeams(),
+          api.listAssignees(),
         ]);
         setStatuses(meta.projectStatuses);
         setCustomerOptions(customerList);
         setRepoTeams(teamList);
+        setAssignees(assigneeList);
         if (mode === 'edit') {
           const { project } = await api.getProject(projectId);
           setForm({
@@ -79,23 +81,6 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, projectId]);
-
-  // Once a Team is picked (or, in edit mode, once the project's existing team
-  // matches one of the repo's teams), fetch its members for the "Ansvarlig" picker.
-  useEffect(() => {
-    const match = repoTeams.find((t) => t.name === form.team);
-    if (!match) {
-      setTeamMembers([]);
-      return;
-    }
-    let cancelled = false;
-    api.listTeamMembers(match.slug).then((members) => {
-      if (!cancelled) setTeamMembers(members);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [form.team, repoTeams]);
 
   function update<K extends keyof ProjectInput>(key: K, value: ProjectInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -220,14 +205,14 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
                 onChange={(e) => update('team', e.target.value)}
               />
             )}
-            {teamMembers.length > 0 ? (
+            {assignees.length > 0 ? (
               <Select
                 label="Ansvarlig"
                 required
-                options={teamMembers.map((m) => ({ value: m.login, label: m.login }))}
+                options={assignees.map((m) => ({ value: m.login, label: m.login }))}
                 value={form.responsible ? { value: form.responsible, label: form.responsible } : null}
                 onChange={(opt) => update('responsible', (opt as Option | null)?.value ?? '')}
-                placeholder="Velg blant teamets medlemmer"
+                placeholder="Velg blant assignees på GitHub"
               />
             ) : (
               <Input

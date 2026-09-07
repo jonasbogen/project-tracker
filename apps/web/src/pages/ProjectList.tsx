@@ -9,7 +9,7 @@ import Input from '@intility/bifrost-react/Input';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faMagnifyingGlass, faPlus } from '@fortawesome/free-solid-svg-icons';
-import { api, type ProjectWithCount } from '../api';
+import { api, type Customer, type ProjectWithCount } from '../api';
 import CompanyLogo from '../components/CompanyLogo';
 import { projectBadgeState, formatTimeline } from '../status';
 
@@ -24,9 +24,9 @@ export default function ProjectList() {
   const initialStatus = searchParams.get('status') ?? '';
 
   const [projects, setProjects] = useState<ProjectWithCount[]>([]);
-  const [teams, setTeams] = useState<string[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
-  const [team, setTeam] = useState('');
+  const [customer, setCustomer] = useState('');
   const [status, setStatus] = useState(initialStatus);
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
@@ -43,22 +43,22 @@ export default function ProjectList() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      api.listProjects(team || undefined, search || undefined, status || undefined),
-      api.listTeams(),
+      api.listProjects(undefined, search || undefined, status || undefined, customer || undefined),
+      api.listCustomers(),
       api.getMeta(),
     ])
-      .then(([projectList, teamList, meta]) => {
+      .then(([projectList, customerList, meta]) => {
         setProjects(projectList);
-        setTeams(teamList);
+        setCustomers(customerList);
         setStatuses(meta.projectStatuses);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [team, search, status]);
+  }, [customer, search, status]);
 
-  const teamOptions: Option[] = teams.map((t) => ({ value: t, label: t }));
+  const customerOptions: Option[] = customers.map((c) => ({ value: c.customer, label: c.customer }));
   const statusOptions: Option[] = statuses.map((s) => ({ value: s, label: s }));
-  const hasFilter = !!(search || team || status);
+  const hasFilter = !!(search || customer || status);
 
   return (
     <div className="stack">
@@ -80,15 +80,15 @@ export default function ProjectList() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
-          {teamOptions.length > 0 && (
+          {customerOptions.length > 0 && (
             <Select
-              label="Filtrer på team"
+              label="Filtrer på kunde"
               hideLabel
-              options={teamOptions}
-              value={team ? { value: team, label: team } : null}
-              onChange={(opt) => setTeam((opt as Option | null)?.value ?? '')}
+              options={customerOptions}
+              value={customer ? { value: customer, label: customer } : null}
+              onChange={(opt) => setCustomer((opt as Option | null)?.value ?? '')}
               isClearable
-              placeholder="Alle team"
+              placeholder="Alle kunder"
             />
           )}
           <Select

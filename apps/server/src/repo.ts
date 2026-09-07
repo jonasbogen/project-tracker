@@ -63,6 +63,7 @@ export async function listProjects(
   team?: string,
   search?: string,
   status?: string,
+  customer?: string,
 ): Promise<ProjectWithCount[]> {
   const conditions: string[] = [];
   const params: string[] = [];
@@ -77,6 +78,10 @@ export async function listProjects(
   if (status) {
     params.push(status);
     conditions.push(`p.status = $${params.length}`);
+  }
+  if (customer) {
+    params.push(customer);
+    conditions.push(`p.customer = $${params.length}`);
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const { rows } = await pool.query<ProjectWithCount>(

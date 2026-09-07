@@ -14,6 +14,7 @@ import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
 import ProjectForm from './pages/ProjectForm';
 import Team from './pages/Team';
+import TeamMember from './pages/TeamMember';
 import Board from './pages/Board';
 import Customers from './pages/Customers';
 import Prices from './pages/Prices';
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/projects/:id/edit" element={<ProjectForm mode="edit" />} />
           <Route path="/team" element={<Team />} />
+          <Route path="/team/:login" element={<TeamMember />} />
           <Route path="/board" element={<Board />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/prices" element={<Prices />} />

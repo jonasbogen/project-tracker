@@ -66,7 +66,13 @@ api.get('/projects', async (c) => {
   const team = c.req.query('team');
   const search = c.req.query('search');
   const status = c.req.query('status');
-  const projects = await repo.listProjects(team || undefined, search || undefined, status || undefined);
+  const customer = c.req.query('customer');
+  const projects = await repo.listProjects(
+    team || undefined,
+    search || undefined,
+    status || undefined,
+    customer || undefined,
+  );
   return c.json(projects);
 });
 

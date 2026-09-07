@@ -56,7 +56,7 @@ export default function Team() {
               {team.map((member) => (
                 <Table.Row
                   key={member.owner}
-                  onClick={() => navigate(`/board?owner=${encodeURIComponent(member.owner)}`)}
+                  onClick={() => navigate(`/team/${encodeURIComponent(member.owner)}`)}
                 >
                   <Table.Cell>
                     <span className="team-member">
