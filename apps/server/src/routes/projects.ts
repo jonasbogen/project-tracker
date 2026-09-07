@@ -324,7 +324,11 @@ api.post('/projects/:id/cases', async (c) => {
     description: created.description,
     status: created.status,
     owner: created.owner,
-    frist: created.case_date ? created.case_date.slice(0, 10) : null,
+    // node-postgres returns a DATE column as a Date object, not the ISO string
+    // the Case type claims - so .slice() on it directly throws. new Date(...)
+    // normalizes either shape (Date passthrough or a string re-parse) before
+    // formatting.
+    frist: created.case_date ? new Date(created.case_date).toISOString().slice(0, 10) : null,
     kunde,
     tjenesteparaply,
     milestoneNumber: project.github_milestone_number,

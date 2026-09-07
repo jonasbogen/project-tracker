@@ -417,6 +417,56 @@ describe('project-tracker API', () => {
     expect(body.github_issue_number).toBe(101);
   });
 
+  it('POST /api/projects/:id/cases formats a Frist when the repo returns case_date as a Date (node-postgres\'s real DATE shape, not the string the Case type claims)', async () => {
+    vi.mocked(repo.getProject).mockResolvedValue({
+      id: 1,
+      name: 'Kundeprosjekt',
+      customer: 'Acme',
+      status: 'Pågår',
+      responsible: 'Jonas',
+      team: 'OT',
+      start_date: null,
+      end_date: null,
+      challenges: '',
+      github_repo: 'Prosjektmappe',
+      github_milestone_number: 42,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    vi.mocked(repo.createCase).mockResolvedValue({
+      id: 10,
+      project_id: 1,
+      title: 'Ny issue med frist',
+      description: 'Beskrivelse',
+      status: 'Åpen',
+      // node-postgres parses a DATE column into a Date, not a string - a
+      // plain '2026-09-30' string here would hide the exact bug this guards.
+      case_date: new Date('2026-09-30T00:00:00.000Z') as unknown as string,
+      owner: 'endsan',
+      github_repo: null,
+      github_issue_number: null,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    vi.mocked(githubSync.createGithubIssue).mockResolvedValue(null);
+
+    const res = await app.request('/api/projects/1/cases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Ny issue med frist',
+        description: 'Beskrivelse',
+        owner: 'endsan',
+        case_date: '2026-09-30',
+        kunde: 'Acme',
+        tjenesteparaply: 'Network',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    expect(githubSync.createGithubIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ frist: '2026-09-30' }),
+    );
+  });
+
   it('POST /api/projects/:id/cases defaults Kunde to the project customer when not given', async () => {
     vi.mocked(repo.getProject).mockResolvedValue({
       id: 1,
