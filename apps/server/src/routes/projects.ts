@@ -10,6 +10,7 @@ import {
   listCustomerOptions,
   listOpenMilestones,
   listRecentPullRequests,
+  listRepoLabels,
   listRepoTeams,
   listServiceUmbrellas,
   listTeamMembers,
@@ -185,6 +186,14 @@ api.get('/service-umbrellas', async (c) => {
   return c.json(umbrellas);
 });
 
+// GET /api/repo-labels — every label defined on the source repo, for the
+// optional "Label" field on the issue form. Empty list (not an error) when
+// GITHUB_TOKEN is unset.
+api.get('/repo-labels', async (c) => {
+  const labels = await listRepoLabels();
+  return c.json(labels);
+});
+
 // GET /api/milestones — open GitHub milestones not yet linked to a project here,
 // for the "koble til eksisterende milestone" picker on project creation.
 api.get('/milestones', async (c) => {
@@ -317,6 +326,7 @@ api.post('/projects/:id/cases', async (c) => {
   };
   const kunde = String(body.kunde ?? '').trim() || project.customer;
   const tjenesteparaply = String(body.tjenesteparaply ?? '').trim();
+  const label = String(body.label ?? '').trim();
   let created = await repo.createCase(id, data);
 
   const issue = await createGithubIssue({
@@ -331,6 +341,7 @@ api.post('/projects/:id/cases', async (c) => {
     frist: created.case_date ? new Date(created.case_date).toISOString().slice(0, 10) : null,
     kunde,
     tjenesteparaply,
+    label,
     milestoneNumber: project.github_milestone_number,
   });
   if (issue) {

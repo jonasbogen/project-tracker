@@ -36,6 +36,7 @@ vi.mock('./github-sync.js', () => ({
   listRecentPullRequests: vi.fn().mockResolvedValue({ pulls: [], error: null }),
   getMilestoneBoard: vi.fn().mockResolvedValue({ statusCounts: [], groups: [] }),
   listRepoTeams: vi.fn().mockResolvedValue([]),
+  listRepoLabels: vi.fn().mockResolvedValue([]),
   listTeamMembers: vi.fn().mockResolvedValue([]),
   githubRepoName: vi.fn().mockReturnValue('Prosjektmappe'),
   syncGithubProjects: vi.fn().mockResolvedValue({ projects: 0, cases: 0 }),
@@ -410,6 +411,7 @@ describe('project-tracker API', () => {
       frist: null,
       kunde: 'Acme',
       tjenesteparaply: 'Network',
+      label: '',
       milestoneNumber: 42,
     });
     expect(repo.setCaseGithubLink).toHaveBeenCalledWith(1, 9, 'Prosjektmappe', 101);

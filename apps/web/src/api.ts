@@ -63,6 +63,11 @@ export interface RepoTeam {
   name: string;
 }
 
+export interface RepoLabel {
+  name: string;
+  color: string;
+}
+
 export interface RecentPullRequest {
   number: number;
   title: string;
@@ -162,6 +167,7 @@ export interface CaseInput {
   owner?: string;
   kunde?: string;
   tjenesteparaply?: string;
+  label?: string;
 }
 
 export interface Meta {
@@ -210,6 +216,7 @@ export const api = {
   listServiceUmbrellas: () => request<ServiceUmbrella[]>('/api/service-umbrellas'),
   listOpenMilestones: () => request<OpenMilestone[]>('/api/milestones'),
   listRepoTeams: () => request<RepoTeam[]>('/api/repo-teams'),
+  listRepoLabels: () => request<RepoLabel[]>('/api/repo-labels'),
   listTeamMembers: (slug: string) => request<Assignee[]>(`/api/repo-teams/${encodeURIComponent(slug)}/members`),
   listRecentPullRequests: () => request<RecentPullRequestsResult>('/api/pull-requests'),
   getStats: () => request<DashboardStats>('/api/stats'),

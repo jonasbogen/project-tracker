@@ -10,7 +10,7 @@ import TextArea from '@intility/bifrost-react/TextArea';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import { faArrowLeft, faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { api, type Assignee, type Case, type Project, type ServiceUmbrella } from '../api';
+import { api, type Assignee, type Case, type Project, type RepoLabel, type ServiceUmbrella } from '../api';
 import {
   caseBadgeState,
   caseStatusColor,
@@ -42,6 +42,7 @@ export default function ProjectDetail() {
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [customerOptions, setCustomerOptions] = useState<string[]>([]);
   const [serviceUmbrellas, setServiceUmbrellas] = useState<ServiceUmbrella[]>([]);
+  const [repoLabels, setRepoLabels] = useState<RepoLabel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -54,6 +55,7 @@ export default function ProjectDetail() {
   const [owner, setOwner] = useState('');
   const [kunde, setKunde] = useState('');
   const [tjenesteparaply, setTjenesteparaply] = useState('');
+  const [label, setLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -61,12 +63,13 @@ export default function ProjectDetail() {
     setLoading(true);
     setError(null);
     try {
-      const [data, meta, assigneeList, customerList, umbrellaList] = await Promise.all([
+      const [data, meta, assigneeList, customerList, umbrellaList, labelList] = await Promise.all([
         api.getProject(projectId),
         api.getMeta(),
         api.listAssignees(),
         api.listCustomerOptions(),
         api.listServiceUmbrellas(),
+        api.listRepoLabels(),
       ]);
       setProject(data.project);
       setCases(data.cases);
@@ -74,6 +77,7 @@ export default function ProjectDetail() {
       setAssignees(assigneeList);
       setCustomerOptions(customerList);
       setServiceUmbrellas(umbrellaList);
+      setRepoLabels(labelList);
       setKunde((prev) => prev || data.project.customer);
     } catch (e) {
       const err = e as Error & { message: string };
@@ -133,6 +137,7 @@ export default function ProjectDetail() {
         owner: owner || undefined,
         kunde: kunde.trim(),
         tjenesteparaply: tjenesteparaply.trim(),
+        label: label || undefined,
       });
       setTitle('');
       setDescription('');
@@ -140,6 +145,7 @@ export default function ProjectDetail() {
       setCaseDate('');
       setOwner('');
       setTjenesteparaply('');
+      setLabel('');
       await load();
     } catch (err) {
       setFormError((err as Error).message);
@@ -495,6 +501,25 @@ export default function ProjectDetail() {
                 value={tjenesteparaply}
                 onChange={(e) => setTjenesteparaply(e.target.value)}
                 placeholder="F.eks. Network"
+              />
+            )}
+            {repoLabels.length > 0 ? (
+              <Select
+                label="Label"
+                optional
+                options={repoLabels.map((l) => ({ value: l.name, label: l.name }))}
+                value={label ? { value: label, label } : null}
+                onChange={(opt) => setLabel((opt as Option | null)?.value ?? '')}
+                isClearable
+                placeholder="Velg label fra GitHub"
+              />
+            ) : (
+              <Input
+                label="Label"
+                optional
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="Navn på GitHub-label"
               />
             )}
           </div>

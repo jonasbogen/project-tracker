@@ -367,6 +367,7 @@ export interface NewIssueInput {
   frist: string | null;
   kunde: string;
   tjenesteparaply: string;
+  label: string;
   milestoneNumber: number | null;
 }
 
@@ -402,6 +403,7 @@ export async function createGithubIssue(
     };
     if (input.milestoneNumber) body.milestone = input.milestoneNumber;
     if (input.owner) body.assignees = [input.owner];
+    if (input.label) body.labels = [input.label];
 
     const issue = await githubFetch<{ number: number }>(`/repos/${ORG}/${REPO}/issues`, {
       method: 'POST',
@@ -444,6 +446,26 @@ export async function listServiceUmbrellas(): Promise<ServiceUmbrella[]> {
       .sort((a, b) => a.title.localeCompare(b.title, 'nb'));
   } catch (err) {
     console.error('GitHub sync: failed to list service umbrellas', err);
+    return [];
+  }
+}
+
+export interface RepoLabel {
+  name: string;
+  color: string;
+}
+
+// The "Label" dropdown's live options: every label defined on the source repo,
+// for the optional Label field on the issue form. Read live (not cached) so a
+// label created moments ago on GitHub is selectable immediately. Empty (never
+// throws) when GITHUB_TOKEN is absent.
+export async function listRepoLabels(): Promise<RepoLabel[]> {
+  if (!process.env.GITHUB_TOKEN) return [];
+  try {
+    const labels = await paginate<{ name: string; color: string }>(`/repos/${ORG}/${REPO}/labels`);
+    return labels.map((l) => ({ name: l.name, color: l.color })).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+  } catch (err) {
+    console.error('GitHub sync: failed to list repo labels', err);
     return [];
   }
 }
