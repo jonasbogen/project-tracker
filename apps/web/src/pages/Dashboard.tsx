@@ -6,10 +6,9 @@ import Message from '@intility/bifrost-react/Message';
 import Badge from '@intility/bifrost-react/Badge';
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
-import WeekTrendChart from '../charts/WeekTrendChart';
 import HeroBackground from '../components/HeroBackground';
 import PullRequestBell from '../components/PullRequestBell';
-import { daysUntil, formatDate, isoWeekNumber, projectStatusColor, timeAgo } from '../status';
+import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
 function StatTile({
   label,
@@ -178,39 +177,33 @@ export default function Dashboard() {
               onItemClick={(owner) => navigate(`/board?owner=${encodeURIComponent(owner)}`)}
             />
           </Card>
-
-          <Card padding="medium">
-            <h2 className="bf-h2">Ukes-trend</h2>
-            <p className="muted" style={{ marginTop: -8 }}>Løste issuer per uke, siste 8 uker.</p>
-            <WeekTrendChart
-              items={stats.weeklyTrend.map((w) => ({
-                label: `U${isoWeekNumber(w.weekStart)}`,
-                value: w.resolved,
-              }))}
-            />
-          </Card>
         </div>
 
         <Card padding="medium">
           <h2 className="bf-h2">Kommende frister</h2>
           {stats.upcomingDeadlines.length === 0 ? (
-            <p className="muted">Ingen prosjekter har en frist satt frem i tid.</p>
+            <p className="muted">Ingen prosjekter eller issuer har en frist satt frem i tid.</p>
           ) : (
             <div className="deadline-list">
               {stats.upcomingDeadlines.map((d) => {
-                const days = daysUntil(d.end_date);
+                const days = daysUntil(d.date);
                 return (
                   <button
-                    key={d.id}
+                    key={`${d.type}-${d.id}`}
                     className="deadline-row"
-                    onClick={() => navigate(`/projects/${d.id}`)}
+                    onClick={() => navigate(`/projects/${d.project_id}`)}
                   >
                     <div>
-                      <div className="deadline-name">{d.name}</div>
+                      <div className="deadline-name">
+                        <Badge state={d.type === 'project' ? 'brand' : 'chill'} style={{ marginRight: 8 }}>
+                          {d.type === 'project' ? 'Prosjekt' : 'Issue'}
+                        </Badge>
+                        {d.title}
+                      </div>
                       <div className="muted">{d.customer}</div>
                     </div>
                     <div className="deadline-when">
-                      <span>{formatDate(d.end_date)}</span>
+                      <span>{formatDate(d.date)}</span>
                       <Badge state={days <= 7 ? 'warning' : 'neutral'}>
                         {days === 0 ? 'I dag' : `${days} dager`}
                       </Badge>

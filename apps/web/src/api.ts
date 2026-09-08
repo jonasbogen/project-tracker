@@ -90,6 +90,7 @@ export interface WeeklyReport {
   html_url: string;
   created_at: string;
   body: string;
+  openCaseCount: number;
 }
 
 export interface WeeklyReportsResult {
@@ -175,7 +176,7 @@ export interface WeeklyTrendPoint {
 export interface DashboardStats {
   projectStatusCounts: { status: string; count: number }[];
   caseStatusCounts: { status: string; count: number }[];
-  upcomingDeadlines: { id: number; name: string; customer: string; end_date: string }[];
+  upcomingDeadlines: CalendarItem[];
   topOwners: TeamMember[];
   recentActivity: ActivityItem[];
   weeklyTrend: WeeklyTrendPoint[];

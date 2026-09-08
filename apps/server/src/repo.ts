@@ -411,35 +411,40 @@ export async function getWeeklyTrend(weeks = 8): Promise<WeeklyTrendPoint[]> {
 export interface DashboardStats {
   projectStatusCounts: { status: string; count: number }[];
   caseStatusCounts: { status: string; count: number }[];
-  upcomingDeadlines: { id: number; name: string; customer: string; end_date: string }[];
+  upcomingDeadlines: CalendarItem[];
   topOwners: TeamMember[];
   recentActivity: ActivityItem[];
   weeklyTrend: WeeklyTrendPoint[];
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const [projectStatusRows, caseStatusRows, deadlineRows, owners, recentActivity, weeklyTrend] = await Promise.all([
+  const [projectStatusRows, caseStatusRows, allDeadlines, owners, recentActivity, weeklyTrend] = await Promise.all([
     pool.query<{ status: string; count: number }>(
       `SELECT status, count(*)::int AS count FROM projects GROUP BY status`,
     ),
     pool.query<{ status: string; count: number }>(
       `SELECT status, count(*)::int AS count FROM cases GROUP BY status`,
     ),
-    pool.query<{ id: number; name: string; customer: string; end_date: string }>(
-      `SELECT id, name, customer, end_date FROM projects
-       WHERE end_date IS NOT NULL AND end_date >= current_date
-       ORDER BY end_date ASC
-       LIMIT 5`,
-    ),
+    listUpcomingDeadlines(),
     listTeam(),
     getRecentActivity(10),
     getWeeklyTrend(8),
   ]);
 
+  // listUpcomingDeadlines() covers the whole timeline (past and future, both
+  // projects and cases) for the Kalender page; "Kommende frister" on the
+  // dashboard only wants what's still ahead. `date` is a DATE column - a JS
+  // Date object at runtime despite the string type - so normalize before the
+  // string comparison against today.
+  const today = new Date().toISOString().slice(0, 10);
+  const upcomingDeadlines = allDeadlines
+    .filter((d) => new Date(d.date).toISOString().slice(0, 10) >= today)
+    .slice(0, 5);
+
   return {
     projectStatusCounts: projectStatusRows.rows,
     caseStatusCounts: caseStatusRows.rows,
-    upcomingDeadlines: deadlineRows.rows,
+    upcomingDeadlines,
     topOwners: owners.slice(0, 6),
     recentActivity,
     weeklyTrend,

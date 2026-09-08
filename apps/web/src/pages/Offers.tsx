@@ -8,7 +8,7 @@ import Input from '@intility/bifrost-react/Input';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import TextArea from '@intility/bifrost-react/TextArea';
-import { faArrowRight, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRight, faArrowUpRightFromSquare, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { api, type Offer, type ProjectWithCount } from '../api';
 import { formatAmount, offerBadgeState } from '../status';
 
@@ -120,10 +120,26 @@ export default function Offers() {
 
   return (
     <div className="stack">
-      <h1 className="bf-h1">Tilbud</h1>
+      <div className="page-header">
+        <h1 className="bf-h1">Tilbud</h1>
+        <Button
+          variant="filled"
+          onClick={() =>
+            window.open(
+              'https://consultancybilling.apps.aa.intility.com/create-order',
+              '_blank',
+              'noopener,noreferrer',
+            )
+          }
+        >
+          <Icon icon={faArrowUpRightFromSquare} marginRight />
+          Fakturer oppsett/etablering
+        </Button>
+      </div>
       <p className="muted">
         Fra sendt tilbud til fakturert - der prislisten møter kunden. Prisliste ligger under
-        Prisliste i menyen.
+        Prisliste i menyen. Engangskostnader for oppsett og etablering faktureres direkte via
+        Consultancy Billing, ikke gjennom tilbudstrakten under.
       </p>
 
       {error && (

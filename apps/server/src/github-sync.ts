@@ -802,11 +802,21 @@ export interface WeeklyReport {
   html_url: string;
   created_at: string;
   body: string;
+  openCaseCount: number;
 }
 
 export interface WeeklyReportsResult {
   reports: WeeklyReport[];
   error: string | null;
+}
+
+// Every per-person table row in a "Ukesrapport" body is one open case, always
+// rendered as "| [#123 title](url) | status | project | urørt |" (see
+// ukesrapport.yml) - counting rows starting with "| [#" is simpler and more
+// robust than fully parsing the markdown table, and gives a trend figure (total
+// open cases per week) for free from data already being fetched.
+function countReportRows(body: string): number {
+  return body.split('\n').filter((line) => /^\|\s*\[#\d+/.test(line)).length;
 }
 
 // "Ukesrapport" - one plain GitHub issue per week (.github/workflows/ukesrapport.yml),
@@ -829,6 +839,7 @@ export async function listWeeklyReports(limit = 12): Promise<WeeklyReportsResult
         html_url: i.html_url,
         created_at: i.created_at,
         body: i.body ?? '',
+        openCaseCount: countReportRows(i.body ?? ''),
       })),
     };
   } catch (err) {

@@ -738,7 +738,7 @@ describe('project-tracker API', () => {
   it('GET /api/reports/weekly returns the github-sync result', async () => {
     vi.mocked(githubSync.listWeeklyReports).mockResolvedValue({
       reports: [
-        { number: 106, title: 'Ukesrapport – uke 36', html_url: 'https://github.com/x/y/issues/106', created_at: '2026-09-04T12:15:33Z', body: '# Ukesrapport – uke 36' },
+        { number: 106, title: 'Ukesrapport – uke 36', html_url: 'https://github.com/x/y/issues/106', created_at: '2026-09-04T12:15:33Z', body: '# Ukesrapport – uke 36', openCaseCount: 3 },
       ],
       error: null,
     });

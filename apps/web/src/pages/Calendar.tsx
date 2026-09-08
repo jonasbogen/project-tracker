@@ -15,8 +15,18 @@ const MONTH_NAMES = [
 ];
 const WEEKDAY_NAMES = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 
-function toKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+// Local Y-M-D, deliberately NOT toISOString(): that converts to UTC first, which
+// silently shifts the date by a day in any timezone ahead of UTC (Europe/Oslo
+// included) once it's evening - a calendar grid built that way puts items on
+// the wrong day. item.date from the API is a plain SQL DATE (no time meaning),
+// serialized as a UTC-midnight string, so its own first 10 characters ARE the
+// calendar day - it's compared against this key as a plain string, never
+// re-parsed through `new Date()`.
+function localKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function startOfMonth(date: Date): Date {
@@ -68,7 +78,7 @@ export default function CalendarPage() {
   }, [items]);
 
   const upcoming = useMemo(() => {
-    const today = toKey(new Date());
+    const today = localKey(new Date());
     return items
       .filter((i) => i.date.slice(0, 10) >= today)
       .sort((a, b) => a.date.localeCompare(b.date))
@@ -76,7 +86,7 @@ export default function CalendarPage() {
   }, [items]);
 
   const grid = buildMonthGrid(monthStart);
-  const todayKey = toKey(new Date());
+  const todayKey = localKey(new Date());
 
   function goToProject(item: CalendarItem) {
     navigate(`/projects/${item.project_id}`);
@@ -132,7 +142,7 @@ export default function CalendarPage() {
                 </div>
               ))}
               {grid.map((day) => {
-                const key = toKey(day);
+                const key = localKey(day);
                 const dayItems = byDate.get(key) ?? [];
                 const inMonth = day.getMonth() === monthStart.getMonth();
                 return (
@@ -143,24 +153,37 @@ export default function CalendarPage() {
                     }`}
                   >
                     <div className="calendar-day-number">{day.getDate()}</div>
-                    <div className="calendar-day-items">
-                      {dayItems.slice(0, 3).map((item) => (
-                        <button
-                          key={`${item.type}-${item.id}`}
-                          className={`calendar-day-item calendar-day-item-${item.type}`}
-                          onClick={() => goToProject(item)}
-                          title={item.title}
-                        >
-                          {item.title}
-                        </button>
-                      ))}
-                      {dayItems.length > 3 && (
-                        <span className="muted calendar-day-more">+{dayItems.length - 3} mer</span>
-                      )}
-                    </div>
+                    {inMonth && (
+                      <div className="calendar-day-items">
+                        {dayItems.slice(0, 3).map((item) => (
+                          <button
+                            key={`${item.type}-${item.id}`}
+                            className={`calendar-day-item calendar-day-item-${item.type}`}
+                            onClick={() => goToProject(item)}
+                            title={item.title}
+                          >
+                            {item.title}
+                          </button>
+                        ))}
+                        {dayItems.length > 3 && (
+                          <span className="muted calendar-day-more">+{dayItems.length - 3} mer</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
+            </div>
+
+            <div className="calendar-legend">
+              <span className="calendar-legend-item">
+                <span className="calendar-legend-dot calendar-legend-dot-project" />
+                Prosjekt
+              </span>
+              <span className="calendar-legend-item">
+                <span className="calendar-legend-dot calendar-legend-dot-case" />
+                Issue
+              </span>
             </div>
           </Card>
 

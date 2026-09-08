@@ -6,8 +6,21 @@ import Message from '@intility/bifrost-react/Message';
 import Table from '@intility/bifrost-react/Table';
 import { faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { api, type StatusdeckRun, type WeeklyReport } from '../api';
+import WeekTrendChart from '../charts/WeekTrendChart';
 import FormattedText from '../components/FormattedText';
 import { formatDate } from '../status';
+
+// "Ukesrapport – uke 36" -> 36, for the trend chart's x-axis label. Falls back
+// to the report's own creation date's week-of-year if the title is ever
+// reworded, so the chart never silently drops a report.
+function weekLabelFromTitle(report: WeeklyReport): string {
+  const match = report.title.match(/uke\s+(\d+)/i);
+  if (match) return `U${match[1]}`;
+  const date = new Date(report.created_at);
+  const oneJan = new Date(date.getFullYear(), 0, 1);
+  const week = Math.ceil(((date.getTime() - oneJan.getTime()) / 86400000 + oneJan.getDay() + 1) / 7);
+  return `U${week}`;
+}
 
 // A minimal renderer for exactly the markdown shapes the "Ukesrapport" workflow
 // produces (see .github/workflows/ukesrapport.yml): #/## headers, "| a | b |"
@@ -144,6 +157,16 @@ export default function Reports() {
           )}
           {!reportsError && reports.length === 0 && (
             <p className="muted">Ingen ukesrapporter funnet enda.</p>
+          )}
+          {reports.length > 1 && (
+            <>
+              <p className="muted" style={{ marginBottom: -8 }}>Åpne saker nevnt per uke.</p>
+              <WeekTrendChart
+                items={[...reports]
+                  .reverse()
+                  .map((r) => ({ label: weekLabelFromTitle(r), value: r.openCaseCount }))}
+              />
+            </>
           )}
           {reports.length > 0 && (
             <div className="stack-sm">
