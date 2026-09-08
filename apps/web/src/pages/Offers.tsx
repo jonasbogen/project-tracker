@@ -120,26 +120,10 @@ export default function Offers() {
 
   return (
     <div className="stack">
-      <div className="page-header">
-        <h1 className="bf-h1">Tilbud</h1>
-        <Button
-          variant="filled"
-          onClick={() =>
-            window.open(
-              'https://consultancybilling.apps.aa.intility.com/create-order',
-              '_blank',
-              'noopener,noreferrer',
-            )
-          }
-        >
-          <Icon icon={faArrowUpRightFromSquare} marginRight />
-          Fakturer oppsett/etablering
-        </Button>
-      </div>
+      <h1 className="bf-h1">Tilbud</h1>
       <p className="muted">
         Fra sendt tilbud til fakturert - der prislisten møter kunden. Prisliste ligger under
-        Prisliste i menyen. Engangskostnader for oppsett og etablering faktureres direkte via
-        Consultancy Billing, ikke gjennom tilbudstrakten under.
+        Prisliste i menyen.
       </p>
 
       {error && (
@@ -221,6 +205,29 @@ export default function Offers() {
 
       <Card padding="medium" className="stack-sm">
         <h2 className="bf-h2">Nytt tilbud</h2>
+
+        <div className="offer-billing-link">
+          <div>
+            <div className="deadline-name">Engangskostnad for oppsett/etablering?</div>
+            <p className="muted" style={{ margin: 0 }}>
+              Faktureres direkte via Consultancy Billing, ikke gjennom tilbudstrakten under.
+            </p>
+          </div>
+          <Button
+            variant="basic"
+            onClick={() =>
+              window.open(
+                'https://consultancybilling.apps.aa.intility.com/create-order',
+                '_blank',
+                'noopener,noreferrer',
+              )
+            }
+          >
+            <Icon icon={faArrowUpRightFromSquare} marginRight />
+            Fakturer oppsett/etablering
+          </Button>
+        </div>
+
         {formError && (
           <Message state="alert" header="Kunne ikke lagre">
             {formError}
