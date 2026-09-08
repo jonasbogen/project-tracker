@@ -10,6 +10,15 @@
 .bf-card {
   border-radius: var(--bf-radius-m);
   overflow: hidden;
+  transition: background-color 0.15s ease;
+}
+
+/* A faint highlight on whichever card the pointer is over, so a page full of
+   boxes (stat tiles, chart cards, table cards...) stays easy to place your
+   pointer in at a glance - on top of, not instead of, any more specific hover
+   state a clickable row/button inside it already has. */
+.bf-card:hover {
+  background-color: var(--bfc-base-2);
 }
 
 .page-header {
