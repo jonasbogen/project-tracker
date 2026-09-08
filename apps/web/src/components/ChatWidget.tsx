@@ -15,6 +15,16 @@ const SUGGESTIONS = [
   'Forklar forskjellen på REST og GraphQL',
 ];
 
+const WELCOME_MESSAGE: ChatMessage = {
+  role: 'assistant',
+  content:
+    'Velkommen! Er det noe jeg kan bistå med? Blant annet kan jeg:\n\n' +
+    '- Slå opp prosjekter og vise status, kunde og frister\n' +
+    '- Vise hvem som eier hvilke issuer, og hvor mange\n' +
+    '- Oppsummere tallene fra oversikten (status, forsinkelser, blokkerte)\n' +
+    '- Svare på generelle spørsmål, ikke bare om verktøyet her',
+};
+
 // Mounted once at the app root (outside <Routes>), so it survives page
 // navigation: the conversation and open/closed state persist as you move
 // between pages, exactly like a bottom-right chat bot that "follows" you.
@@ -29,6 +39,15 @@ export default function ChatWidget() {
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, open]);
+
+  // Greets automatically once per app load - ChatWidget is mounted once at the
+  // app root and stays mounted across page navigation, so this never re-fires
+  // just from moving between pages, only from actually entering/reloading the app.
+  useEffect(() => {
+    setOpen(true);
+    setMessages([WELCOME_MESSAGE]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function send(text: string) {
     const question = text.trim();

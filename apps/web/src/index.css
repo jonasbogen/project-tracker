@@ -4,80 +4,6 @@
   margin: 0 auto;
 }
 
-/* Project detail: a searchable milestone sidebar alongside the main content. */
-
-.project-detail-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 24px;
-}
-
-.project-detail-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.milestone-sidebar {
-  flex: 0 0 260px;
-  position: sticky;
-  top: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: calc(100vh - 48px);
-}
-
-.milestone-sidebar-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-}
-
-.milestone-sidebar-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 8px 10px;
-  border: none;
-  border-radius: var(--bf-radius-s);
-  background: none;
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-}
-
-.milestone-sidebar-item:hover {
-  background: var(--bfc-base-2);
-}
-
-.milestone-sidebar-item-active {
-  background: hsl(var(--bfc-brand-hsl) / 0.12);
-}
-
-.milestone-sidebar-item-name {
-  font-weight: 600;
-}
-
-.milestone-sidebar-item-customer {
-  font-size: 0.8125rem;
-}
-
-@media (max-width: 900px) {
-  .project-detail-layout {
-    flex-direction: column;
-  }
-
-  .milestone-sidebar {
-    flex: 1 1 auto;
-    position: static;
-    width: 100%;
-    max-height: none;
-  }
-}
-
 /* Bifrost's Card ships with square corners by default; round every card (and
    the boxy content it wraps almost everywhere in this app) to match Message,
    Badge, and the chat panel, which already use the same radius scale. */
@@ -313,15 +239,42 @@
   gap: 16px;
 }
 
+.stat-tile {
+  text-align: center;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.stat-tile:has(button:hover) {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.08);
+  transform: translateY(-1px);
+}
+
+.stat-tile > button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
 .stat-tile-label {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--bfc-base-c-2);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .stat-tile-value {
-  font-size: 2rem;
-  font-weight: 600;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
   font-variant-numeric: proportional-nums;
 }
 
