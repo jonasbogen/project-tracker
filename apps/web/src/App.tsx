@@ -34,7 +34,7 @@ export default function App() {
     <Nav
       logo={
         <NavLink to="/" className="bf-neutral-link">
-          <Nav.Logo>
+          <Nav.Logo logo="/logo.svg">
             <Inline gap={8}>
               <span>Prosjektsporing</span>
               <Badge state="neutral" className="from-small">
