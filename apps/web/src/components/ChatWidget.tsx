@@ -49,7 +49,7 @@ export default function ChatWidget() {
     const timeout = setTimeout(() => {
       setOpen(true);
       setMessages([WELCOME_MESSAGE]);
-    }, 900);
+    }, 5000);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
