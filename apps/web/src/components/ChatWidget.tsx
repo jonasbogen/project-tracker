@@ -42,10 +42,15 @@ export default function ChatWidget() {
 
   // Greets automatically once per app load - ChatWidget is mounted once at the
   // app root and stays mounted across page navigation, so this never re-fires
-  // just from moving between pages, only from actually entering/reloading the app.
+  // just from moving between pages, only from actually entering/reloading the
+  // app. Delayed rather than instantly open, so the panel visibly pops in
+  // (see the chat-pop-in animation) instead of just being there from frame one.
   useEffect(() => {
-    setOpen(true);
-    setMessages([WELCOME_MESSAGE]);
+    const timeout = setTimeout(() => {
+      setOpen(true);
+      setMessages([WELCOME_MESSAGE]);
+    }, 900);
+    return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
