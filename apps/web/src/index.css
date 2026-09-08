@@ -1015,6 +1015,42 @@
   background: hsl(var(--bfc-chill-hsl));
 }
 
+/* Prisliste (categories of services, flat or tiered pricing) */
+
+.price-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.price-tiers-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+}
+
+.price-tier-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.price-service-form {
+  background: var(--bfc-base-2);
+}
+
+.price-tier-form-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
 @media (max-width: 720px) {
   .calendar-grid {
     grid-auto-rows: 64px;

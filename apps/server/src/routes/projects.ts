@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import * as repo from '../repo.js';
-import type { CaseInput, PriceInput, ProjectInput } from '../repo.js';
+import type { CaseInput, ProjectInput } from '../repo.js';
 import {
   createGithubIssue,
   createGithubMilestone,
@@ -108,54 +108,6 @@ api.get('/cases', async (c) => {
 api.get('/customers', async (c) => {
   const customers = await repo.listCustomers();
   return c.json(customers);
-});
-
-// GET /api/prices — the service price list.
-api.get('/prices', async (c) => {
-  const prices = await repo.listPrices();
-  return c.json(prices);
-});
-
-function priceFromBody(body: Record<string, unknown>): PriceInput | { error: string } {
-  const service = String(body.service ?? '').trim();
-  const price = Number(body.price);
-  if (!service) return { error: 'Tjeneste er påkrevd.' };
-  if (!Number.isFinite(price) || price < 0) return { error: 'Ugyldig pris.' };
-  return {
-    service,
-    price,
-    unit: String(body.unit ?? '').trim(),
-    description: String(body.description ?? '').trim(),
-  };
-}
-
-// POST /api/prices — add a row to the price list.
-api.post('/prices', async (c) => {
-  const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
-  const data = priceFromBody(body);
-  if ('error' in data) return c.json({ error: data.error }, 400);
-  const price = await repo.createPrice(data);
-  return c.json(price, 201);
-});
-
-// PUT /api/prices/:id — edit a price list row.
-api.put('/prices/:id', async (c) => {
-  const id = parseId(c.req.param('id'));
-  if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
-  const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
-  const data = priceFromBody(body);
-  if ('error' in data) return c.json({ error: data.error }, 400);
-  const price = await repo.updatePrice(id, data);
-  if (!price) return c.json({ error: 'Fant ikke raden.' }, 404);
-  return c.json(price);
-});
-
-// DELETE /api/prices/:id — remove a price list row.
-api.delete('/prices/:id', async (c) => {
-  const id = parseId(c.req.param('id'));
-  if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
-  await repo.deletePrice(id);
-  return c.body(null, 204);
 });
 
 // GET /api/assignees — people who already own at least one open issue in the

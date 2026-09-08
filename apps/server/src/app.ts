@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { api } from './routes/projects.js';
 import { chat } from './routes/chat.js';
+import { pricesApi } from './routes/prices.js';
 
 // The Vite build output. Resolved relative to the process working directory,
 // which is the repo root both for `npm start` locally and for the Minato
@@ -16,6 +17,7 @@ export function createApp(): Hono {
   // JSON API.
   app.route('/api', api);
   app.route('/api', chat);
+  app.route('/api', pricesApi);
 
   // Any other /api path is a genuine 404 (don't fall through to the SPA).
   app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404));

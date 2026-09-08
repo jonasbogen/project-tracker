@@ -140,20 +140,53 @@ export interface Customer {
   active_count: number;
 }
 
+export interface PriceTier {
+  id: number;
+  price_id: number;
+  tier_label: string;
+  price: string | null;
+  sort_order: number;
+}
+
 export interface Price {
   id: number;
+  category_id: number;
   service: string;
-  price: string;
-  unit: string;
+  type: string;
   description: string;
+  pricing_model: string;
+  billing: string;
+  unit: string;
+  price: string | null;
+  leasing_price: string | null;
+  sort_order: number;
   created_at: string;
+  tiers: PriceTier[];
+}
+
+export interface PriceCategory {
+  id: number;
+  name: string;
+  sort_order: number;
+  prices: Price[];
+}
+
+export interface PriceTierInput {
+  tier_label: string;
+  price: number | null;
 }
 
 export interface PriceInput {
+  category_id: number;
   service: string;
-  price: number;
-  unit?: string;
+  type: string;
   description?: string;
+  pricing_model: string;
+  billing: string;
+  unit?: string;
+  price?: number | null;
+  leasing_price?: number | null;
+  tiers?: PriceTierInput[];
 }
 
 export interface ActivityItem {
@@ -314,7 +347,13 @@ export const api = {
     return request<CaseWithProjectInfo[]>(`/api/cases${query ? `?${query}` : ''}`);
   },
   listCustomers: () => request<Customer[]>('/api/customers'),
-  listPrices: () => request<Price[]>('/api/prices'),
+  listPriceCategories: () => request<PriceCategory[]>('/api/price-categories'),
+  createPriceCategory: (name: string) =>
+    request<PriceCategory>('/api/price-categories', { method: 'POST', body: JSON.stringify({ name }) }),
+  renamePriceCategory: (id: number, name: string) =>
+    request<void>(`/api/price-categories/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+  deletePriceCategory: (id: number) =>
+    request<void>(`/api/price-categories/${id}`, { method: 'DELETE' }),
   createPrice: (data: PriceInput) =>
     request<Price>('/api/prices', { method: 'POST', body: JSON.stringify(data) }),
   updatePrice: (id: number, data: PriceInput) =>

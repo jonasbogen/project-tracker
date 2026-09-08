@@ -569,45 +569,174 @@ export async function listCustomers(): Promise<Customer[]> {
   return rows;
 }
 
+export const PRICE_TYPES = ['Service', 'Hardware'] as const;
+export const PRICING_MODELS = ['Per unit', 'Tiered'] as const;
+export const BILLING_CYCLES = ['Monthly', 'One-time'] as const;
+
+export interface PriceTier {
+  id: number;
+  price_id: number;
+  tier_label: string;
+  price: string | null;
+  sort_order: number;
+}
+
 export interface Price {
   id: number;
+  category_id: number;
   service: string;
-  price: string;
-  unit: string;
+  type: string;
   description: string;
+  pricing_model: string;
+  billing: string;
+  unit: string;
+  price: string | null;
+  leasing_price: string | null;
+  sort_order: number;
   created_at: string;
+  tiers: PriceTier[];
+}
+
+export interface PriceCategory {
+  id: number;
+  name: string;
+  sort_order: number;
+  prices: Price[];
+}
+
+export interface PriceTierInput {
+  tier_label: string;
+  price: number | null;
 }
 
 export interface PriceInput {
+  category_id: number;
   service: string;
-  price: number;
-  unit?: string;
+  type: string;
   description?: string;
+  pricing_model: string;
+  billing: string;
+  unit?: string;
+  price?: number | null;
+  leasing_price?: number | null;
+  tiers?: PriceTierInput[];
 }
 
-export async function listPrices(): Promise<Price[]> {
-  const { rows } = await pool.query<Price>('SELECT * FROM prices ORDER BY service ASC');
-  return rows;
+// Every category with its services (and each service's tiers, if any), in
+// display order. Three flat queries assembled in JS rather than a JSON-agg
+// query - simpler to read and cheap at this scale (a few dozen rows, total).
+export async function listPriceCategories(): Promise<PriceCategory[]> {
+  const [{ rows: categories }, { rows: prices }, { rows: tiers }] = await Promise.all([
+    pool.query<{ id: number; name: string; sort_order: number }>(
+      'SELECT id, name, sort_order FROM price_categories ORDER BY sort_order ASC, name ASC',
+    ),
+    pool.query<Omit<Price, 'tiers'>>('SELECT * FROM prices ORDER BY sort_order ASC, service ASC'),
+    pool.query<PriceTier>('SELECT * FROM price_tiers ORDER BY sort_order ASC, id ASC'),
+  ]);
+
+  const tiersByPrice = new Map<number, PriceTier[]>();
+  for (const t of tiers) {
+    const list = tiersByPrice.get(t.price_id) ?? [];
+    list.push(t);
+    tiersByPrice.set(t.price_id, list);
+  }
+
+  const pricesByCategory = new Map<number, Price[]>();
+  for (const p of prices) {
+    const list = pricesByCategory.get(p.category_id) ?? [];
+    list.push({ ...p, tiers: tiersByPrice.get(p.id) ?? [] });
+    pricesByCategory.set(p.category_id, list);
+  }
+
+  return categories.map((c) => ({ ...c, prices: pricesByCategory.get(c.id) ?? [] }));
+}
+
+export async function createPriceCategory(name: string): Promise<PriceCategory> {
+  const { rows } = await pool.query<{ id: number; name: string; sort_order: number }>(
+    `INSERT INTO price_categories (name, sort_order)
+     VALUES ($1, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM price_categories))
+     RETURNING id, name, sort_order`,
+    [name],
+  );
+  return { ...rows[0], prices: [] };
+}
+
+export async function renamePriceCategory(id: number, name: string): Promise<void> {
+  await pool.query('UPDATE price_categories SET name = $1 WHERE id = $2', [name, id]);
+}
+
+// Cascades to its services (ON DELETE CASCADE on prices.category_id), which in
+// turn cascades to their tiers (ON DELETE CASCADE on price_tiers.price_id).
+export async function deletePriceCategory(id: number): Promise<void> {
+  await pool.query('DELETE FROM price_categories WHERE id = $1', [id]);
+}
+
+// Tiers are always replaced wholesale on write (delete-then-insert) - simpler
+// and correct at this scale (a handful of tiers per service) versus diffing
+// individual tier rows.
+async function replaceTiers(priceId: number, tiers: PriceTierInput[]): Promise<PriceTier[]> {
+  await pool.query('DELETE FROM price_tiers WHERE price_id = $1', [priceId]);
+  if (tiers.length === 0) return [];
+  const values: string[] = [];
+  const params: (number | string | null)[] = [];
+  tiers.forEach((t, i) => {
+    params.push(priceId, t.tier_label, t.price, i);
+    values.push(`($${params.length - 3}, $${params.length - 2}, $${params.length - 1}, $${params.length})`);
+  });
+  const { rows } = await pool.query<PriceTier>(
+    `INSERT INTO price_tiers (price_id, tier_label, price, sort_order)
+     VALUES ${values.join(', ')}
+     RETURNING *`,
+    params,
+  );
+  return rows.sort((a, b) => a.sort_order - b.sort_order);
 }
 
 export async function createPrice(data: PriceInput): Promise<Price> {
-  const { rows } = await pool.query<Price>(
-    `INSERT INTO prices (service, price, unit, description)
-     VALUES ($1, $2, $3, $4)
+  const { rows } = await pool.query<Omit<Price, 'tiers'>>(
+    `INSERT INTO prices
+       (category_id, service, type, description, pricing_model, billing, unit, price, leasing_price)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [data.service, data.price, data.unit || '', data.description || ''],
+    [
+      data.category_id,
+      data.service,
+      data.type,
+      data.description || '',
+      data.pricing_model,
+      data.billing,
+      data.unit || '',
+      data.pricing_model === 'Tiered' ? null : data.price ?? null,
+      data.leasing_price ?? null,
+    ],
   );
-  return rows[0];
+  const tiers = data.pricing_model === 'Tiered' ? await replaceTiers(rows[0].id, data.tiers ?? []) : [];
+  return { ...rows[0], tiers };
 }
 
 export async function updatePrice(id: number, data: PriceInput): Promise<Price | undefined> {
-  const { rows } = await pool.query<Price>(
-    `UPDATE prices SET service = $1, price = $2, unit = $3, description = $4
-     WHERE id = $5
+  const { rows } = await pool.query<Omit<Price, 'tiers'>>(
+    `UPDATE prices
+     SET category_id = $1, service = $2, type = $3, description = $4, pricing_model = $5,
+         billing = $6, unit = $7, price = $8, leasing_price = $9
+     WHERE id = $10
      RETURNING *`,
-    [data.service, data.price, data.unit || '', data.description || '', id],
+    [
+      data.category_id,
+      data.service,
+      data.type,
+      data.description || '',
+      data.pricing_model,
+      data.billing,
+      data.unit || '',
+      data.pricing_model === 'Tiered' ? null : data.price ?? null,
+      data.leasing_price ?? null,
+      id,
+    ],
   );
-  return rows[0];
+  if (!rows[0]) return undefined;
+  const tiers = data.pricing_model === 'Tiered' ? await replaceTiers(id, data.tiers ?? []) : await replaceTiers(id, []);
+  return { ...rows[0], tiers };
 }
 
 export async function deletePrice(id: number): Promise<void> {

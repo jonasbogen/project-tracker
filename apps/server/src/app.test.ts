@@ -18,7 +18,10 @@ vi.mock('./repo.js', async (importActual) => {
     getDashboardStats: vi.fn(),
     listAllCases: vi.fn(),
     listCustomers: vi.fn(),
-    listPrices: vi.fn(),
+    listPriceCategories: vi.fn(),
+    createPriceCategory: vi.fn(),
+    renamePriceCategory: vi.fn(),
+    deletePriceCategory: vi.fn(),
     createPrice: vi.fn(),
     updatePrice: vi.fn(),
     deletePrice: vi.fn(),
@@ -538,14 +541,73 @@ describe('project-tracker API', () => {
     expect(await res.json()).toEqual([{ customer: 'Acme', project_count: 2, active_count: 1 }]);
   });
 
-  it('GET /api/prices returns the repo result', async () => {
-    vi.mocked(repo.listPrices).mockResolvedValue([
-      { id: 1, service: 'SRO', price: '1500.00', unit: 'per time', description: '', created_at: '2026-08-05T00:00:00Z' },
+  it('GET /api/price-categories returns the repo result', async () => {
+    vi.mocked(repo.listPriceCategories).mockResolvedValue([
+      {
+        id: 1,
+        name: 'OT Services',
+        sort_order: 0,
+        prices: [
+          {
+            id: 1,
+            category_id: 1,
+            service: 'OT Foundation | Standard Site',
+            type: 'Service',
+            description: '',
+            pricing_model: 'Per unit',
+            billing: 'Monthly',
+            unit: 'service',
+            price: '1740.00',
+            leasing_price: null,
+            sort_order: 0,
+            created_at: '2026-08-05T00:00:00Z',
+            tiers: [],
+          },
+        ],
+      },
     ]);
-    const res = await app.request('/api/prices');
+    const res = await app.request('/api/price-categories');
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveLength(1);
+    expect(body[0].prices).toHaveLength(1);
+  });
+
+  it('POST /api/price-categories validates required fields', async () => {
+    const res = await app.request('/api/price-categories', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: '' }),
+    });
+    expect(res.status).toBe(400);
+    expect(repo.createPriceCategory).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/price-categories creates a new category', async () => {
+    vi.mocked(repo.createPriceCategory).mockResolvedValue({ id: 7, name: 'Other', sort_order: 5, prices: [] });
+    const res = await app.request('/api/price-categories', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Other' }),
+    });
+    expect(res.status).toBe(201);
+    expect(repo.createPriceCategory).toHaveBeenCalledWith('Other');
+  });
+
+  it('PUT /api/price-categories/:id renames a category', async () => {
+    const res = await app.request('/api/price-categories/1', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Renamed' }),
+    });
+    expect(res.status).toBe(204);
+    expect(repo.renamePriceCategory).toHaveBeenCalledWith(1, 'Renamed');
+  });
+
+  it('DELETE /api/price-categories/:id removes the category', async () => {
+    const res = await app.request('/api/price-categories/1', { method: 'DELETE' });
+    expect(res.status).toBe(204);
+    expect(repo.deletePriceCategory).toHaveBeenCalledWith(1);
   });
 
   it('POST /api/prices validates required fields', async () => {
@@ -558,27 +620,111 @@ describe('project-tracker API', () => {
     expect(repo.createPrice).not.toHaveBeenCalled();
   });
 
-  it('POST /api/prices creates a valid row', async () => {
+  it('POST /api/prices creates a valid "Per unit" row', async () => {
     vi.mocked(repo.createPrice).mockResolvedValue({
       id: 1,
+      category_id: 1,
       service: 'SRO',
-      price: '1500.00',
-      unit: 'per time',
+      type: 'Service',
       description: '',
+      pricing_model: 'Per unit',
+      billing: 'Monthly',
+      unit: 'per time',
+      price: '1500.00',
+      leasing_price: null,
+      sort_order: 0,
       created_at: '2026-08-05T00:00:00Z',
+      tiers: [],
     });
     const res = await app.request('/api/prices', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ service: 'SRO', price: 1500, unit: 'per time' }),
+      body: JSON.stringify({
+        category_id: 1,
+        service: 'SRO',
+        type: 'Service',
+        pricing_model: 'Per unit',
+        billing: 'Monthly',
+        price: 1500,
+        unit: 'per time',
+      }),
     });
     expect(res.status).toBe(201);
     expect(repo.createPrice).toHaveBeenCalledWith({
+      category_id: 1,
       service: 'SRO',
-      price: 1500,
-      unit: 'per time',
+      type: 'Service',
       description: '',
+      pricing_model: 'Per unit',
+      billing: 'Monthly',
+      unit: 'per time',
+      price: 1500,
+      leasing_price: null,
+      tiers: [],
     });
+  });
+
+  it('POST /api/prices requires at least one tier for a "Tiered" row', async () => {
+    const res = await app.request('/api/prices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        category_id: 1,
+        service: 'Cyber Visibility Asset Intelligence',
+        type: 'Service',
+        pricing_model: 'Tiered',
+        billing: 'Monthly',
+        unit: 'asset',
+        tiers: [],
+      }),
+    });
+    expect(res.status).toBe(400);
+    expect(repo.createPrice).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/prices creates a valid "Tiered" row, with a null price meaning "on request"', async () => {
+    vi.mocked(repo.createPrice).mockResolvedValue({
+      id: 2,
+      category_id: 1,
+      service: 'Cyber Visibility Asset Intelligence',
+      type: 'Service',
+      description: '',
+      pricing_model: 'Tiered',
+      billing: 'Monthly',
+      unit: 'asset',
+      price: null,
+      leasing_price: null,
+      sort_order: 0,
+      created_at: '2026-08-05T00:00:00Z',
+      tiers: [],
+    });
+    const res = await app.request('/api/prices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        category_id: 1,
+        service: 'Cyber Visibility Asset Intelligence',
+        type: 'Service',
+        pricing_model: 'Tiered',
+        billing: 'Monthly',
+        unit: 'asset',
+        tiers: [
+          { tier_label: '0-200', price: 4500 },
+          { tier_label: '3501+', price: null },
+        ],
+      }),
+    });
+    expect(res.status).toBe(201);
+    expect(repo.createPrice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pricing_model: 'Tiered',
+        price: null,
+        tiers: [
+          { tier_label: '0-200', price: 4500 },
+          { tier_label: '3501+', price: null },
+        ],
+      }),
+    );
   });
 
   it('DELETE /api/prices/:id removes the row', async () => {
