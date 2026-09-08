@@ -4,31 +4,66 @@ import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import Badge from '@intility/bifrost-react/Badge';
+import {
+  faBan,
+  faCalendarDays,
+  faChartColumn,
+  faClockRotateLeft,
+  faDiagramProject,
+  faListCheck,
+  faSpinner,
+  faTriangleExclamation,
+  faUsers,
+  type IconDefinition,
+} from '@fortawesome/free-solid-svg-icons';
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import HeroBackground from '../components/HeroBackground';
 import PullRequestBell from '../components/PullRequestBell';
 import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
+const ACCENT_COLOR: Record<string, string> = {
+  brand: 'hsl(var(--bfc-brand-hsl))',
+  chill: 'hsl(var(--bfc-chill-hsl))',
+  warning: 'hsl(var(--bfc-warning-hsl))',
+  alert: 'hsl(var(--bfc-alert-hsl))',
+  neutral: 'hsl(var(--bfc-neutral-hsl))',
+};
+
 function StatTile({
   label,
   value,
+  icon,
+  accent,
   onClick,
 }: {
   label: string;
   value: number;
+  icon: IconDefinition;
+  accent: keyof typeof ACCENT_COLOR;
   onClick?: () => void;
 }) {
+  const color = ACCENT_COLOR[accent];
   const content = (
     <>
+      <Icon icon={icon} className="stat-tile-icon" style={{ color }} />
       <div className="stat-tile-label">{label}</div>
       <div className="stat-tile-value">{value}</div>
     </>
   );
   return (
-    <Card padding="medium" className="stat-tile">
+    <Card padding="medium" className="stat-tile" style={{ borderTopColor: color }}>
       {onClick ? <button onClick={onClick}>{content}</button> : content}
     </Card>
+  );
+}
+
+function SectionTitle({ icon, children }: { icon: IconDefinition; children: React.ReactNode }) {
+  return (
+    <h2 className="bf-h2 section-title">
+      <Icon icon={icon} />
+      {children}
+    </h2>
   );
 }
 
@@ -85,7 +120,10 @@ export default function Dashboard() {
       <HeroBackground />
       <div className="stack">
         <div className="page-header">
-          <h1 className="bf-h1">OT Projects</h1>
+          <div>
+            <h1 className="bf-h1">OT Projects</h1>
+            <p className="muted page-subtitle">Porteføljestatus for OT/Edge Platform-kundeprosjekter</p>
+          </div>
           <PullRequestBell />
         </div>
 
@@ -93,22 +131,36 @@ export default function Dashboard() {
           <StatTile
             label="Prosjekter totalt"
             value={totalProjects}
+            icon={faDiagramProject}
+            accent="brand"
             onClick={() => navigate('/projects')}
           />
           <StatTile
             label="Pågår"
             value={countByStatus(stats.projectStatusCounts, 'Pågår')}
+            icon={faSpinner}
+            accent="chill"
             onClick={() => navigate('/projects?status=Pågår')}
           />
           <StatTile
             label="Forsinket"
             value={countByStatus(stats.projectStatusCounts, 'Forsinket')}
+            icon={faTriangleExclamation}
+            accent="warning"
             onClick={() => navigate('/projects?status=Forsinket')}
           />
-          <StatTile label="Åpne issuer" value={totalOpenCases} onClick={() => navigate('/board')} />
+          <StatTile
+            label="Åpne issuer"
+            value={totalOpenCases}
+            icon={faListCheck}
+            accent="neutral"
+            onClick={() => navigate('/board')}
+          />
           <StatTile
             label="Blokkert"
             value={blocked.length}
+            icon={faBan}
+            accent="alert"
             onClick={() =>
               document.getElementById('blokkert-card')?.scrollIntoView({ behavior: 'smooth' })
             }
@@ -116,7 +168,7 @@ export default function Dashboard() {
         </div>
 
         <Card padding="medium" id="blokkert-card" className="stack-sm">
-          <h2 className="bf-h2">Blokkert</h2>
+          <SectionTitle icon={faBan}>Blokkert</SectionTitle>
           {blockedError && (
             <Message state="alert" header="Kunne ikke laste blokkerte issuer">
               {blockedError}
@@ -158,7 +210,7 @@ export default function Dashboard() {
 
         <div className="dashboard-grid">
           <Card padding="medium">
-            <h2 className="bf-h2">Prosjekter per status</h2>
+            <SectionTitle icon={faChartColumn}>Prosjekter per status</SectionTitle>
             <BarChart
               items={projectStatuses.map((status) => ({
                 label: status,
@@ -170,7 +222,7 @@ export default function Dashboard() {
           </Card>
 
           <Card padding="medium">
-            <h2 className="bf-h2">Issuer per eier</h2>
+            <SectionTitle icon={faUsers}>Issuer per eier</SectionTitle>
             <BarChart
               items={stats.topOwners.map((o) => ({ label: o.owner, value: o.total_cases }))}
               emptyText="Ingen issuer har en eier fra GitHub enda."
@@ -180,7 +232,7 @@ export default function Dashboard() {
         </div>
 
         <Card padding="medium">
-          <h2 className="bf-h2">Kommende frister</h2>
+          <SectionTitle icon={faCalendarDays}>Kommende frister</SectionTitle>
           {stats.upcomingDeadlines.length === 0 ? (
             <p className="muted">Ingen prosjekter eller issuer har en frist satt frem i tid.</p>
           ) : (
@@ -216,7 +268,7 @@ export default function Dashboard() {
         </Card>
 
         <Card padding="medium">
-          <h2 className="bf-h2">Siste endringer</h2>
+          <SectionTitle icon={faClockRotateLeft}>Siste endringer</SectionTitle>
           {stats.recentActivity.length === 0 ? (
             <p className="muted">Ingen endringer registrert enda.</p>
           ) : (

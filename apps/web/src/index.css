@@ -30,6 +30,21 @@
   margin-bottom: 24px;
 }
 
+.page-subtitle {
+  margin-top: 2px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title svg {
+  color: var(--bfc-base-c-2);
+  font-size: 0.85em;
+}
+
 .stack {
   display: flex;
   flex-direction: column;
@@ -250,7 +265,13 @@
 
 .stat-tile {
   text-align: center;
+  border-top: 3px solid transparent;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.stat-tile-icon {
+  font-size: 1.125rem;
+  margin-bottom: 6px;
 }
 
 .stat-tile:has(button:hover) {
