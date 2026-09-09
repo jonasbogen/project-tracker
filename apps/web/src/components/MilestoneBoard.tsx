@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type DragEvent } from 'react';
 import Badge from '@intility/bifrost-react/Badge';
 import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
@@ -56,9 +56,13 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  function handleDrop(targetStatus: string) {
+  function handleDrop(targetStatus: string, e: DragEvent) {
     setDragOverStatus(null);
-    const issueNumber = draggingNumber;
+    // Prefer the dataTransfer payload over the draggingNumber state - it's the
+    // one piece of drag state the browser itself guarantees is still current
+    // at drop time, regardless of any React state timing.
+    const fromTransfer = Number(e.dataTransfer.getData('text/plain'));
+    const issueNumber = Number.isInteger(fromTransfer) && fromTransfer > 0 ? fromTransfer : draggingNumber;
     setDraggingNumber(null);
     if (!issueNumber) return;
 
@@ -105,12 +109,13 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
               className={`board-column${dragOverStatus === status ? ' board-column-dragover' : ''}`}
               onDragOver={(e) => {
                 e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
                 setDragOverStatus(status);
               }}
               onDragLeave={() => setDragOverStatus((current) => (current === status ? null : current))}
               onDrop={(e) => {
                 e.preventDefault();
-                handleDrop(status);
+                handleDrop(status, e);
               }}
             >
               <div className="board-column-header">
@@ -126,7 +131,14 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
                     role="button"
                     tabIndex={0}
                     draggable
-                    onDragStart={() => setDraggingNumber(issue.number)}
+                    onDragStart={(e) => {
+                      // Some browsers (Firefox in particular) refuse to start a
+                      // native HTML5 drag at all unless dataTransfer carries
+                      // something - an empty dragstart silently does nothing.
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', String(issue.number));
+                      setDraggingNumber(issue.number);
+                    }}
                     onDragEnd={() => setDraggingNumber(null)}
                     onClick={() => window.open(issue.html_url, '_blank', 'noopener,noreferrer')}
                     onKeyDown={(e) => {
