@@ -18,7 +18,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
-import PullRequestBell from '../components/PullRequestBell';
+import CountUp from '../components/CountUp';
 import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
 const ACCENT_COLOR: Record<string, string> = {
@@ -47,7 +47,9 @@ function StatTile({
     <>
       <Icon icon={icon} className="stat-tile-icon" style={{ color }} />
       <div className="stat-tile-label">{label}</div>
-      <div className="stat-tile-value">{value}</div>
+      <div className="stat-tile-value">
+        <CountUp value={value} />
+      </div>
     </>
   );
   return (
@@ -109,14 +111,6 @@ export default function Dashboard() {
       <div className="hero-banner">
         <img src="/hero-ot.jpg" alt="" className="hero-banner-image" />
         <div className="hero-banner-overlay" />
-        <div className="hero-banner-content">
-          <h1 className="hero-banner-title">OT Projects</h1>
-          <p className="hero-banner-subtitle">Porteføljestatus for OT/Edge Platform-kundeprosjekter</p>
-        </div>
-      </div>
-
-      <div className="hero-toolbar">
-        <PullRequestBell />
       </div>
 
       <div className="stat-tile-row">
