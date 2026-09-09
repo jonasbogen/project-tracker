@@ -19,7 +19,6 @@ import {
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import CountUp from '../components/CountUp';
-import CustomerLogoStrip from '../components/CustomerLogoStrip';
 import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
 const ACCENT_COLOR: Record<string, string> = {
@@ -113,8 +112,6 @@ export default function Dashboard() {
         <img src="/hero-ot.jpg" alt="" className="hero-banner-image" />
         <div className="hero-banner-overlay" />
       </div>
-
-      <CustomerLogoStrip />
 
       <div className="stat-tile-row">
         <StatTile

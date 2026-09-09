@@ -141,40 +141,6 @@
   background: linear-gradient(180deg, rgb(8 12 20 / 0.05) 0%, rgb(8 12 20 / 0.82) 100%);
 }
 
-.customer-logo-strip {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.customer-logo-strip-label {
-  font-size: 0.8125rem;
-  flex-shrink: 0;
-}
-
-.customer-logo-strip-row {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  flex-wrap: wrap;
-}
-
-.customer-logo-strip-item {
-  height: 32px;
-  width: auto;
-  max-width: 120px;
-  object-fit: contain;
-  opacity: 0.75;
-  filter: grayscale(1);
-  transition: opacity 0.15s ease, filter 0.15s ease;
-}
-
-.customer-logo-strip-item:hover {
-  opacity: 1;
-  filter: grayscale(0);
-}
-
 /* Dashboard */
 
 /* "Blokkert" gets a moodier, photo-backed treatment (industrial dusk silhouette)
