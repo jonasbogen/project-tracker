@@ -1,4 +1,4 @@
-import { useEffect, useState, type DragEvent } from 'react';
+import { useRef, useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import Badge from '@intility/bifrost-react/Badge';
 import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
@@ -9,6 +9,14 @@ import SectionTitle from './SectionTitle';
 
 interface BoardCard extends MilestoneBoardIssue {
   umbrella: string | null;
+}
+
+interface DragState {
+  issueNumber: number;
+  sourceStatus: string;
+  startX: number;
+  startY: number;
+  moved: boolean;
 }
 
 function bucketByStatus(data: MilestoneBoardData): Record<string, BoardCard[]> {
@@ -31,8 +39,16 @@ function bucketByStatus(data: MilestoneBoardData): Record<string, BoardCard[]> {
 // bar scoped to just this milestone. Dragging a card between columns calls
 // straight through to the real GitHub project board (see moveIssueStatus on
 // the server) - there is no local copy of "status" to drift out of sync.
-// Both the columns and the grouped list only appear once a PROJECT_TOKEN with
-// write access to the org's projects is configured server-side.
+//
+// The drag itself is implemented with plain mouse events (mousedown/move/up)
+// rather than the native HTML5 drag-and-drop API: with cards that are
+// themselves draggable nested inside a draggable drop zone, the native
+// API's drop event is notoriously unreliable across browsers about firing
+// at all, whereas elementFromPoint()-based hit testing on mouse events is
+// fully within our control and works the same everywhere.
+//
+// Both the columns and the grouped list only appear once a PROJECT_TOKEN
+// with write access to the org's projects is configured server-side.
 export default function MilestoneBoard({ projectId }: { projectId: number }) {
   const [board, setBoard] = useState<MilestoneBoardData | null>(null);
   const [columns, setColumns] = useState<Record<string, BoardCard[]>>({});
@@ -40,6 +56,9 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
   const [moveError, setMoveError] = useState<string | null>(null);
   const [draggingNumber, setDraggingNumber] = useState<number | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
+  const columnsRef = useRef(columns);
+  columnsRef.current = columns;
+  const dragRef = useRef<DragState | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -56,28 +75,17 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  function handleDrop(targetStatus: string, e: DragEvent) {
-    setDragOverStatus(null);
-    // Prefer the dataTransfer payload over the draggingNumber state - it's the
-    // one piece of drag state the browser itself guarantees is still current
-    // at drop time, regardless of any React state timing.
-    const fromTransfer = Number(e.dataTransfer.getData('text/plain'));
-    const issueNumber = Number.isInteger(fromTransfer) && fromTransfer > 0 ? fromTransfer : draggingNumber;
-    setDraggingNumber(null);
-    if (!issueNumber) return;
-
-    const sourceStatus = Object.keys(columns).find((status) =>
-      columns[status].some((issue) => issue.number === issueNumber),
-    );
-    if (!sourceStatus || sourceStatus === targetStatus) return;
-    const moving = columns[sourceStatus].find((issue) => issue.number === issueNumber);
+  function moveCard(issueNumber: number, sourceStatus: string, targetStatus: string) {
+    if (sourceStatus === targetStatus) return;
+    const current = columnsRef.current;
+    const moving = current[sourceStatus]?.find((issue) => issue.number === issueNumber);
     if (!moving) return;
 
-    const previous = columns;
+    const previous = current;
     setColumns({
-      ...columns,
-      [sourceStatus]: columns[sourceStatus].filter((issue) => issue.number !== issueNumber),
-      [targetStatus]: [...columns[targetStatus], { ...moving, status: targetStatus }],
+      ...current,
+      [sourceStatus]: current[sourceStatus].filter((issue) => issue.number !== issueNumber),
+      [targetStatus]: [...current[targetStatus], { ...moving, status: targetStatus }],
     });
     setMoveError(null);
 
@@ -85,6 +93,51 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       setColumns(previous);
       setMoveError(e.message);
     });
+  }
+
+  function handleCardMouseDown(e: ReactMouseEvent, issue: BoardCard, sourceStatus: string) {
+    if (e.button !== 0) return;
+    const state: DragState = {
+      issueNumber: issue.number,
+      sourceStatus,
+      startX: e.clientX,
+      startY: e.clientY,
+      moved: false,
+    };
+    dragRef.current = state;
+
+    function columnUnder(clientX: number, clientY: number): string | null {
+      const el = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
+      return el?.closest<HTMLElement>('[data-board-status]')?.dataset.boardStatus ?? null;
+    }
+
+    function onMove(ev: MouseEvent) {
+      if (!state.moved && Math.hypot(ev.clientX - state.startX, ev.clientY - state.startY) > 6) {
+        state.moved = true;
+        setDraggingNumber(state.issueNumber);
+        document.body.classList.add('board-dragging');
+      }
+      if (state.moved) setDragOverStatus(columnUnder(ev.clientX, ev.clientY));
+    }
+
+    function onUp(ev: MouseEvent) {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.classList.remove('board-dragging');
+      dragRef.current = null;
+      setDraggingNumber(null);
+      setDragOverStatus(null);
+
+      if (!state.moved) {
+        window.open(issue.html_url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      const targetStatus = columnUnder(ev.clientX, ev.clientY);
+      if (targetStatus) moveCard(state.issueNumber, state.sourceStatus, targetStatus);
+    }
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
   }
 
   if (loading) return <Icon.Spinner aria-label="Laster prosjekttavle" />;
@@ -107,16 +160,7 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
               key={status}
               padding="large"
               className={`board-column${dragOverStatus === status ? ' board-column-dragover' : ''}`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                setDragOverStatus(status);
-              }}
-              onDragLeave={() => setDragOverStatus((current) => (current === status ? null : current))}
-              onDrop={(e) => {
-                e.preventDefault();
-                handleDrop(status, e);
-              }}
+              data-board-status={status}
             >
               <div className="board-column-header">
                 <span className="bf-h3">{status}</span>
@@ -127,20 +171,10 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
                 {columns[status]?.map((issue) => (
                   <div
                     key={issue.number}
-                    className={`board-card${draggingNumber === issue.number ? ' board-card-dragging' : ''}`}
+                    className={`board-card board-card-draggable${draggingNumber === issue.number ? ' board-card-dragging' : ''}`}
                     role="button"
                     tabIndex={0}
-                    draggable
-                    onDragStart={(e) => {
-                      // Some browsers (Firefox in particular) refuse to start a
-                      // native HTML5 drag at all unless dataTransfer carries
-                      // something - an empty dragstart silently does nothing.
-                      e.dataTransfer.effectAllowed = 'move';
-                      e.dataTransfer.setData('text/plain', String(issue.number));
-                      setDraggingNumber(issue.number);
-                    }}
-                    onDragEnd={() => setDraggingNumber(null)}
-                    onClick={() => window.open(issue.html_url, '_blank', 'noopener,noreferrer')}
+                    onMouseDown={(e) => handleCardMouseDown(e, issue, status)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         window.open(issue.html_url, '_blank', 'noopener,noreferrer');
