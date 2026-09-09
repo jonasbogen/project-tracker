@@ -19,6 +19,7 @@ import {
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import CountUp from '../components/CountUp';
+import Skeleton from '../components/Skeleton';
 import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
 const ACCENT_COLOR: Record<string, string> = {
@@ -89,7 +90,38 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <Icon.Spinner aria-label="Laster oversikt" />;
+  if (loading) {
+    return (
+      <div className="stack" aria-label="Laster oversikt">
+        <Skeleton className="hero-banner" />
+        <div className="stat-tile-row">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i} padding="large" className="stat-tile">
+              <Skeleton style={{ height: 12, width: '60%', margin: '0 auto 10px' }} />
+              <Skeleton style={{ height: 30, width: '40%', margin: '0 auto' }} />
+            </Card>
+          ))}
+        </div>
+        <Card padding="large">
+          <Skeleton style={{ height: 160 }} />
+        </Card>
+        <div className="dashboard-grid">
+          <Card padding="large">
+            <Skeleton style={{ height: 160 }} />
+          </Card>
+          <Card padding="large">
+            <Skeleton style={{ height: 160 }} />
+          </Card>
+        </div>
+        <Card padding="large">
+          <Skeleton style={{ height: 160 }} />
+        </Card>
+        <Card padding="large">
+          <Skeleton style={{ height: 160 }} />
+        </Card>
+      </div>
+    );
+  }
   if (error || !stats) {
     return (
       <Message state="alert" header="Kunne ikke laste oversikten">

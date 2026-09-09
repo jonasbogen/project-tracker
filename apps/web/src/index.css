@@ -4,12 +4,40 @@
   margin: 0 auto;
 }
 
+.skeleton {
+  border-radius: var(--bf-radius-s);
+  background: linear-gradient(
+    90deg,
+    var(--bfc-base-2) 25%,
+    var(--bfc-base-3) 37%,
+    var(--bfc-base-2) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-pulse 1.4s ease infinite;
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
 /* Bifrost's Card ships with square corners by default; round every card (and
    the boxy content it wraps almost everywhere in this app) to match Message,
    Badge, and the chat panel, which already use the same radius scale. */
 .bf-card {
   border-radius: var(--bf-radius-m);
   overflow: hidden;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.06);
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -17,10 +45,12 @@
    is over, so a page full of boxes (stat tiles, chart cards, table cards...)
    stays easy to place your pointer in at a glance - on top of, not instead
    of, any more specific hover state a clickable row/button inside it already
-   has. box-shadow (not border) so it never shifts layout. */
+   has. box-shadow (not border) so it never shifts layout - the resting
+   shadow above is replaced, not stacked, since box-shadow doesn't combine
+   across the two rules and a lifted+outlined look reads as "hovered" either way. */
 .bf-card:hover {
   background-color: var(--bfc-base-2);
-  box-shadow: 0 0 0 1px hsl(var(--bfc-brand-hsl) / 0.5);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1), 0 0 0 1px hsl(var(--bfc-brand-hsl) / 0.5);
 }
 
 .page-header {
