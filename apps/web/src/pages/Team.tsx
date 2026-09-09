@@ -30,7 +30,7 @@ export default function Team() {
           <h1 className="hero-banner-title">Team</h1>
           <p className="hero-banner-subtitle">
             Personer som er satt som eier (assignee) på minst én issue fra GitHub, med antall
-            issuer de eier.
+            issues de eier.
           </p>
         </div>
       </div>
@@ -52,7 +52,7 @@ export default function Team() {
 
         {!loading && !error && team.length === 0 && (
           <Message header="Ingen eiere registrert enda">
-            Issuer synkronisert fra GitHub viser eier her når issuene har en assignee.
+            Issues synkronisert fra GitHub viser eier her når issuene har en assignee.
           </Message>
         )}
 
@@ -61,7 +61,7 @@ export default function Team() {
             <Table.Header>
               <Table.Row>
                 <Table.HeaderCell>Person</Table.HeaderCell>
-                <Table.HeaderCell>Åpne issuer</Table.HeaderCell>
+                <Table.HeaderCell>Åpne issues</Table.HeaderCell>
                 <Table.HeaderCell>Totalt</Table.HeaderCell>
               </Table.Row>
             </Table.Header>

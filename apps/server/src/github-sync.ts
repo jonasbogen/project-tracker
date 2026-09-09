@@ -697,11 +697,17 @@ export async function moveIssueStatus(issueNumber: number, statusName: string): 
   if (!process.env.PROJECT_TOKEN) return { ok: false, error: 'PROJECT_TOKEN er ikke satt opp.' };
   try {
     const meta = await getStatusFieldMeta();
-    if (!meta) return { ok: false, error: 'Fant ikke Status-feltet på GitHub-prosjekttavlen.' };
+    if (!meta) {
+      console.error('GitHub sync: could not read the Status project field (missing project/field id)');
+      return { ok: false, error: 'Fant ikke Status-feltet på GitHub-prosjekttavlen.' };
+    }
     const option = meta.options.find((o) => o.name === statusName);
     if (!option) return { ok: false, error: `Ukjent status: ${statusName}` };
     const itemId = await fetchProjectItemId(issueNumber);
-    if (!itemId) return { ok: false, error: `Fant ikke issue #${issueNumber} på GitHub-prosjekttavlen.` };
+    if (!itemId) {
+      console.error(`GitHub sync: issue #${issueNumber} has no item on project #${PROJECT_NUMBER}`);
+      return { ok: false, error: `Fant ikke issue #${issueNumber} på GitHub-prosjekttavlen.` };
+    }
     const res = await fetch('https://api.github.com/graphql', {
       method: 'POST',
       headers: {
@@ -714,8 +720,18 @@ export async function moveIssueStatus(issueNumber: number, statusName: string): 
         variables: { project: meta.projectId, item: itemId, field: meta.fieldId, option: option.id },
       }),
     });
-    const json = (await res.json()) as { errors?: { message: string }[] };
-    if (json.errors?.length) return { ok: false, error: json.errors.map((e) => e.message).join('; ') };
+    const json = (await res.json()) as { message?: string; errors?: { message: string }[] };
+    // GitHub's GraphQL endpoint can fail two different ways: HTTP-level (401/403,
+    // a plain {message} body, e.g. a token with read-only Projects access) or
+    // GraphQL-level (200 OK, but an `errors` array, e.g. a field/value it won't
+    // accept) - either one must fail the move, not silently report success.
+    if (!res.ok || json.errors?.length) {
+      const detail = json.errors?.length ? json.errors.map((e) => e.message).join('; ') : (json.message ?? `HTTP ${res.status}`);
+      console.error(
+        `GitHub sync: failed to move issue #${issueNumber} to status "${statusName}": ${detail}`,
+      );
+      return { ok: false, error: detail };
+    }
     return { ok: true, status: statusName };
   } catch (err) {
     console.error(`GitHub sync: failed to move issue #${issueNumber} to status "${statusName}"`, err);

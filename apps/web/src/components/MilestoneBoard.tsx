@@ -118,7 +118,7 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
                 <Badge state="neutral">{columns[status]?.length ?? 0}</Badge>
               </div>
               <div className="board-column-body">
-                {(columns[status]?.length ?? 0) === 0 && <p className="muted">Ingen issuer.</p>}
+                {(columns[status]?.length ?? 0) === 0 && <p className="muted">Ingen issues.</p>}
                 {columns[status]?.map((issue) => (
                   <div
                     key={issue.number}

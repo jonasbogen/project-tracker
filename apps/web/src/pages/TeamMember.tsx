@@ -97,13 +97,13 @@ export default function TeamMember() {
         <>
           <div className="stat-tile-row">
             <Card padding="large" className="stat-tile">
-              <div className="stat-tile-label">Åpne issuer</div>
+              <div className="stat-tile-label">Åpne issues</div>
               <div className="stat-tile-value">
                 <CountUp value={openCases.length} />
               </div>
             </Card>
             <Card padding="large" className="stat-tile">
-              <div className="stat-tile-label">Issuer totalt</div>
+              <div className="stat-tile-label">Issues totalt</div>
               <div className="stat-tile-value">
                 <CountUp value={cases.length} />
               </div>
@@ -145,9 +145,9 @@ export default function TeamMember() {
           </Card>
 
           <Card padding="large" className="stack-sm">
-            <SectionTitle icon={faListCheck}>Issuer eid av {login}</SectionTitle>
+            <SectionTitle icon={faListCheck}>Issues eid av {login}</SectionTitle>
             {cases.length === 0 ? (
-              <p className="muted">Ingen issuer registrert.</p>
+              <p className="muted">Ingen issues registrert.</p>
             ) : (
               <Table>
                 <Table.Header>

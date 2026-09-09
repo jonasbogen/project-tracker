@@ -77,7 +77,7 @@ export default function MyTasks() {
       <div className="hero-banner-content">
         <h1 className="hero-banner-title">Mine oppgaver</h1>
         <p className="hero-banner-subtitle">
-          Dine åpne issuer på tvers av alle prosjekter, sortert etter frist.
+          Dine åpne issues på tvers av alle prosjekter, sortert etter frist.
         </p>
       </div>
     </div>
@@ -160,8 +160,8 @@ export default function MyTasks() {
       {!loading && !error && (
         <Card padding="large" className="stack-sm">
           {openCases.length === 0 ? (
-            <Message header="Ingen åpne issuer" noIcon>
-              Du eier ingen åpne issuer akkurat nå.
+            <Message header="Ingen åpne issues" noIcon>
+              Du eier ingen åpne issues akkurat nå.
             </Message>
           ) : (
             <Table>

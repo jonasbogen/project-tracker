@@ -525,7 +525,7 @@ export interface CaseFilters {
 
 // Every case (any status) across every project, optionally narrowed to one project
 // and/or one owner, with the parent project's name and customer for display. Backs
-// the "Issuer"-board — the click-through target for every case counter in the app.
+// the "Issues"-board — the click-through target for every case counter in the app.
 export async function listAllCases(filters: CaseFilters): Promise<CaseWithProjectInfo[]> {
   const conditions: string[] = [];
   const params: (string | number)[] = [];

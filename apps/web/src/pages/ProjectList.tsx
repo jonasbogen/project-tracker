@@ -137,7 +137,7 @@ export default function ProjectList() {
                 <Table.HeaderCell>Status</Table.HeaderCell>
                 <Table.HeaderCell>Ansvarlig</Table.HeaderCell>
                 <Table.HeaderCell>Tidslinje</Table.HeaderCell>
-                <Table.HeaderCell>Issuer</Table.HeaderCell>
+                <Table.HeaderCell>Issues</Table.HeaderCell>
               </Table.Row>
             </Table.Header>
             <Table.Body>

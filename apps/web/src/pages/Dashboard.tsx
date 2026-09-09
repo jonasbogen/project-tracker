@@ -170,7 +170,7 @@ export default function Dashboard() {
         </Reveal>
         <Reveal delay={240}>
           <StatTile
-            label="Åpne issuer"
+            label="Åpne issues"
             value={totalOpenCases}
             icon={faListCheck}
             accent="neutral"
@@ -197,7 +197,7 @@ export default function Dashboard() {
           <div className="blokkert-card-content stack-sm">
             <SectionTitle icon={faBan}>Blokkert</SectionTitle>
             {blockedError && (
-              <Message state="alert" header="Kunne ikke laste blokkerte issuer">
+              <Message state="alert" header="Kunne ikke laste blokkerte issues">
                 {blockedError}
               </Message>
             )}
@@ -254,10 +254,10 @@ export default function Dashboard() {
 
         <Reveal delay={100}>
           <Card padding="large">
-            <SectionTitle icon={faUsers}>Issuer per eier</SectionTitle>
+            <SectionTitle icon={faUsers}>Issues per eier</SectionTitle>
             <BarChart
               items={stats.topOwners.map((o) => ({ label: o.owner, value: o.total_cases }))}
-              emptyText="Ingen issuer har en eier fra GitHub enda."
+              emptyText="Ingen issues har en eier fra GitHub enda."
               onItemClick={(owner) => navigate(`/board?owner=${encodeURIComponent(owner)}`)}
             />
           </Card>
@@ -268,7 +268,7 @@ export default function Dashboard() {
         <Card padding="large">
           <SectionTitle icon={faCalendarDays}>Kommende frister</SectionTitle>
           {stats.upcomingDeadlines.length === 0 ? (
-            <p className="muted">Ingen prosjekter eller issuer har en frist satt frem i tid.</p>
+            <p className="muted">Ingen prosjekter eller issues har en frist satt frem i tid.</p>
           ) : (
             <div className="deadline-list">
               {stats.upcomingDeadlines.map((d) => {

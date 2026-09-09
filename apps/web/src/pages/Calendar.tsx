@@ -98,7 +98,7 @@ export default function CalendarPage() {
     <div className="stack">
       <h1 className="bf-h1">Kalender</h1>
       <p className="muted">
-        De nærmeste fristene for prosjekter (milestones) og issuer, samlet på én tidslinje.
+        De nærmeste fristene for prosjekter (milestones) og issues, samlet på én tidslinje.
       </p>
 
       {error && (

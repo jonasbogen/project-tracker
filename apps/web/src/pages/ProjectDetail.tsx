@@ -157,7 +157,7 @@ export default function ProjectDetail() {
   }, [projectId]);
 
   async function handleDeleteProject() {
-    if (!confirm('Slette dette prosjektet og alle tilhørende issuer?')) return;
+    if (!confirm('Slette dette prosjektet og alle tilhørende issues?')) return;
     try {
       await api.deleteProject(projectId);
       navigate('/projects');
@@ -369,7 +369,7 @@ export default function ProjectDetail() {
             Siste aktivitet
           </SectionTitle>
           {cases.length === 0 ? (
-            <p className="muted">Ingen issuer registrert enda.</p>
+            <p className="muted">Ingen issues registrert enda.</p>
           ) : (
             <div className="deadline-list">
               {[...cases]
@@ -400,14 +400,14 @@ export default function ProjectDetail() {
           )}
         </Card>
         <Card padding="large">
-          <SectionTitle icon={faChartColumn}>Issuer per status</SectionTitle>
+          <SectionTitle icon={faChartColumn}>Issues per status</SectionTitle>
           <BarChart
             items={caseStatuses.map((status) => ({
               label: status,
               value: cases.filter((c) => c.status === status).length,
               color: caseStatusColor(status),
             }))}
-            emptyText="Ingen issuer registrert enda."
+            emptyText="Ingen issues registrert enda."
           />
         </Card>
       </div>
@@ -419,9 +419,9 @@ export default function ProjectDetail() {
       )}
 
       <Card padding="large" className="stack-sm">
-        <SectionTitle icon={faListCheck}>Issuer</SectionTitle>
+        <SectionTitle icon={faListCheck}>Issues</SectionTitle>
         {cases.length === 0 ? (
-          <Message noIcon header="Ingen issuer knyttet til prosjektet enda." />
+          <Message noIcon header="Ingen issues knyttet til prosjektet enda." />
         ) : (
           <Table>
             <Table.Header>

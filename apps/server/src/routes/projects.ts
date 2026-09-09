@@ -94,7 +94,7 @@ api.get('/team', async (c) => {
 });
 
 // GET /api/cases — every case (any status), optionally narrowed to one project and/or
-// one owner. Backs the "Issuer"-board that every case counter in the app links to.
+// one owner. Backs the "Issues"-board that every case counter in the app links to.
 api.get('/cases', async (c) => {
   const projectId = parseId(c.req.query('project') ?? undefined);
   const owner = c.req.query('owner');

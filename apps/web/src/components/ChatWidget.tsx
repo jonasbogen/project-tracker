@@ -14,8 +14,8 @@ const CAPABILITIES: { label: string; prompt: string }[] = [
     prompt: 'Vis meg en oversikt over prosjektene, med status og frister.',
   },
   {
-    label: 'Vise hvem som eier hvilke issuer, og hvor mange',
-    prompt: 'Hvem eier flest åpne issuer akkurat nå?',
+    label: 'Vise hvem som eier hvilke issues, og hvor mange',
+    prompt: 'Hvem eier flest åpne issues akkurat nå?',
   },
   {
     label: 'Oppsummere tallene fra oversikten (status, forsinkelser, blokkerte)',
