@@ -191,11 +191,14 @@
   background: linear-gradient(180deg, rgb(8 12 20 / 0.05) 0%, rgb(8 12 20 / 0.82) 100%);
 }
 
-/* A shorter banner for a secondary page's header photo (e.g. Team) - the
-   dashboard's own hero doesn't carry title text (see Dashboard.tsx), but a
-   secondary page's does, so this variant keeps the title/subtitle pair too. */
+/* A shorter banner for a secondary page's header photo (e.g. Team,
+   MyTasks) - the dashboard's own hero doesn't carry title text (see
+   Dashboard.tsx), but a secondary page's does, so this variant keeps the
+   title/subtitle pair too. Tall enough that a wide source photo isn't
+   cropped down to a sliver - anything shorter starts cutting off whatever
+   sits mid-frame (e.g. a logo baked into the image). */
 .hero-banner-compact {
-  min-height: 160px;
+  min-height: 220px;
 }
 
 .hero-banner-content {

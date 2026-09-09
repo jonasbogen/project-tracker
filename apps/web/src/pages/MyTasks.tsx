@@ -70,10 +70,23 @@ export default function MyTasks() {
     setCases([]);
   }
 
+  const hero = (
+    <div className="hero-banner hero-banner-compact">
+      <img src="/eidsiva.jpg" alt="" className="hero-banner-image" />
+      <div className="hero-banner-overlay" />
+      <div className="hero-banner-content">
+        <h1 className="hero-banner-title">Mine oppgaver</h1>
+        <p className="hero-banner-subtitle">
+          Dine åpne issuer på tvers av alle prosjekter, sortert etter frist.
+        </p>
+      </div>
+    </div>
+  );
+
   if (!login) {
     return (
       <div className="stack">
-        <h1 className="bf-h1">Mine oppgaver</h1>
+        {hero}
         <Card padding="large" className="stack-sm">
           <p className="muted">
             Ingen innlogging her enda - velg din egen GitHub-bruker en gang, så husker denne
@@ -111,19 +124,20 @@ export default function MyTasks() {
 
   return (
     <div className="stack">
+      {hero}
       <div className="page-header">
-        <h1 className="bf-h1">
-          <span className="team-member">
-            <img
-              className="team-avatar"
-              src={`https://github.com/${login}.png?size=64`}
-              alt=""
-              width={28}
-              height={28}
-            />
-            Mine oppgaver
+        <span className="team-member">
+          <img
+            className="team-avatar"
+            src={`https://github.com/${login}.png?size=64`}
+            alt=""
+            width={28}
+            height={28}
+          />
+          <span className="bf-h3" style={{ margin: 0 }}>
+            {login}
           </span>
-        </h1>
+        </span>
         <Button variant="flat" onClick={handleSwitchUser}>
           Ikke {login}? Bytt bruker
         </Button>
