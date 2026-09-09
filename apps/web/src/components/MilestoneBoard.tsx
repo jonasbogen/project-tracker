@@ -3,7 +3,7 @@ import Badge from '@intility/bifrost-react/Badge';
 import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
-import { faListCheck, faSitemap } from '@fortawesome/free-solid-svg-icons';
+import { faListCheck } from '@fortawesome/free-solid-svg-icons';
 import { api, type MilestoneBoard as MilestoneBoardData, type MilestoneBoardIssue } from '../api';
 import SectionTitle from './SectionTitle';
 
@@ -34,21 +34,20 @@ function bucketByStatus(data: MilestoneBoardData): Record<string, BoardCard[]> {
 
 // A live, two-way mirror of the GitHub Projects board for this project's
 // milestone: draggable columns for the Status field (Backlog/To do/In
-// progress/Blocked/Done, the same ones on github.com/orgs/<org>/projects/318),
-// then issues grouped under their Tjenesteparaply parent with a completion
-// bar scoped to just this milestone. Dragging a card between columns calls
-// straight through to the real GitHub project board (see moveIssueStatus on
-// the server) - there is no local copy of "status" to drift out of sync.
+// progress/Blocked/Done, the same ones on github.com/orgs/<org>/projects/318).
+// Dragging a card between columns calls straight through to the real GitHub
+// project board (see moveIssueStatus on the server) - there is no local copy
+// of "status" to drift out of sync, and no separate grouping of our own on
+// top of it - a card sits in whichever column it actually sits in on GitHub.
 //
 // The drag itself is implemented with plain mouse events (mousedown/move/up)
 // rather than the native HTML5 drag-and-drop API: with cards that are
 // themselves draggable nested inside a draggable drop zone, the native
 // API's drop event is notoriously unreliable across browsers about firing
-// at all, whereas elementFromPoint()-based hit testing on mouse events is
-// fully within our control and works the same everywhere.
-//
-// Both the columns and the grouped list only appear once a PROJECT_TOKEN
-// with write access to the org's projects is configured server-side.
+// at all. Which column a drop lands in is resolved geometrically (nearest
+// column by horizontal distance) rather than via elementFromPoint(), since
+// the columns sit in a CSS grid with gaps between them - elementFromPoint()
+// at a point over a gap resolves to nothing, silently dropping the move.
 export default function MilestoneBoard({ projectId }: { projectId: number }) {
   const [board, setBoard] = useState<MilestoneBoardData | null>(null);
   const [columns, setColumns] = useState<Record<string, BoardCard[]>>({});
@@ -59,6 +58,7 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
   const columnsRef = useRef(columns);
   columnsRef.current = columns;
   const dragRef = useRef<DragState | null>(null);
+  const columnElsRef = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
     setLoading(true);
@@ -95,6 +95,24 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
     });
   }
 
+  // Nearest column by horizontal distance (0 if the point is already inside
+  // it), ignoring points far outside the board's row vertically - a plain
+  // hit-test would miss the gaps between grid columns entirely.
+  function columnUnder(clientX: number, clientY: number): string | null {
+    let closest: string | null = null;
+    let closestDist = Infinity;
+    for (const [status, el] of columnElsRef.current) {
+      const rect = el.getBoundingClientRect();
+      if (clientY < rect.top - 40 || clientY > rect.bottom + 40) continue;
+      const dist = clientX < rect.left ? rect.left - clientX : clientX > rect.right ? clientX - rect.right : 0;
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = status;
+      }
+    }
+    return closest;
+  }
+
   function handleCardMouseDown(e: ReactMouseEvent, issue: BoardCard, sourceStatus: string) {
     if (e.button !== 0) return;
     const state: DragState = {
@@ -105,11 +123,6 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       moved: false,
     };
     dragRef.current = state;
-
-    function columnUnder(clientX: number, clientY: number): string | null {
-      const el = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-      return el?.closest<HTMLElement>('[data-board-status]')?.dataset.boardStatus ?? null;
-    }
 
     function onMove(ev: MouseEvent) {
       if (!state.moved && Math.hypot(ev.clientX - state.startX, ev.clientY - state.startY) > 6) {
@@ -160,7 +173,10 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
               key={status}
               padding="large"
               className={`board-column${dragOverStatus === status ? ' board-column-dragover' : ''}`}
-              data-board-status={status}
+              ref={(el) => {
+                if (el) columnElsRef.current.set(status, el);
+                else columnElsRef.current.delete(status);
+              }}
             >
               <div className="board-column-header">
                 <span className="bf-h3">{status}</span>
@@ -216,65 +232,6 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
           skrivetilgang til prosjekttavlen.
         </p>
       )}
-
-      <SectionTitle as="h3" icon={faSitemap}>
-        Fremdrift per tjenesteparaply
-      </SectionTitle>
-      <div className="milestone-groups">
-        {board.groups.map((g) => (
-          <div key={g.umbrella?.number ?? 'none'} className="milestone-group">
-            <div className="milestone-group-header">
-              <span className="milestone-group-title">
-                {g.umbrella ? (
-                  <a href={g.umbrella.html_url} target="_blank" rel="noopener noreferrer">
-                    {g.umbrella.title} <span className="muted">#{g.umbrella.number}</span>
-                  </a>
-                ) : (
-                  'Uten tjenesteparaply'
-                )}
-                <span className="muted"> · {g.total} sak(er)</span>
-              </span>
-              <span className="milestone-group-progress muted">
-                {g.completed} / {g.total} · {g.percentCompleted}%
-              </span>
-            </div>
-            <div className="milestone-progress-track">
-              <div className="milestone-progress-fill" style={{ width: `${g.percentCompleted}%` }} />
-            </div>
-            <div className="milestone-issue-list">
-              {g.issues.map((issue) => (
-                <a
-                  key={issue.number}
-                  href={issue.html_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="milestone-issue-row"
-                >
-                  <span
-                    className={`milestone-issue-title${issue.state === 'closed' ? ' milestone-issue-title-done' : ''}`}
-                  >
-                    {issue.title}
-                  </span>
-                  <span className="milestone-issue-meta">
-                    {issue.status && <Badge state="neutral">{issue.status}</Badge>}
-                    {issue.assignees.map((a) => (
-                      <img
-                        key={a.login}
-                        className="team-avatar"
-                        src={a.avatar_url}
-                        alt={a.login}
-                        title={a.login}
-                        width={20}
-                        height={20}
-                      />
-                    ))}
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
