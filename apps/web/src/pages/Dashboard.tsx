@@ -19,6 +19,7 @@ import {
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import CountUp from '../components/CountUp';
+import Reveal from '../components/Reveal';
 import SectionTitle from '../components/SectionTitle';
 import Skeleton from '../components/Skeleton';
 import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
@@ -132,19 +133,24 @@ export default function Dashboard() {
 
   return (
     <div className="stack">
-      <div className="hero-banner">
-        <img src="/hero-ot.jpg" alt="" className="hero-banner-image" />
-        <div className="hero-banner-overlay" />
-      </div>
+      <Reveal>
+        <div className="hero-banner">
+          <img src="/hero-ot.jpg" alt="" className="hero-banner-image" />
+          <div className="hero-banner-overlay" />
+        </div>
+      </Reveal>
 
       <div className="stat-tile-row">
-        <StatTile
+        <Reveal delay={0}>
+          <StatTile
             label="Prosjekter totalt"
             value={totalProjects}
             icon={faDiagramProject}
             accent="brand"
             onClick={() => navigate('/projects')}
           />
+        </Reveal>
+        <Reveal delay={80}>
           <StatTile
             label="Pågår"
             value={countByStatus(stats.projectStatusCounts, 'Pågår')}
@@ -152,6 +158,8 @@ export default function Dashboard() {
             accent="chill"
             onClick={() => navigate('/projects?status=Pågår')}
           />
+        </Reveal>
+        <Reveal delay={160}>
           <StatTile
             label="Forsinket"
             value={countByStatus(stats.projectStatusCounts, 'Forsinket')}
@@ -159,6 +167,8 @@ export default function Dashboard() {
             accent="warning"
             onClick={() => navigate('/projects?status=Forsinket')}
           />
+        </Reveal>
+        <Reveal delay={240}>
           <StatTile
             label="Åpne issuer"
             value={totalOpenCases}
@@ -166,6 +176,8 @@ export default function Dashboard() {
             accent="neutral"
             onClick={() => navigate('/board')}
           />
+        </Reveal>
+        <Reveal delay={320}>
           <StatTile
             label="Blokkert"
             value={blocked.length}
@@ -175,8 +187,10 @@ export default function Dashboard() {
               document.getElementById('blokkert-card')?.scrollIntoView({ behavior: 'smooth' })
             }
           />
-        </div>
+        </Reveal>
+      </div>
 
+      <Reveal>
         <Card padding="large" id="blokkert-card" className="blokkert-card">
           <img src="/klemetsrud.jpg" alt="" className="blokkert-card-image" />
           <div className="blokkert-card-overlay" />
@@ -221,8 +235,10 @@ export default function Dashboard() {
             )}
           </div>
         </Card>
+      </Reveal>
 
-        <div className="dashboard-grid">
+      <div className="dashboard-grid">
+        <Reveal delay={0}>
           <Card padding="large">
             <SectionTitle icon={faChartColumn}>Prosjekter per status</SectionTitle>
             <BarChart
@@ -234,7 +250,9 @@ export default function Dashboard() {
               onItemClick={(status) => navigate(`/projects?status=${encodeURIComponent(status)}`)}
             />
           </Card>
+        </Reveal>
 
+        <Reveal delay={100}>
           <Card padding="large">
             <SectionTitle icon={faUsers}>Issuer per eier</SectionTitle>
             <BarChart
@@ -243,8 +261,10 @@ export default function Dashboard() {
               onItemClick={(owner) => navigate(`/board?owner=${encodeURIComponent(owner)}`)}
             />
           </Card>
-        </div>
+        </Reveal>
+      </div>
 
+      <Reveal>
         <Card padding="large">
           <SectionTitle icon={faCalendarDays}>Kommende frister</SectionTitle>
           {stats.upcomingDeadlines.length === 0 ? (
@@ -280,7 +300,9 @@ export default function Dashboard() {
             </div>
           )}
         </Card>
+      </Reveal>
 
+      <Reveal>
         <Card padding="large">
           <SectionTitle icon={faClockRotateLeft}>Siste endringer</SectionTitle>
           {stats.recentActivity.length === 0 ? (
@@ -320,6 +342,7 @@ export default function Dashboard() {
             </div>
           )}
         </Card>
-      </div>
+      </Reveal>
+    </div>
   );
 }

@@ -160,7 +160,7 @@ describe('project-tracker API', () => {
     });
     const res = await app.request('/api/projects/1/board');
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ statusCounts: [], groups: [] });
+    expect(await res.json()).toEqual({ statusCounts: [], groups: [], statusOrder: [] });
     expect(githubSync.getMilestoneBoard).not.toHaveBeenCalled();
   });
 

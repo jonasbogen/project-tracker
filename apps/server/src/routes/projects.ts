@@ -17,6 +17,7 @@ import {
   listStatusdeckRuns,
   listTeamMembers,
   listWeeklyReports,
+  moveIssueStatus,
   syncGithubProjects,
   verifyGithubWebhookSignature,
 } from '../github-sync.js';
@@ -279,9 +280,28 @@ api.get('/projects/:id/board', async (c) => {
   if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
   const project = await repo.getProject(id);
   if (!project) return c.json({ error: 'Prosjektet finnes ikke.' }, 404);
-  if (!project.github_milestone_number) return c.json({ statusCounts: [], groups: [] });
+  if (!project.github_milestone_number) return c.json({ statusCounts: [], groups: [], statusOrder: [] });
   const board = await getMilestoneBoard(project.github_milestone_number);
   return c.json(board);
+});
+
+// PATCH /api/projects/:id/board — drag a card to a new column: sets the Status
+// field on the issue's GitHub Projects V2 item, so the app's board and the
+// real GitHub board never disagree. Requires PROJECT_TOKEN.
+api.patch('/projects/:id/board', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
+  const project = await repo.getProject(id);
+  if (!project) return c.json({ error: 'Prosjektet finnes ikke.' }, 404);
+  const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
+  const issueNumber = Number(body.issueNumber);
+  const status = String(body.status ?? '').trim();
+  if (!Number.isInteger(issueNumber) || issueNumber <= 0 || !status) {
+    return c.json({ error: 'issueNumber og status er påkrevd.' }, 400);
+  }
+  const result = await moveIssueStatus(issueNumber, status);
+  if (!result.ok) return c.json({ error: result.error }, 502);
+  return c.json({ status: result.status });
 });
 
 // PUT /api/projects/:id — update a project.

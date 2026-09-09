@@ -31,6 +31,26 @@
   }
 }
 
+/* Reveal - fades a block up into place the first time it scrolls into view
+   (see components/Reveal.tsx); transition-delay (set inline per instance)
+   staggers a row of blocks instead of them all appearing at once. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    transition: none;
+  }
+}
+
 /* Bifrost's Card ships with square corners by default; round every card (and
    the boxy content it wraps almost everywhere in this app) to match Message,
    Badge, and the chat panel, which already use the same radius scale. */
@@ -712,6 +732,19 @@
 
 .board-card:hover {
   background: var(--bfc-base-2);
+}
+
+/* Draggable board (MilestoneBoard) - a dragged card fades so the column it
+   left reads as "not here anymore", and a column being dragged over gets a
+   brand-colored ring so it's obvious where the drop will land. */
+.board-card-dragging {
+  opacity: 0.4;
+}
+
+.board-column-dragover {
+  box-shadow:
+    0 0 0 2px hsl(var(--bfc-brand-hsl)),
+    0 4px 12px rgb(0 0 0 / 0.1);
 }
 
 .board-card-title {

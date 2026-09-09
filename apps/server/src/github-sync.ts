@@ -492,6 +492,10 @@ function displayNameFromLabelSlug(slug: string): string {
     .join(' ');
 }
 
+// The org's single Projects V2 board that both the "Kunde" and "Status" fields
+// live on - the same board the repo's issues show up on under github.com/orgs/<org>/projects.
+const PROJECT_NUMBER = 318;
+
 // The canonical "Kunde" list lives in a Kunde single-select field on the org's
 // Projects V2 board (org project #318), which needs an org-Projects-scoped token
 // most GITHUB_TOKEN values don't have — same reason the repo's own "Synk skjema"
@@ -507,7 +511,7 @@ async function fetchCustomerOptionsFromProjectField(): Promise<string[]> {
       body: JSON.stringify({
         query:
           'query($org:String!,$num:Int!,$felt:String!){organization(login:$org){projectV2(number:$num){field(name:$felt){... on ProjectV2SingleSelectField{options{name}}}}}}',
-        variables: { org: ORG, num: 318, felt: 'Kunde' },
+        variables: { org: ORG, num: PROJECT_NUMBER, felt: 'Kunde' },
       }),
     });
     const json = (await res.json()) as {
@@ -596,6 +600,129 @@ async function fetchIssueStatuses(issueNumbers: number[]): Promise<Record<number
   }
 }
 
+interface StatusFieldMeta {
+  projectId: string;
+  fieldId: string;
+  options: { id: string; name: string }[];
+}
+
+// The Status field's id and its option ids, cached for the process lifetime -
+// this is board *structure* (which columns exist), not board *data*, and the
+// repo's own project board practically never adds/renames a status column.
+let statusFieldMetaCache: StatusFieldMeta | null = null;
+
+async function getStatusFieldMeta(): Promise<StatusFieldMeta | null> {
+  if (statusFieldMetaCache) return statusFieldMetaCache;
+  const token = process.env.PROJECT_TOKEN;
+  if (!token) return null;
+  try {
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        query:
+          'query($org:String!,$num:Int!){organization(login:$org){projectV2(number:$num){id field(name:"Status"){... on ProjectV2SingleSelectField{id options{id name}}}}}}',
+        variables: { org: ORG, num: PROJECT_NUMBER },
+      }),
+    });
+    const json = (await res.json()) as {
+      data?: {
+        organization?: {
+          projectV2?: { id?: string; field?: { id?: string; options?: { id: string; name: string }[] } };
+        };
+      };
+    };
+    const projectV2 = json.data?.organization?.projectV2;
+    if (!projectV2?.id || !projectV2.field?.id) return null;
+    statusFieldMetaCache = {
+      projectId: projectV2.id,
+      fieldId: projectV2.field.id,
+      options: projectV2.field.options ?? [],
+    };
+    return statusFieldMetaCache;
+  } catch (err) {
+    console.error('GitHub sync: failed to read the Status project field', err);
+    return null;
+  }
+}
+
+// The canonical column order for the board - the Status field's own option
+// order, so the app's board matches the real GitHub Projects board left to
+// right. Empty when PROJECT_TOKEN is absent (the board then falls back to
+// whatever order statuses happen to appear in).
+export async function listStatusOptions(): Promise<string[]> {
+  const meta = await getStatusFieldMeta();
+  return meta?.options.map((o) => o.name) ?? [];
+}
+
+// This issue's Projects V2 item id *on this specific board* (org project
+// #318) - an issue can belong to other projects too, so this is not the same
+// as "the first project item found" the way fetchIssueStatuses reads status.
+async function fetchProjectItemId(issueNumber: number): Promise<string | null> {
+  const token = process.env.PROJECT_TOKEN;
+  if (!token) return null;
+  try {
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        query:
+          'query($org:String!,$repo:String!,$num:Int!){repository(owner:$org,name:$repo){issue(number:$num){projectItems(first:10){nodes{id project{number}}}}}}',
+        variables: { org: ORG, repo: REPO, num: issueNumber },
+      }),
+    });
+    const json = (await res.json()) as {
+      data?: {
+        repository?: {
+          issue?: { projectItems?: { nodes?: ({ id: string; project?: { number: number } } | null)[] } };
+        };
+      };
+    };
+    const nodes = json.data?.repository?.issue?.projectItems?.nodes ?? [];
+    return nodes.find((n) => n?.project?.number === PROJECT_NUMBER)?.id ?? null;
+  } catch (err) {
+    console.error(`GitHub sync: failed to find the project item for issue #${issueNumber}`, err);
+    return null;
+  }
+}
+
+export type MoveIssueStatusResult = { ok: true; status: string } | { ok: false; error: string };
+
+// Drags a card between board columns for real: sets the Status field's value
+// on this issue's Projects V2 item, so the app's board and the real GitHub
+// Projects board (github.com/orgs/<org>/projects/318) never disagree. Needs
+// PROJECT_TOKEN (same token every other Status/Kunde read already needs) with
+// write access to the org's projects.
+export async function moveIssueStatus(issueNumber: number, statusName: string): Promise<MoveIssueStatusResult> {
+  if (!process.env.PROJECT_TOKEN) return { ok: false, error: 'PROJECT_TOKEN er ikke satt opp.' };
+  try {
+    const meta = await getStatusFieldMeta();
+    if (!meta) return { ok: false, error: 'Fant ikke Status-feltet på GitHub-prosjekttavlen.' };
+    const option = meta.options.find((o) => o.name === statusName);
+    if (!option) return { ok: false, error: `Ukjent status: ${statusName}` };
+    const itemId = await fetchProjectItemId(issueNumber);
+    if (!itemId) return { ok: false, error: `Fant ikke issue #${issueNumber} på GitHub-prosjekttavlen.` };
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${process.env.PROJECT_TOKEN}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        query:
+          'mutation($project:ID!,$item:ID!,$field:ID!,$option:String!){updateProjectV2ItemFieldValue(input:{projectId:$project itemId:$item fieldId:$field value:{singleSelectOptionId:$option}}){clientMutationId}}',
+        variables: { project: meta.projectId, item: itemId, field: meta.fieldId, option: option.id },
+      }),
+    });
+    const json = (await res.json()) as { errors?: { message: string }[] };
+    if (json.errors?.length) return { ok: false, error: json.errors.map((e) => e.message).join('; ') };
+    return { ok: true, status: statusName };
+  } catch (err) {
+    console.error(`GitHub sync: failed to move issue #${issueNumber} to status "${statusName}"`, err);
+    return { ok: false, error: err instanceof Error ? err.message : 'Ukjent feil.' };
+  }
+}
+
 export interface MilestoneBoardIssue {
   number: number;
   title: string;
@@ -616,6 +743,7 @@ export interface MilestoneBoardGroup {
 export interface MilestoneBoard {
   statusCounts: { status: string; count: number }[];
   groups: MilestoneBoardGroup[];
+  statusOrder: string[];
 }
 
 interface GithubIssueDetailed extends GithubIssue {
@@ -637,7 +765,7 @@ function parentNumberFromUrl(url: string | null): number | null {
 // back empty without it. Never throws — an unreachable repo or missing token
 // just yields an empty board.
 export async function getMilestoneBoard(milestoneNumber: number): Promise<MilestoneBoard> {
-  if (!process.env.GITHUB_TOKEN) return { statusCounts: [], groups: [] };
+  if (!process.env.GITHUB_TOKEN) return { statusCounts: [], groups: [], statusOrder: [] };
   try {
     const allIssues = await paginate<GithubIssueDetailed>(
       `/repos/${ORG}/${REPO}/issues?milestone=${milestoneNumber}&state=all`,
@@ -707,10 +835,23 @@ export async function getMilestoneBoard(milestoneNumber: number): Promise<Milest
       statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
     }
 
-    return { statusCounts: [...statusCounts.entries()].map(([status, count]) => ({ status, count })), groups };
+    // Prefer the Status field's own option order (matches the real GitHub
+    // board's column order); fall back to first-seen order when the field
+    // meta call didn't come back (e.g. PROJECT_TOKEN missing write scope).
+    const fieldOrder = await listStatusOptions();
+    const seenOrder = [...statusCounts.keys()];
+    const statusOrder = fieldOrder.length
+      ? [...fieldOrder, ...seenOrder.filter((s) => !fieldOrder.includes(s))]
+      : seenOrder;
+
+    return {
+      statusCounts: [...statusCounts.entries()].map(([status, count]) => ({ status, count })),
+      groups,
+      statusOrder,
+    };
   } catch (err) {
     console.error(`GitHub sync: failed to build the milestone board for #${milestoneNumber}`, err);
-    return { statusCounts: [], groups: [] };
+    return { statusCounts: [], groups: [], statusOrder: [] };
   }
 }
 

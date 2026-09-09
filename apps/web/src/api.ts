@@ -132,6 +132,7 @@ export interface MilestoneBoardGroup {
 export interface MilestoneBoard {
   statusCounts: { status: string; count: number }[];
   groups: MilestoneBoardGroup[];
+  statusOrder: string[];
 }
 
 export interface Customer {
@@ -361,6 +362,11 @@ export const api = {
   deletePrice: (id: number) => request<void>(`/api/prices/${id}`, { method: 'DELETE' }),
   getProject: (id: number) => request<{ project: Project; cases: Case[] }>(`/api/projects/${id}`),
   getProjectBoard: (id: number) => request<MilestoneBoard>(`/api/projects/${id}/board`),
+  moveBoardCard: (id: number, issueNumber: number, status: string) =>
+    request<{ status: string }>(`/api/projects/${id}/board`, {
+      method: 'PATCH',
+      body: JSON.stringify({ issueNumber, status }),
+    }),
   createProject: (data: ProjectInput, existingMilestoneNumber?: number) =>
     request<Project>('/api/projects', {
       method: 'POST',

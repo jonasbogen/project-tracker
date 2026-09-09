@@ -237,3 +237,139 @@ describe('syncGithubProjects', () => {
     expect(vi.mocked(repo.upsertCaseFromGithub)).not.toHaveBeenCalled();
   });
 });
+
+// The Status field's id/option ids are cached for the module's lifetime (see
+// the comment on statusFieldMetaCache in github-sync.ts), so each of these
+// tests resets the module registry and re-imports fresh - otherwise a cache
+// populated by an earlier test would silently skip the field-meta fetch in a
+// later one and throw off its expected call count.
+describe('project board status sync', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env.GITHUB_TOKEN = 'test-token';
+    process.env.GITHUB_ORG = 'intility';
+    process.env.GITHUB_REPO = 'Prosjektmappe';
+    delete process.env.PROJECT_TOKEN;
+  });
+
+  it('listStatusOptions returns an empty list without PROJECT_TOKEN', async () => {
+    const { listStatusOptions } = await import('./github-sync.js');
+    expect(await listStatusOptions()).toEqual([]);
+  });
+
+  it("listStatusOptions returns the Status field's option names in order", async () => {
+    process.env.PROJECT_TOKEN = 'proj-token';
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          organization: {
+            projectV2: {
+              id: 'PVT_1',
+              field: {
+                id: 'PVTSSF_1',
+                options: [
+                  { id: 'opt-backlog', name: 'Backlog' },
+                  { id: 'opt-todo', name: 'To do' },
+                  { id: 'opt-progress', name: 'In progress' },
+                  { id: 'opt-blocked', name: 'Blocked' },
+                  { id: 'opt-done', name: 'Done' },
+                ],
+              },
+            },
+          },
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { listStatusOptions } = await import('./github-sync.js');
+
+    expect(await listStatusOptions()).toEqual(['Backlog', 'To do', 'In progress', 'Blocked', 'Done']);
+  });
+
+  it('moveIssueStatus fails without PROJECT_TOKEN', async () => {
+    const { moveIssueStatus } = await import('./github-sync.js');
+    expect(await moveIssueStatus(42, 'Done')).toEqual({ ok: false, error: 'PROJECT_TOKEN er ikke satt opp.' });
+  });
+
+  it('moveIssueStatus resolves the field and item ids, then mutates the project field', async () => {
+    process.env.PROJECT_TOKEN = 'proj-token';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            organization: {
+              projectV2: { id: 'PVT_1', field: { id: 'PVTSSF_1', options: [{ id: 'opt-done', name: 'Done' }] } },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            repository: {
+              issue: { projectItems: { nodes: [{ id: 'PVTI_1', project: { number: 318 } }] } },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: { updateProjectV2ItemFieldValue: { clientMutationId: null } } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { moveIssueStatus } = await import('./github-sync.js');
+    const result = await moveIssueStatus(42, 'Done');
+
+    expect(result).toEqual({ ok: true, status: 'Done' });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const mutationBody = JSON.parse(fetchMock.mock.calls[2][1].body as string);
+    expect(mutationBody.variables).toEqual({
+      project: 'PVT_1',
+      item: 'PVTI_1',
+      field: 'PVTSSF_1',
+      option: 'opt-done',
+    });
+  });
+
+  it('moveIssueStatus fails when the status name is not one of the field\'s options', async () => {
+    process.env.PROJECT_TOKEN = 'proj-token';
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          organization: {
+            projectV2: { id: 'PVT_1', field: { id: 'PVTSSF_1', options: [{ id: 'opt-done', name: 'Done' }] } },
+          },
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { moveIssueStatus } = await import('./github-sync.js');
+
+    expect(await moveIssueStatus(42, 'Nonexistent')).toEqual({ ok: false, error: 'Ukjent status: Nonexistent' });
+  });
+
+  it('moveIssueStatus fails when the issue has no item on this project board', async () => {
+    process.env.PROJECT_TOKEN = 'proj-token';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            organization: {
+              projectV2: { id: 'PVT_1', field: { id: 'PVTSSF_1', options: [{ id: 'opt-done', name: 'Done' }] } },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: { repository: { issue: { projectItems: { nodes: [] } } } } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { moveIssueStatus } = await import('./github-sync.js');
+
+    expect(await moveIssueStatus(42, 'Done')).toEqual({
+      ok: false,
+      error: 'Fant ikke issue #42 på GitHub-prosjekttavlen.',
+    });
+  });
+});
