@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 // copied over. Falls back to a generated initials badge when no logo matches.
 let manifestPromise: Promise<Record<string, string>> | null = null;
 
-function loadManifest(): Promise<Record<string, string>> {
+export function loadManifest(): Promise<Record<string, string>> {
   if (!manifestPromise) {
     manifestPromise = fetch('/logos/manifest.json')
       .then((res) => (res.ok ? (res.json() as Promise<Record<string, string>>) : {}))
@@ -50,7 +50,7 @@ function isFuzzyMatch(a: string, b: string): boolean {
 
 // Exact match on the normalized name wins outright; otherwise the first fuzzy
 // match (see isFuzzyMatch).
-function findLogoFile(name: string, manifest: Record<string, string>): string | null {
+export function findLogoFile(name: string, manifest: Record<string, string>): string | null {
   const target = normalize(name);
   if (!target) return null;
   let fuzzy: string | null = null;

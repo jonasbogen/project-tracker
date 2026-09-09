@@ -19,6 +19,7 @@ import {
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import CountUp from '../components/CountUp';
+import CustomerLogoStrip from '../components/CustomerLogoStrip';
 import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
 const ACCENT_COLOR: Record<string, string> = {
@@ -113,6 +114,8 @@ export default function Dashboard() {
         <div className="hero-banner-overlay" />
       </div>
 
+      <CustomerLogoStrip />
+
       <div className="stat-tile-row">
         <StatTile
             label="Prosjekter totalt"
@@ -153,45 +156,49 @@ export default function Dashboard() {
           />
         </div>
 
-        <Card padding="large" id="blokkert-card" className="stack-sm">
-          <SectionTitle icon={faBan}>Blokkert</SectionTitle>
-          {blockedError && (
-            <Message state="alert" header="Kunne ikke laste blokkerte issuer">
-              {blockedError}
-            </Message>
-          )}
-          {!blockedError && blocked.length === 0 && <p className="muted">Ingenting står fast.</p>}
-          {blocked.length > 0 && (
-            <div className="deadline-list">
-              {blocked.map((b) => (
-                <button
-                  key={b.number}
-                  className="deadline-row"
-                  onClick={() =>
-                    b.project_id
-                      ? navigate(`/projects/${b.project_id}`)
-                      : window.open(
-                          `https://github.com/intility/Prosjektmappe/issues/${b.number}`,
-                          '_blank',
-                          'noopener,noreferrer',
-                        )
-                  }
-                >
-                  <div>
-                    <div className="deadline-name">{b.title}</div>
-                    <div className="muted">{b.project_name ?? 'Ukjent prosjekt'}</div>
-                  </div>
-                  <div className="deadline-when">
-                    <Badge state="alert">
-                      {b.blockedByOwners.length > 0
-                        ? `Venter på ${b.blockedByOwners.join(', ')}`
-                        : 'Venter, ikke spesifisert'}
-                    </Badge>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+        <Card padding="large" id="blokkert-card" className="blokkert-card">
+          <img src="/klemetsrud.jpg" alt="" className="blokkert-card-image" />
+          <div className="blokkert-card-overlay" />
+          <div className="blokkert-card-content stack-sm">
+            <SectionTitle icon={faBan}>Blokkert</SectionTitle>
+            {blockedError && (
+              <Message state="alert" header="Kunne ikke laste blokkerte issuer">
+                {blockedError}
+              </Message>
+            )}
+            {!blockedError && blocked.length === 0 && <p className="muted">Ingenting står fast.</p>}
+            {blocked.length > 0 && (
+              <div className="deadline-list">
+                {blocked.map((b) => (
+                  <button
+                    key={b.number}
+                    className="deadline-row"
+                    onClick={() =>
+                      b.project_id
+                        ? navigate(`/projects/${b.project_id}`)
+                        : window.open(
+                            `https://github.com/intility/Prosjektmappe/issues/${b.number}`,
+                            '_blank',
+                            'noopener,noreferrer',
+                          )
+                    }
+                  >
+                    <div>
+                      <div className="deadline-name">{b.title}</div>
+                      <div className="muted">{b.project_name ?? 'Ukjent prosjekt'}</div>
+                    </div>
+                    <div className="deadline-when">
+                      <Badge state="alert">
+                        {b.blockedByOwners.length > 0
+                          ? `Venter på ${b.blockedByOwners.join(', ')}`
+                          : 'Venter, ikke spesifisert'}
+                      </Badge>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </Card>
 
         <div className="dashboard-grid">
