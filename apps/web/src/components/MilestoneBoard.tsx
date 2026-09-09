@@ -1,4 +1,15 @@
-import { useRef, useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
 import Badge from '@intility/bifrost-react/Badge';
 import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
@@ -9,14 +20,6 @@ import SectionTitle from './SectionTitle';
 
 interface BoardCard extends MilestoneBoardIssue {
   umbrella: string | null;
-}
-
-interface DragState {
-  issueNumber: number;
-  sourceStatus: string;
-  startX: number;
-  startY: number;
-  moved: boolean;
 }
 
 function bucketByStatus(data: MilestoneBoardData): Record<string, BoardCard[]> {
@@ -32,6 +35,66 @@ function bucketByStatus(data: MilestoneBoardData): Record<string, BoardCard[]> {
   return buckets;
 }
 
+function CardContent({ issue }: { issue: BoardCard }) {
+  return (
+    <>
+      <div className={`board-card-title${issue.state === 'closed' ? ' milestone-issue-title-done' : ''}`}>
+        {issue.title}
+      </div>
+      {issue.umbrella && <div className="muted board-card-meta">{issue.umbrella}</div>}
+      {issue.assignees.length > 0 && (
+        <div className="board-card-footer">
+          <span className="team-member">
+            {issue.assignees.map((a) => (
+              <img key={a.login} className="team-avatar" src={a.avatar_url} alt={a.login} title={a.login} width={20} height={20} />
+            ))}
+          </span>
+        </div>
+      )}
+    </>
+  );
+}
+
+function BoardCardItem({ issue }: { issue: BoardCard }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: issue.number });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`board-card board-card-draggable${isDragging ? ' board-card-dragging' : ''}`}
+      onClick={() => window.open(issue.html_url, '_blank', 'noopener,noreferrer')}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') window.open(issue.html_url, '_blank', 'noopener,noreferrer');
+      }}
+    >
+      <CardContent issue={issue} />
+    </div>
+  );
+}
+
+function BoardColumn({ status, issues }: { status: string; issues: BoardCard[] }) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+  return (
+    <Card
+      padding="large"
+      className={`board-column${isOver ? ' board-column-dragover' : ''}`}
+      ref={setNodeRef}
+    >
+      <div className="board-column-header">
+        <span className="bf-h3">{status}</span>
+        <Badge state="neutral">{issues.length}</Badge>
+      </div>
+      <div className="board-column-body">
+        {issues.length === 0 && <p className="muted">Ingen issues.</p>}
+        {issues.map((issue) => (
+          <BoardCardItem key={issue.number} issue={issue} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 // A live, two-way mirror of the GitHub Projects board for this project's
 // milestone: draggable columns for the Status field (Backlog/To do/In
 // progress/Blocked/Done, the same ones on github.com/orgs/<org>/projects/318).
@@ -40,25 +103,18 @@ function bucketByStatus(data: MilestoneBoardData): Record<string, BoardCard[]> {
 // of "status" to drift out of sync, and no separate grouping of our own on
 // top of it - a card sits in whichever column it actually sits in on GitHub.
 //
-// The drag itself is implemented with plain mouse events (mousedown/move/up)
-// rather than the native HTML5 drag-and-drop API: with cards that are
-// themselves draggable nested inside a draggable drop zone, the native
-// API's drop event is notoriously unreliable across browsers about firing
-// at all. Which column a drop lands in is resolved geometrically (nearest
-// column by horizontal distance) rather than via elementFromPoint(), since
-// the columns sit in a CSS grid with gaps between them - elementFromPoint()
-// at a point over a gap resolves to nothing, silently dropping the move.
+// Drag-and-drop itself is @dnd-kit/core (pointer-events based, not the
+// native HTML5 DnD API) - two different from-scratch attempts at this using
+// native drag-and-drop and hand-rolled mouse tracking both turned out
+// unreliable in practice, which is exactly the class of problem a
+// purpose-built, heavily-tested library exists to solve.
 export default function MilestoneBoard({ projectId }: { projectId: number }) {
   const [board, setBoard] = useState<MilestoneBoardData | null>(null);
   const [columns, setColumns] = useState<Record<string, BoardCard[]>>({});
   const [loading, setLoading] = useState(true);
   const [moveError, setMoveError] = useState<string | null>(null);
-  const [draggingNumber, setDraggingNumber] = useState<number | null>(null);
-  const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
-  const columnsRef = useRef(columns);
-  columnsRef.current = columns;
-  const dragRef = useRef<DragState | null>(null);
-  const columnElsRef = useRef(new Map<string, HTMLDivElement>());
+  const [activeIssue, setActiveIssue] = useState<BoardCard | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
     setLoading(true);
@@ -75,17 +131,32 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  function moveCard(issueNumber: number, sourceStatus: string, targetStatus: string) {
-    if (sourceStatus === targetStatus) return;
-    const current = columnsRef.current;
-    const moving = current[sourceStatus]?.find((issue) => issue.number === issueNumber);
+  function handleDragStart(event: DragStartEvent) {
+    const issueNumber = Number(event.active.id);
+    for (const list of Object.values(columns)) {
+      const issue = list.find((i) => i.number === issueNumber);
+      if (issue) {
+        setActiveIssue(issue);
+        return;
+      }
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveIssue(null);
+    const targetStatus = event.over?.id as string | undefined;
+    if (!targetStatus) return;
+    const issueNumber = Number(event.active.id);
+    const sourceStatus = Object.keys(columns).find((status) => columns[status].some((i) => i.number === issueNumber));
+    if (!sourceStatus || sourceStatus === targetStatus) return;
+    const moving = columns[sourceStatus].find((i) => i.number === issueNumber);
     if (!moving) return;
 
-    const previous = current;
+    const previous = columns;
     setColumns({
-      ...current,
-      [sourceStatus]: current[sourceStatus].filter((issue) => issue.number !== issueNumber),
-      [targetStatus]: [...current[targetStatus], { ...moving, status: targetStatus }],
+      ...columns,
+      [sourceStatus]: columns[sourceStatus].filter((i) => i.number !== issueNumber),
+      [targetStatus]: [...columns[targetStatus], { ...moving, status: targetStatus }],
     });
     setMoveError(null);
 
@@ -93,64 +164,6 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       setColumns(previous);
       setMoveError(e.message);
     });
-  }
-
-  // Nearest column by horizontal distance (0 if the point is already inside
-  // it), ignoring points far outside the board's row vertically - a plain
-  // hit-test would miss the gaps between grid columns entirely.
-  function columnUnder(clientX: number, clientY: number): string | null {
-    let closest: string | null = null;
-    let closestDist = Infinity;
-    for (const [status, el] of columnElsRef.current) {
-      const rect = el.getBoundingClientRect();
-      if (clientY < rect.top - 40 || clientY > rect.bottom + 40) continue;
-      const dist = clientX < rect.left ? rect.left - clientX : clientX > rect.right ? clientX - rect.right : 0;
-      if (dist < closestDist) {
-        closestDist = dist;
-        closest = status;
-      }
-    }
-    return closest;
-  }
-
-  function handleCardMouseDown(e: ReactMouseEvent, issue: BoardCard, sourceStatus: string) {
-    if (e.button !== 0) return;
-    const state: DragState = {
-      issueNumber: issue.number,
-      sourceStatus,
-      startX: e.clientX,
-      startY: e.clientY,
-      moved: false,
-    };
-    dragRef.current = state;
-
-    function onMove(ev: MouseEvent) {
-      if (!state.moved && Math.hypot(ev.clientX - state.startX, ev.clientY - state.startY) > 6) {
-        state.moved = true;
-        setDraggingNumber(state.issueNumber);
-        document.body.classList.add('board-dragging');
-      }
-      if (state.moved) setDragOverStatus(columnUnder(ev.clientX, ev.clientY));
-    }
-
-    function onUp(ev: MouseEvent) {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      document.body.classList.remove('board-dragging');
-      dragRef.current = null;
-      setDraggingNumber(null);
-      setDragOverStatus(null);
-
-      if (!state.moved) {
-        window.open(issue.html_url, '_blank', 'noopener,noreferrer');
-        return;
-      }
-      const targetStatus = columnUnder(ev.clientX, ev.clientY);
-      if (targetStatus) moveCard(state.issueNumber, state.sourceStatus, targetStatus);
-    }
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
   }
 
   if (loading) return <Icon.Spinner aria-label="Laster prosjekttavle" />;
@@ -167,65 +180,20 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       )}
 
       {board.statusOrder.length > 0 ? (
-        <div className="board">
-          {board.statusOrder.map((status) => (
-            <Card
-              key={status}
-              padding="large"
-              className={`board-column${dragOverStatus === status ? ' board-column-dragover' : ''}`}
-              ref={(el) => {
-                if (el) columnElsRef.current.set(status, el);
-                else columnElsRef.current.delete(status);
-              }}
-            >
-              <div className="board-column-header">
-                <span className="bf-h3">{status}</span>
-                <Badge state="neutral">{columns[status]?.length ?? 0}</Badge>
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className="board">
+            {board.statusOrder.map((status) => (
+              <BoardColumn key={status} status={status} issues={columns[status] ?? []} />
+            ))}
+          </div>
+          <DragOverlay>
+            {activeIssue && (
+              <div className="board-card board-card-draggable board-card-overlay">
+                <CardContent issue={activeIssue} />
               </div>
-              <div className="board-column-body">
-                {(columns[status]?.length ?? 0) === 0 && <p className="muted">Ingen issues.</p>}
-                {columns[status]?.map((issue) => (
-                  <div
-                    key={issue.number}
-                    className={`board-card board-card-draggable${draggingNumber === issue.number ? ' board-card-dragging' : ''}`}
-                    role="button"
-                    tabIndex={0}
-                    onMouseDown={(e) => handleCardMouseDown(e, issue, status)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        window.open(issue.html_url, '_blank', 'noopener,noreferrer');
-                      }
-                    }}
-                  >
-                    <div
-                      className={`board-card-title${issue.state === 'closed' ? ' milestone-issue-title-done' : ''}`}
-                    >
-                      {issue.title}
-                    </div>
-                    {issue.umbrella && <div className="muted board-card-meta">{issue.umbrella}</div>}
-                    {issue.assignees.length > 0 && (
-                      <div className="board-card-footer">
-                        <span className="team-member">
-                          {issue.assignees.map((a) => (
-                            <img
-                              key={a.login}
-                              className="team-avatar"
-                              src={a.avatar_url}
-                              alt={a.login}
-                              title={a.login}
-                              width={20}
-                              height={20}
-                            />
-                          ))}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ))}
-        </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       ) : (
         <p className="muted">
           Board-kolonner (Backlog/To do/In progress/Blocked/Done) vises når PROJECT_TOKEN er satt opp med

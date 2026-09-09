@@ -734,31 +734,29 @@
   background: var(--bfc-base-2);
 }
 
-/* Draggable board (MilestoneBoard) - a dragged card fades so the column it
-   left reads as "not here anymore", and a column being dragged over gets a
-   brand-colored ring so it's obvious where the drop will land. The drag
-   itself is driven by mouse events, not native HTML5 drag-and-drop (see
-   MilestoneBoard.tsx), so "board-dragging" on <body> - not a native drag
-   image - is what indicates a move is in progress; it also blocks text
-   selection while the mouse moves across cards mid-drag. */
+/* Draggable board (MilestoneBoard, via @dnd-kit/core) - the source card
+   fades in place while a floating copy (DragOverlay) follows the pointer,
+   and a column being dragged over gets a brand-colored ring so it's obvious
+   where the drop will land. */
 .board-card-draggable {
   cursor: grab;
+  touch-action: none;
 }
 
 .board-card-dragging {
   opacity: 0.4;
+}
+
+.board-card-overlay {
+  width: 260px;
   cursor: grabbing;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
 }
 
 .board-column-dragover {
   box-shadow:
     0 0 0 2px hsl(var(--bfc-brand-hsl)),
     0 4px 12px rgb(0 0 0 / 0.1);
-}
-
-body.board-dragging {
-  user-select: none;
-  cursor: grabbing;
 }
 
 .board-card-title {
