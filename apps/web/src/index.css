@@ -66,11 +66,23 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .section-title svg {
+  flex-shrink: 0;
   color: var(--bfc-base-c-2);
   font-size: 0.85em;
+}
+
+/* A long status/category name in a narrow box (a board column, a price
+   category) truncates instead of pushing past the card's edge - the icon
+   next to it never shrinks, so it stays anchored either way. */
+.section-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stack {
@@ -128,6 +140,14 @@
   flex-wrap: wrap;
 }
 
+/* An inline rename/create form (Prices' category actions) drops a text input
+   into an otherwise button-only row - without a width of its own it stretches
+   to fill whatever's left, crowding the save/cancel buttons against the edge. */
+.inline-actions > .bf-input-container {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
 .muted {
   color: var(--bfc-base-c-2);
 }
@@ -169,6 +189,32 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, rgb(8 12 20 / 0.05) 0%, rgb(8 12 20 / 0.82) 100%);
+}
+
+/* A shorter banner for a secondary page's header photo (e.g. Team) - the
+   dashboard's own hero doesn't carry title text (see Dashboard.tsx), but a
+   secondary page's does, so this variant keeps the title/subtitle pair too. */
+.hero-banner-compact {
+  min-height: 160px;
+}
+
+.hero-banner-content {
+  position: relative;
+  z-index: 1;
+  padding: 24px 28px;
+  width: 100%;
+}
+
+.hero-banner-title {
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.hero-banner-subtitle {
+  color: rgb(255 255 255 / 0.85);
+  margin: 4px 0 0;
 }
 
 /* Dashboard */
@@ -626,7 +672,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 12px;
+}
+
+.board-column-header > *:first-child {
+  min-width: 0;
+}
+
+.board-column-header > *:last-child {
+  flex-shrink: 0;
 }
 
 .board-column-body {
@@ -914,6 +969,11 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.price-category-header > *:first-child {
+  min-width: 0;
+  flex: 1 1 200px;
 }
 
 .price-tiers-cell {

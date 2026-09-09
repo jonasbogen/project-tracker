@@ -18,7 +18,7 @@ export default function SectionTitle({
   return (
     <Tag className={`${Tag === 'h2' ? 'bf-h2' : 'bf-h3'} section-title${className ? ` ${className}` : ''}`}>
       <Icon icon={icon} />
-      {children}
+      <span className="section-title-text">{children}</span>
     </Tag>
   );
 }

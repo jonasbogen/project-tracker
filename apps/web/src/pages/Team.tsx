@@ -23,11 +23,17 @@ export default function Team() {
 
   return (
     <div className="stack">
-      <h1 className="bf-h1">Team</h1>
-      <p className="muted">
-        Personer som er satt som eier (assignee) på minst én issue fra GitHub, med antall issuer de
-        eier.
-      </p>
+      <div className="hero-banner hero-banner-compact">
+        <img src="/team-ops.jpg" alt="" className="hero-banner-image" />
+        <div className="hero-banner-overlay" />
+        <div className="hero-banner-content">
+          <h1 className="hero-banner-title">Team</h1>
+          <p className="hero-banner-subtitle">
+            Personer som er satt som eier (assignee) på minst én issue fra GitHub, med antall
+            issuer de eier.
+          </p>
+        </div>
+      </div>
 
       <Card padding="large">
         {loading && (
