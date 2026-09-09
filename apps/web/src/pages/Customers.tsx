@@ -32,7 +32,7 @@ export default function Customers() {
       <h1 className="bf-h1">Kunder</h1>
       <p className="muted">Alle kunder som har minst ett prosjekt, med antall aktive og totalt.</p>
 
-      <Card padding="medium">
+      <Card padding="large">
         <Input
           label="Søk kunde"
           hideLabel

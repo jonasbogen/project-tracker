@@ -28,7 +28,7 @@ export default function Team() {
         eier.
       </p>
 
-      <Card padding="medium">
+      <Card padding="large">
         {loading && <Icon.Spinner aria-label="Laster team" />}
 
         {error && (

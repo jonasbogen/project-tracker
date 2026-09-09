@@ -18,7 +18,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
-import HeroBackground from '../components/HeroBackground';
 import PullRequestBell from '../components/PullRequestBell';
 import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
@@ -52,7 +51,7 @@ function StatTile({
     </>
   );
   return (
-    <Card padding="medium" className="stat-tile" style={{ borderTopColor: color }}>
+    <Card padding="large" className="stat-tile" style={{ borderTopColor: color }}>
       {onClick ? <button onClick={onClick}>{content}</button> : content}
     </Card>
   );
@@ -88,22 +87,12 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <>
-        <HeroBackground />
-        <Icon.Spinner aria-label="Laster oversikt" />
-      </>
-    );
-  }
+  if (loading) return <Icon.Spinner aria-label="Laster oversikt" />;
   if (error || !stats) {
     return (
-      <>
-        <HeroBackground />
-        <Message state="alert" header="Kunne ikke laste oversikten">
-          {error ?? 'Ukjent feil.'}
-        </Message>
-      </>
+      <Message state="alert" header="Kunne ikke laste oversikten">
+        {error ?? 'Ukjent feil.'}
+      </Message>
     );
   }
 
@@ -116,19 +105,22 @@ export default function Dashboard() {
     .reduce((sum, r) => sum + r.count, 0);
 
   return (
-    <>
-      <HeroBackground />
-      <div className="stack">
-        <div className="page-header">
-          <div>
-            <h1 className="bf-h1">OT Projects</h1>
-            <p className="muted page-subtitle">Porteføljestatus for OT/Edge Platform-kundeprosjekter</p>
-          </div>
-          <PullRequestBell />
+    <div className="stack">
+      <div className="hero-banner">
+        <img src="/hero-ot.jpg" alt="" className="hero-banner-image" />
+        <div className="hero-banner-overlay" />
+        <div className="hero-banner-content">
+          <h1 className="hero-banner-title">OT Projects</h1>
+          <p className="hero-banner-subtitle">Porteføljestatus for OT/Edge Platform-kundeprosjekter</p>
         </div>
+      </div>
 
-        <div className="stat-tile-row">
-          <StatTile
+      <div className="hero-toolbar">
+        <PullRequestBell />
+      </div>
+
+      <div className="stat-tile-row">
+        <StatTile
             label="Prosjekter totalt"
             value={totalProjects}
             icon={faDiagramProject}
@@ -167,7 +159,7 @@ export default function Dashboard() {
           />
         </div>
 
-        <Card padding="medium" id="blokkert-card" className="stack-sm">
+        <Card padding="large" id="blokkert-card" className="stack-sm">
           <SectionTitle icon={faBan}>Blokkert</SectionTitle>
           {blockedError && (
             <Message state="alert" header="Kunne ikke laste blokkerte issuer">
@@ -209,7 +201,7 @@ export default function Dashboard() {
         </Card>
 
         <div className="dashboard-grid">
-          <Card padding="medium">
+          <Card padding="large">
             <SectionTitle icon={faChartColumn}>Prosjekter per status</SectionTitle>
             <BarChart
               items={projectStatuses.map((status) => ({
@@ -221,7 +213,7 @@ export default function Dashboard() {
             />
           </Card>
 
-          <Card padding="medium">
+          <Card padding="large">
             <SectionTitle icon={faUsers}>Issuer per eier</SectionTitle>
             <BarChart
               items={stats.topOwners.map((o) => ({ label: o.owner, value: o.total_cases }))}
@@ -231,7 +223,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <Card padding="medium">
+        <Card padding="large">
           <SectionTitle icon={faCalendarDays}>Kommende frister</SectionTitle>
           {stats.upcomingDeadlines.length === 0 ? (
             <p className="muted">Ingen prosjekter eller issuer har en frist satt frem i tid.</p>
@@ -267,7 +259,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card padding="medium">
+        <Card padding="large">
           <SectionTitle icon={faClockRotateLeft}>Siste endringer</SectionTitle>
           {stats.recentActivity.length === 0 ? (
             <p className="muted">Ingen endringer registrert enda.</p>
@@ -307,6 +299,5 @@ export default function Dashboard() {
           )}
         </Card>
       </div>
-    </>
   );
 }

@@ -70,7 +70,7 @@ export default function Board() {
           {statuses.map((status) => {
             const columnCases = cases.filter((c) => c.status === status);
             return (
-              <Card key={status} padding="medium" className="board-column">
+              <Card key={status} padding="large" className="board-column">
                 <div className="board-column-header">
                   <h2 className="bf-h2">{status}</h2>
                   <Badge state={caseBadgeState(status)}>{columnCases.length}</Badge>

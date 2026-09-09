@@ -109,7 +109,7 @@ export default function CalendarPage() {
         <Icon.Spinner aria-label="Laster kalender" />
       ) : (
         <>
-          <Card padding="medium">
+          <Card padding="large">
             <div className="calendar-header">
               <Button
                 small
@@ -187,7 +187,7 @@ export default function CalendarPage() {
             </div>
           </Card>
 
-          <Card padding="medium" className="stack-sm">
+          <Card padding="large" className="stack-sm">
             <h2 className="bf-h2">Nærmeste frister</h2>
             {upcoming.length === 0 ? (
               <p className="muted">Ingen kommende frister registrert.</p>

@@ -148,7 +148,7 @@ export default function Reports() {
       {loading && <Icon.Spinner aria-label="Laster rapporter" />}
 
       {!loading && (
-        <Card padding="medium" className="stack-sm">
+        <Card padding="large" className="stack-sm">
           <h2 className="bf-h2">Ukesrapport</h2>
           {reportsError && (
             <Message state="alert" header="Kunne ikke laste ukesrapporter">
@@ -192,7 +192,7 @@ export default function Reports() {
       )}
 
       {!loading && (
-        <Card padding="medium" className="stack-sm">
+        <Card padding="large" className="stack-sm">
           <h2 className="bf-h2">Statusdeck</h2>
           {runsError && (
             <Message state="alert" header="Kunne ikke laste statusdeck-kjøringer">

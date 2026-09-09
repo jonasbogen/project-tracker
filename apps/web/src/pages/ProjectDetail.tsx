@@ -266,7 +266,7 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      <Card padding="medium">
+      <Card padding="large">
         <div className="stack-sm">
           <div className="detail-grid">
             <div>
@@ -308,7 +308,7 @@ export default function ProjectDetail() {
       </Card>
 
       <div className="dashboard-grid">
-        <Card padding="medium">
+        <Card padding="large">
           <h2 className="bf-h2">Frist og aktivitet</h2>
           {project.end_date ? (
             <div className="deadline-list">
@@ -366,7 +366,7 @@ export default function ProjectDetail() {
             </div>
           )}
         </Card>
-        <Card padding="medium">
+        <Card padding="large">
           <h2 className="bf-h2">Issuer per status</h2>
           <BarChart
             items={caseStatuses.map((status) => ({
@@ -380,12 +380,12 @@ export default function ProjectDetail() {
       </div>
 
       {project.github_milestone_number && (
-        <Card padding="medium">
+        <Card padding="large">
           <MilestoneBoard projectId={project.id} />
         </Card>
       )}
 
-      <Card padding="medium" className="stack-sm">
+      <Card padding="large" className="stack-sm">
         <h2 className="bf-h2">Issuer</h2>
         {cases.length === 0 ? (
           <Message noIcon header="Ingen issuer knyttet til prosjektet enda." />
@@ -472,7 +472,7 @@ export default function ProjectDetail() {
         )}
       </Card>
 
-      <Card padding="medium" className="stack-sm">
+      <Card padding="large" className="stack-sm">
         <h2 className="bf-h2">Legg til issue</h2>
         <p className="muted">Opprettes automatisk som en issue på GitHub.</p>
         {formError && (

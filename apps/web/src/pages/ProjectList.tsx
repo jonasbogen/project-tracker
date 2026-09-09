@@ -70,7 +70,7 @@ export default function ProjectList() {
         </Button>
       </div>
 
-      <Card padding="medium">
+      <Card padding="large">
         <div className="filter-row">
           <Input
             label="Søk"

@@ -128,7 +128,7 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
         </Message>
       )}
 
-      <Card padding="medium">
+      <Card padding="large">
         <form onSubmit={handleSubmit} className="stack-sm">
           {mode === 'create' && milestones.length > 0 && (
             <Select

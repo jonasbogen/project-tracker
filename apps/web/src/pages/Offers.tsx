@@ -140,7 +140,7 @@ export default function Offers() {
             const columnOffers = offers.filter((o) => o.status === status);
             const sum = columnOffers.reduce((n, o) => n + Number(o.amount), 0);
             return (
-              <Card key={status} padding="medium" className="board-column">
+              <Card key={status} padding="large" className="board-column">
                 <div className="board-column-header">
                   <h2 className="bf-h2">{status}</h2>
                   <Badge state={offerBadgeState(status)}>{columnOffers.length}</Badge>
@@ -203,7 +203,7 @@ export default function Offers() {
         </div>
       )}
 
-      <Card padding="medium" className="stack-sm">
+      <Card padding="large" className="stack-sm">
         <h2 className="bf-h2">Nytt tilbud</h2>
 
         <div className="offer-billing-link">

@@ -73,7 +73,7 @@ export default function MyTasks() {
     return (
       <div className="stack">
         <h1 className="bf-h1">Mine oppgaver</h1>
-        <Card padding="medium" className="stack-sm">
+        <Card padding="large" className="stack-sm">
           <p className="muted">
             Ingen innlogging her enda - velg din egen GitHub-bruker en gang, så husker denne
             nettleseren valget.
@@ -137,7 +137,7 @@ export default function MyTasks() {
       )}
 
       {!loading && !error && (
-        <Card padding="medium" className="stack-sm">
+        <Card padding="large" className="stack-sm">
           {openCases.length === 0 ? (
             <Message header="Ingen åpne issuer" noIcon>
               Du eier ingen åpne issuer akkurat nå.

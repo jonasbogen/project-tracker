@@ -76,21 +76,21 @@ export default function TeamMember() {
       {!loading && !error && (
         <>
           <div className="stat-tile-row">
-            <Card padding="medium" className="stat-tile">
+            <Card padding="large" className="stat-tile">
               <div className="stat-tile-label">Åpne issuer</div>
               <div className="stat-tile-value">{openCases.length}</div>
             </Card>
-            <Card padding="medium" className="stat-tile">
+            <Card padding="large" className="stat-tile">
               <div className="stat-tile-label">Issuer totalt</div>
               <div className="stat-tile-value">{cases.length}</div>
             </Card>
-            <Card padding="medium" className="stat-tile">
+            <Card padding="large" className="stat-tile">
               <div className="stat-tile-label">Ansvarlig for prosjekter</div>
               <div className="stat-tile-value">{projects.length}</div>
             </Card>
           </div>
 
-          <Card padding="medium" className="stack-sm">
+          <Card padding="large" className="stack-sm">
             <h2 className="bf-h2">Prosjekter {login} er ansvarlig for</h2>
             {projects.length === 0 ? (
               <p className="muted">Ingen prosjekter registrert.</p>
@@ -118,7 +118,7 @@ export default function TeamMember() {
             )}
           </Card>
 
-          <Card padding="medium" className="stack-sm">
+          <Card padding="large" className="stack-sm">
             <h2 className="bf-h2">Issuer eid av {login}</h2>
             {cases.length === 0 ? (
               <p className="muted">Ingen issuer registrert.</p>

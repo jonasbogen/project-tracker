@@ -30,10 +30,6 @@
   margin-bottom: 24px;
 }
 
-.page-subtitle {
-  margin-top: 2px;
-}
-
 .section-title {
   display: flex;
   align-items: center;
@@ -116,143 +112,55 @@
   flex: 1 1 220px;
 }
 
-/* Hero background (dashboard only) */
+/* Hero banner (dashboard only) - a real photo instead of an abstract animation,
+   dark-gradient bottom so white title/subtitle text stays readable regardless
+   of what's in the image at that spot. */
 
-.hero-background {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
+.hero-banner {
+  position: relative;
+  min-height: 240px;
+  border-radius: var(--bf-radius-l, 16px);
   overflow: hidden;
-  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
 }
 
-/* The wrapper carries position + the JS scroll-parallax transform; the blob
-   inside carries its own continuous CSS animation. Two elements, two
-   independent transforms - nested transforms compose without either
-   overwriting the other (a single element can't cleanly animate both a JS-set
-   and a CSS-animated transform at once). */
-.hero-blob-wrap {
+.hero-banner-image {
   position: absolute;
-  width: 60vmax;
-  height: 60vmax;
-}
-
-.hero-blob-wrap-brand {
-  top: -22vmax;
-  right: -18vmax;
-}
-
-.hero-blob-wrap-chill {
-  top: 32vmax;
-  left: -22vmax;
-}
-
-.hero-blob-wrap-attn {
-  top: 78vmax;
-  right: -14vmax;
-}
-
-.hero-blob {
+  inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.22;
-  will-change: transform, opacity, filter;
+  object-fit: cover;
 }
 
-.hero-blob-brand {
-  background: hsl(var(--bfc-brand-hsl));
-  animation: hero-drift-1 16s ease-in-out infinite;
+.hero-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(8 12 20 / 0.05) 0%, rgb(8 12 20 / 0.82) 100%);
 }
 
-.hero-blob-chill {
-  background: hsl(var(--bfc-chill-hsl));
-  animation: hero-drift-2 20s ease-in-out infinite;
-  animation-delay: -6s;
+.hero-banner-content {
+  position: relative;
+  z-index: 1;
+  padding: 28px 32px;
+  width: 100%;
 }
 
-.hero-blob-attn {
-  background: hsl(var(--bfc-attn-hsl));
-  animation: hero-drift-3 18s ease-in-out infinite;
-  animation-delay: -11s;
+.hero-banner-title {
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
 }
 
-@keyframes hero-drift-1 {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-    opacity: 0.16;
-  }
-  25% {
-    transform: translate3d(14%, 10%, 0) rotate(8deg) scale(1.22);
-    opacity: 0.28;
-  }
-  50% {
-    transform: translate3d(4%, 20%, 0) rotate(-4deg) scale(0.88);
-    opacity: 0.14;
-  }
-  75% {
-    transform: translate3d(-14%, 8%, 0) rotate(-10deg) scale(1.15);
-    opacity: 0.26;
-  }
-  100% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-    opacity: 0.16;
-  }
+.hero-banner-subtitle {
+  color: rgb(255 255 255 / 0.85);
+  margin: 4px 0 0;
 }
 
-@keyframes hero-drift-2 {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-    opacity: 0.18;
-  }
-  25% {
-    transform: translate3d(-16%, -12%, 0) rotate(-10deg) scale(1.2);
-    opacity: 0.3;
-  }
-  50% {
-    transform: translate3d(-6%, 10%, 0) rotate(6deg) scale(0.85);
-    opacity: 0.15;
-  }
-  75% {
-    transform: translate3d(12%, -6%, 0) rotate(12deg) scale(1.18);
-    opacity: 0.27;
-  }
-  100% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-    opacity: 0.18;
-  }
-}
-
-@keyframes hero-drift-3 {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-    opacity: 0.17;
-  }
-  25% {
-    transform: translate3d(10%, -14%, 0) rotate(9deg) scale(0.86);
-    opacity: 0.13;
-  }
-  50% {
-    transform: translate3d(-12%, -4%, 0) rotate(-7deg) scale(1.24);
-    opacity: 0.29;
-  }
-  75% {
-    transform: translate3d(-4%, 14%, 0) rotate(-11deg) scale(0.9);
-    opacity: 0.16;
-  }
-  100% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-    opacity: 0.17;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-blob-brand,
-  .hero-blob-chill,
-  .hero-blob-attn {
-    animation: none;
-  }
+.hero-toolbar {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* Dashboard */
@@ -325,7 +233,8 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 10px 4px;
+  padding: 12px 14px;
+  border-radius: var(--bf-radius-s);
   border: none;
   background: none;
   border-bottom: 1px solid var(--bfc-base-dimmed);

@@ -271,7 +271,7 @@ export default function Prices() {
       <p className="muted">Tjenester og priser teamet tilbyr. Redigerbar av alle som bruker verktøyet.</p>
 
       {categories.map((category) => (
-        <Card key={category.id} padding="medium" className="stack-sm">
+        <Card key={category.id} padding="large" className="stack-sm">
           <div className="price-category-header">
             <h2 className="bf-h2">{category.name}</h2>
             <div className="inline-actions">
@@ -360,7 +360,7 @@ export default function Prices() {
           )}
 
           {formCategoryId === category.id && (
-            <Card padding="medium" className="stack-sm price-service-form">
+            <Card padding="large" className="stack-sm price-service-form">
               <h3 className="bf-h3">{editingPriceId ? 'Edit service' : 'New service'}</h3>
               {formError && (
                 <Message state="alert" header="Could not save">
