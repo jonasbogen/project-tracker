@@ -734,29 +734,30 @@
   background: var(--bfc-base-2);
 }
 
-/* Draggable board (MilestoneBoard, via @dnd-kit/core) - the source card
-   fades in place while a floating copy (DragOverlay) follows the pointer,
-   and a column being dragged over gets a brand-colored ring so it's obvious
-   where the drop will land. */
+/* Draggable board (MilestoneBoard) - native HTML5 drag-and-drop. A dragged
+   card fades so the column it left reads as "not here anymore", and a
+   column being dragged over gets a brand-colored ring so it's obvious where
+   the drop will land. */
 .board-card-draggable {
   cursor: grab;
-  touch-action: none;
 }
 
 .board-card-dragging {
   opacity: 0.4;
-}
-
-.board-card-overlay {
-  width: 260px;
   cursor: grabbing;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
 }
 
 .board-column-dragover {
   box-shadow:
     0 0 0 2px hsl(var(--bfc-brand-hsl)),
     0 4px 12px rgb(0 0 0 / 0.1);
+}
+
+.board-debug-log-lines {
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
 }
 
 .board-card-title {

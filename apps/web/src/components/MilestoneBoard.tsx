@@ -1,15 +1,4 @@
-import { useEffect, useState } from 'react';
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useDraggable,
-  useDroppable,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from '@dnd-kit/core';
+import { useEffect, useState, type DragEvent } from 'react';
 import Badge from '@intility/bifrost-react/Badge';
 import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
@@ -35,66 +24,6 @@ function bucketByStatus(data: MilestoneBoardData): Record<string, BoardCard[]> {
   return buckets;
 }
 
-function CardContent({ issue }: { issue: BoardCard }) {
-  return (
-    <>
-      <div className={`board-card-title${issue.state === 'closed' ? ' milestone-issue-title-done' : ''}`}>
-        {issue.title}
-      </div>
-      {issue.umbrella && <div className="muted board-card-meta">{issue.umbrella}</div>}
-      {issue.assignees.length > 0 && (
-        <div className="board-card-footer">
-          <span className="team-member">
-            {issue.assignees.map((a) => (
-              <img key={a.login} className="team-avatar" src={a.avatar_url} alt={a.login} title={a.login} width={20} height={20} />
-            ))}
-          </span>
-        </div>
-      )}
-    </>
-  );
-}
-
-function BoardCardItem({ issue }: { issue: BoardCard }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: issue.number });
-  return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      className={`board-card board-card-draggable${isDragging ? ' board-card-dragging' : ''}`}
-      onClick={() => window.open(issue.html_url, '_blank', 'noopener,noreferrer')}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') window.open(issue.html_url, '_blank', 'noopener,noreferrer');
-      }}
-    >
-      <CardContent issue={issue} />
-    </div>
-  );
-}
-
-function BoardColumn({ status, issues }: { status: string; issues: BoardCard[] }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
-  return (
-    <Card
-      padding="large"
-      className={`board-column${isOver ? ' board-column-dragover' : ''}`}
-      ref={setNodeRef}
-    >
-      <div className="board-column-header">
-        <span className="bf-h3">{status}</span>
-        <Badge state="neutral">{issues.length}</Badge>
-      </div>
-      <div className="board-column-body">
-        {issues.length === 0 && <p className="muted">Ingen issues.</p>}
-        {issues.map((issue) => (
-          <BoardCardItem key={issue.number} issue={issue} />
-        ))}
-      </div>
-    </Card>
-  );
-}
-
 // A live, two-way mirror of the GitHub Projects board for this project's
 // milestone: draggable columns for the Status field (Backlog/To do/In
 // progress/Blocked/Done, the same ones on github.com/orgs/<org>/projects/318).
@@ -103,18 +32,26 @@ function BoardColumn({ status, issues }: { status: string; issues: BoardCard[] }
 // of "status" to drift out of sync, and no separate grouping of our own on
 // top of it - a card sits in whichever column it actually sits in on GitHub.
 //
-// Drag-and-drop itself is @dnd-kit/core (pointer-events based, not the
-// native HTML5 DnD API) - two different from-scratch attempts at this using
-// native drag-and-drop and hand-rolled mouse tracking both turned out
-// unreliable in practice, which is exactly the class of problem a
-// purpose-built, heavily-tested library exists to solve.
+// Native HTML5 drag-and-drop (not a pointer-events library) - the same
+// dragover/drop handlers are attached to both the column AND every card in
+// it, since a drop landing on a nested draggable card is exactly the case
+// browsers are least reliable about bubbling correctly to an ancestor drop
+// zone; duplicating the handler removes any dependence on that bubbling.
+//
+// debugLog renders on-page (not just to the console) so a move can be
+// diagnosed without browser devtools or working server logs.
 export default function MilestoneBoard({ projectId }: { projectId: number }) {
   const [board, setBoard] = useState<MilestoneBoardData | null>(null);
   const [columns, setColumns] = useState<Record<string, BoardCard[]>>({});
   const [loading, setLoading] = useState(true);
   const [moveError, setMoveError] = useState<string | null>(null);
-  const [activeIssue, setActiveIssue] = useState<BoardCard | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const [draggingNumber, setDraggingNumber] = useState<number | null>(null);
+  const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+
+  function log(line: string) {
+    setDebugLog((prev) => [...prev.slice(-9), `${new Date().toLocaleTimeString('nb-NO')} ${line}`]);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -131,27 +68,20 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  function handleDragStart(event: DragStartEvent) {
-    const issueNumber = Number(event.active.id);
-    for (const list of Object.values(columns)) {
-      const issue = list.find((i) => i.number === issueNumber);
-      if (issue) {
-        setActiveIssue(issue);
-        return;
-      }
-    }
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    setActiveIssue(null);
-    const targetStatus = event.over?.id as string | undefined;
-    if (!targetStatus) return;
-    const issueNumber = Number(event.active.id);
+  function moveCard(issueNumber: number, targetStatus: string) {
     const sourceStatus = Object.keys(columns).find((status) => columns[status].some((i) => i.number === issueNumber));
-    if (!sourceStatus || sourceStatus === targetStatus) return;
+    if (!sourceStatus) {
+      log(`Fant ikke #${issueNumber} i noen kolonne lokalt.`);
+      return;
+    }
+    if (sourceStatus === targetStatus) {
+      log(`#${issueNumber} sluppet i samme kolonne (${targetStatus}) - ingen endring.`);
+      return;
+    }
     const moving = columns[sourceStatus].find((i) => i.number === issueNumber);
     if (!moving) return;
 
+    log(`Flytter #${issueNumber}: ${sourceStatus} -> ${targetStatus}`);
     const previous = columns;
     setColumns({
       ...columns,
@@ -160,10 +90,36 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
     });
     setMoveError(null);
 
-    api.moveBoardCard(projectId, issueNumber, targetStatus).catch((e: Error) => {
-      setColumns(previous);
-      setMoveError(e.message);
-    });
+    api
+      .moveBoardCard(projectId, issueNumber, targetStatus)
+      .then(() => log(`GitHub bekreftet: #${issueNumber} er nå "${targetStatus}".`))
+      .catch((e: Error) => {
+        log(`GitHub avviste flyttingen: ${e.message}`);
+        setColumns(previous);
+        setMoveError(e.message);
+      });
+  }
+
+  function handleDragStart(e: DragEvent, issueNumber: number) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(issueNumber));
+    setDraggingNumber(issueNumber);
+    log(`Startet drag av #${issueNumber}.`);
+  }
+
+  function handleDrop(e: DragEvent, targetStatus: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverStatus(null);
+    const fromTransfer = Number(e.dataTransfer.getData('text/plain'));
+    const issueNumber = Number.isInteger(fromTransfer) && fromTransfer > 0 ? fromTransfer : draggingNumber;
+    setDraggingNumber(null);
+    if (!issueNumber) {
+      log(`Slipp registrert i "${targetStatus}", men fant ingen issue-nummer.`);
+      return;
+    }
+    log(`Slipp registrert: #${issueNumber} i "${targetStatus}".`);
+    moveCard(issueNumber, targetStatus);
   }
 
   if (loading) return <Icon.Spinner aria-label="Laster prosjekttavle" />;
@@ -180,25 +136,91 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       )}
 
       {board.statusOrder.length > 0 ? (
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="board">
-            {board.statusOrder.map((status) => (
-              <BoardColumn key={status} status={status} issues={columns[status] ?? []} />
-            ))}
-          </div>
-          <DragOverlay>
-            {activeIssue && (
-              <div className="board-card board-card-draggable board-card-overlay">
-                <CardContent issue={activeIssue} />
+        <div className="board">
+          {board.statusOrder.map((status) => (
+            <Card
+              key={status}
+              padding="large"
+              className={`board-column${dragOverStatus === status ? ' board-column-dragover' : ''}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                setDragOverStatus(status);
+              }}
+              onDragLeave={() => setDragOverStatus((current) => (current === status ? null : current))}
+              onDrop={(e) => handleDrop(e, status)}
+            >
+              <div className="board-column-header">
+                <span className="bf-h3">{status}</span>
+                <Badge state="neutral">{columns[status]?.length ?? 0}</Badge>
               </div>
-            )}
-          </DragOverlay>
-        </DndContext>
+              <div className="board-column-body">
+                {(columns[status]?.length ?? 0) === 0 && <p className="muted">Ingen issues.</p>}
+                {columns[status]?.map((issue) => (
+                  <div
+                    key={issue.number}
+                    className={`board-card board-card-draggable${draggingNumber === issue.number ? ' board-card-dragging' : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, issue.number)}
+                    onDragEnd={() => setDraggingNumber(null)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      setDragOverStatus(status);
+                    }}
+                    onDrop={(e) => handleDrop(e, status)}
+                    onClick={() => window.open(issue.html_url, '_blank', 'noopener,noreferrer')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        window.open(issue.html_url, '_blank', 'noopener,noreferrer');
+                      }
+                    }}
+                  >
+                    <div
+                      className={`board-card-title${issue.state === 'closed' ? ' milestone-issue-title-done' : ''}`}
+                    >
+                      {issue.title}
+                    </div>
+                    {issue.umbrella && <div className="muted board-card-meta">{issue.umbrella}</div>}
+                    {issue.assignees.length > 0 && (
+                      <div className="board-card-footer">
+                        <span className="team-member">
+                          {issue.assignees.map((a) => (
+                            <img
+                              key={a.login}
+                              className="team-avatar"
+                              src={a.avatar_url}
+                              alt={a.login}
+                              title={a.login}
+                              width={20}
+                              height={20}
+                            />
+                          ))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
       ) : (
         <p className="muted">
           Board-kolonner (Backlog/To do/In progress/Blocked/Done) vises når PROJECT_TOKEN er satt opp med
           skrivetilgang til prosjekttavlen.
         </p>
+      )}
+
+      {debugLog.length > 0 && (
+        <Card padding="medium" className="board-debug-log">
+          <p className="muted" style={{ marginBottom: 6 }}>
+            Feilsøkingslogg (midlertidig, for å finne ut hvorfor drag-and-drop ikke fester seg):
+          </p>
+          <pre className="board-debug-log-lines">{debugLog.join('\n')}</pre>
+        </Card>
       )}
     </div>
   );
