@@ -296,10 +296,12 @@ api.patch('/projects/:id/board', async (c) => {
   const body = await c.req.json<Record<string, unknown>>().catch((): Record<string, unknown> => ({}));
   const issueNumber = Number(body.issueNumber);
   const status = String(body.status ?? '').trim();
+  console.log(`Board move request: project ${id}, issue #${issueNumber} -> "${status}"`);
   if (!Number.isInteger(issueNumber) || issueNumber <= 0 || !status) {
     return c.json({ error: 'issueNumber og status er påkrevd.' }, 400);
   }
   const result = await moveIssueStatus(issueNumber, status);
+  console.log(`Board move result for issue #${issueNumber}:`, JSON.stringify(result));
   if (!result.ok) return c.json({ error: result.error }, 502);
   return c.json({ status: result.status });
 });
