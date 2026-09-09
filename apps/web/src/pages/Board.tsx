@@ -5,8 +5,10 @@ import Button from '@intility/bifrost-react/Button';
 import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faListCheck } from '@fortawesome/free-solid-svg-icons';
 import { api, type CaseWithProjectInfo, type Project } from '../api';
+import SectionTitle from '../components/SectionTitle';
+import Skeleton from '../components/Skeleton';
 import { caseBadgeState, formatDate, githubIssueUrl } from '../status';
 
 export default function Board() {
@@ -57,7 +59,15 @@ export default function Board() {
 
       <h1 className="bf-h1">{heading}</h1>
 
-      {loading && <Icon.Spinner aria-label="Laster issuer" />}
+      {loading && (
+        <div className="board" aria-label="Laster issuer">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} padding="large" className="board-column">
+              <Skeleton style={{ height: 200 }} />
+            </Card>
+          ))}
+        </div>
+      )}
 
       {error && (
         <Message state="alert" header="Kunne ikke laste issuer">
@@ -72,7 +82,7 @@ export default function Board() {
             return (
               <Card key={status} padding="large" className="board-column">
                 <div className="board-column-header">
-                  <h2 className="bf-h2">{status}</h2>
+                  <SectionTitle icon={faListCheck}>{status}</SectionTitle>
                   <Badge state={caseBadgeState(status)}>{columnCases.length}</Badge>
                 </div>
                 <div className="board-column-body">

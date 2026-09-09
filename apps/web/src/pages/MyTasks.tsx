@@ -9,6 +9,7 @@ import Table from '@intility/bifrost-react/Table';
 import Select from '@intility/bifrost-react-select';
 import { api, type Assignee, type CaseWithProjectInfo } from '../api';
 import { clearCurrentUser, getCurrentUser, setCurrentUser } from '../currentUser';
+import Skeleton from '../components/Skeleton';
 import { caseBadgeState, formatDate, githubIssueUrl } from '../status';
 
 interface Option {
@@ -128,7 +129,13 @@ export default function MyTasks() {
         </Button>
       </div>
 
-      {loading && <Icon.Spinner aria-label="Laster oppgaver" />}
+      {loading && (
+        <Card padding="large" className="stack-sm" aria-label="Laster oppgaver">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} style={{ height: 20 }} />
+          ))}
+        </Card>
+      )}
 
       {error && (
         <Message state="alert" header="Kunne ikke laste oppgaver">

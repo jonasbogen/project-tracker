@@ -5,8 +5,10 @@ import Button from '@intility/bifrost-react/Button';
 import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
-import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarDays, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { api, type CalendarItem } from '../api';
+import SectionTitle from '../components/SectionTitle';
+import Skeleton from '../components/Skeleton';
 import { daysUntil, formatDate } from '../status';
 
 const MONTH_NAMES = [
@@ -106,7 +108,14 @@ export default function CalendarPage() {
       )}
 
       {loading ? (
-        <Icon.Spinner aria-label="Laster kalender" />
+        <div className="stack" aria-label="Laster kalender">
+          <Card padding="large">
+            <Skeleton style={{ height: 620 }} />
+          </Card>
+          <Card padding="large">
+            <Skeleton style={{ height: 160 }} />
+          </Card>
+        </div>
       ) : (
         <>
           <Card padding="large">
@@ -188,7 +197,7 @@ export default function CalendarPage() {
           </Card>
 
           <Card padding="large" className="stack-sm">
-            <h2 className="bf-h2">Nærmeste frister</h2>
+            <SectionTitle icon={faCalendarDays}>Nærmeste frister</SectionTitle>
             {upcoming.length === 0 ? (
               <p className="muted">Ingen kommende frister registrert.</p>
             ) : (

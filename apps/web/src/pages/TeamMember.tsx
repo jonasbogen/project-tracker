@@ -6,8 +6,11 @@ import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import Table from '@intility/bifrost-react/Table';
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faDiagramProject, faListCheck } from '@fortawesome/free-solid-svg-icons';
 import { api, type CaseWithProjectInfo, type ProjectWithCount } from '../api';
+import CountUp from '../components/CountUp';
+import SectionTitle from '../components/SectionTitle';
+import Skeleton from '../components/Skeleton';
 import { caseBadgeState, formatDate, githubIssueUrl, projectBadgeState } from '../status';
 
 // One person's own overview page: every issue they own (from GitHub assignee
@@ -65,7 +68,24 @@ export default function TeamMember() {
         </Button>
       </div>
 
-      {loading && <Icon.Spinner aria-label="Laster oversikt" />}
+      {loading && (
+        <div className="stack" aria-label="Laster oversikt">
+          <div className="stat-tile-row">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} padding="large" className="stat-tile">
+                <Skeleton style={{ height: 12, width: '60%', margin: '0 auto 10px' }} />
+                <Skeleton style={{ height: 30, width: '40%', margin: '0 auto' }} />
+              </Card>
+            ))}
+          </div>
+          <Card padding="large">
+            <Skeleton style={{ height: 140 }} />
+          </Card>
+          <Card padding="large">
+            <Skeleton style={{ height: 140 }} />
+          </Card>
+        </div>
+      )}
 
       {error && (
         <Message state="alert" header="Kunne ikke laste oversikt">
@@ -78,20 +98,26 @@ export default function TeamMember() {
           <div className="stat-tile-row">
             <Card padding="large" className="stat-tile">
               <div className="stat-tile-label">Åpne issuer</div>
-              <div className="stat-tile-value">{openCases.length}</div>
+              <div className="stat-tile-value">
+                <CountUp value={openCases.length} />
+              </div>
             </Card>
             <Card padding="large" className="stat-tile">
               <div className="stat-tile-label">Issuer totalt</div>
-              <div className="stat-tile-value">{cases.length}</div>
+              <div className="stat-tile-value">
+                <CountUp value={cases.length} />
+              </div>
             </Card>
             <Card padding="large" className="stat-tile">
               <div className="stat-tile-label">Ansvarlig for prosjekter</div>
-              <div className="stat-tile-value">{projects.length}</div>
+              <div className="stat-tile-value">
+                <CountUp value={projects.length} />
+              </div>
             </Card>
           </div>
 
           <Card padding="large" className="stack-sm">
-            <h2 className="bf-h2">Prosjekter {login} er ansvarlig for</h2>
+            <SectionTitle icon={faDiagramProject}>Prosjekter {login} er ansvarlig for</SectionTitle>
             {projects.length === 0 ? (
               <p className="muted">Ingen prosjekter registrert.</p>
             ) : (
@@ -119,7 +145,7 @@ export default function TeamMember() {
           </Card>
 
           <Card padding="large" className="stack-sm">
-            <h2 className="bf-h2">Issuer eid av {login}</h2>
+            <SectionTitle icon={faListCheck}>Issuer eid av {login}</SectionTitle>
             {cases.length === 0 ? (
               <p className="muted">Ingen issuer registrert.</p>
             ) : (

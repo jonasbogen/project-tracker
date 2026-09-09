@@ -4,10 +4,12 @@ import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import Table from '@intility/bifrost-react/Table';
-import { faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faChartColumn, faChevronDown, faChevronRight, faFileLines } from '@fortawesome/free-solid-svg-icons';
 import { api, type StatusdeckRun, type WeeklyReport } from '../api';
 import WeekTrendChart from '../charts/WeekTrendChart';
 import FormattedText from '../components/FormattedText';
+import SectionTitle from '../components/SectionTitle';
+import Skeleton from '../components/Skeleton';
 import { formatDate } from '../status';
 
 // "Ukesrapport – uke 36" -> 36, for the trend chart's x-axis label. Falls back
@@ -145,11 +147,20 @@ export default function Reports() {
         arkivet, så de ikke bare forsvinner i Teams.
       </p>
 
-      {loading && <Icon.Spinner aria-label="Laster rapporter" />}
+      {loading && (
+        <div className="stack" aria-label="Laster rapporter">
+          <Card padding="large">
+            <Skeleton style={{ height: 220 }} />
+          </Card>
+          <Card padding="large">
+            <Skeleton style={{ height: 160 }} />
+          </Card>
+        </div>
+      )}
 
       {!loading && (
         <Card padding="large" className="stack-sm">
-          <h2 className="bf-h2">Ukesrapport</h2>
+          <SectionTitle icon={faFileLines}>Ukesrapport</SectionTitle>
           {reportsError && (
             <Message state="alert" header="Kunne ikke laste ukesrapporter">
               {reportsError}
@@ -193,7 +204,7 @@ export default function Reports() {
 
       {!loading && (
         <Card padding="large" className="stack-sm">
-          <h2 className="bf-h2">Statusdeck</h2>
+          <SectionTitle icon={faChartColumn}>Statusdeck</SectionTitle>
           {runsError && (
             <Message state="alert" header="Kunne ikke laste statusdeck-kjøringer">
               {runsError}

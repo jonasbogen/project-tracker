@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import Card from '@intility/bifrost-react/Card';
-import Icon from '@intility/bifrost-react/Icon';
 import Input from '@intility/bifrost-react/Input';
 import Message from '@intility/bifrost-react/Message';
 import Table from '@intility/bifrost-react/Table';
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { api, type Customer } from '../api';
 import CompanyLogo from '../components/CompanyLogo';
+import Skeleton from '../components/Skeleton';
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -43,7 +43,13 @@ export default function Customers() {
           style={{ marginBottom: 16 }}
         />
 
-        {loading && <Icon.Spinner aria-label="Laster kunder" />}
+        {loading && (
+          <div className="stack-sm" aria-label="Laster kunder">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} style={{ height: 20 }} />
+            ))}
+          </div>
+        )}
 
         {error && (
           <Message state="alert" header="Kunne ikke laste kunder">

@@ -10,6 +10,7 @@ import Select from '@intility/bifrost-react-select';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { api, type Assignee, type OpenMilestone, type ProjectInput, type RepoTeam } from '../api';
 import CompanyLogo from '../components/CompanyLogo';
+import Skeleton from '../components/Skeleton';
 
 interface Option {
   value: string;
@@ -102,7 +103,16 @@ export default function ProjectForm({ mode }: { mode: 'create' | 'edit' }) {
     }
   }
 
-  if (loading) return <Icon.Spinner aria-label="Laster" />;
+  if (loading) {
+    return (
+      <div className="stack" aria-label="Laster">
+        <Skeleton style={{ height: 32, width: 200 }} />
+        <Card padding="large">
+          <Skeleton style={{ height: 320 }} />
+        </Card>
+      </div>
+    );
+  }
 
   const statusOptions: Option[] = statuses.map((s) => ({ value: s, label: s }));
   const heading = mode === 'create' ? 'Nytt prosjekt' : 'Rediger prosjekt';

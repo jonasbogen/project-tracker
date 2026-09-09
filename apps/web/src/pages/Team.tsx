@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import Table from '@intility/bifrost-react/Table';
+import Badge from '@intility/bifrost-react/Badge';
 import Card from '@intility/bifrost-react/Card';
-import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import { api, type TeamMember } from '../api';
+import Skeleton from '../components/Skeleton';
 
 export default function Team() {
   const [team, setTeam] = useState<TeamMember[]>([]);
@@ -29,7 +30,13 @@ export default function Team() {
       </p>
 
       <Card padding="large">
-        {loading && <Icon.Spinner aria-label="Laster team" />}
+        {loading && (
+          <div className="stack-sm" aria-label="Laster team">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} style={{ height: 20 }} />
+            ))}
+          </div>
+        )}
 
         {error && (
           <Message state="alert" header="Kunne ikke laste team">
@@ -70,7 +77,9 @@ export default function Team() {
                       {member.owner}
                     </span>
                   </Table.Cell>
-                  <Table.Cell>{member.open_cases}</Table.Cell>
+                  <Table.Cell>
+                    <Badge state={member.open_cases > 0 ? 'attn' : 'neutral'}>{member.open_cases}</Badge>
+                  </Table.Cell>
                   <Table.Cell>{member.total_cases}</Table.Cell>
                 </Table.Row>
               ))}

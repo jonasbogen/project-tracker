@@ -19,6 +19,7 @@ import {
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
 import CountUp from '../components/CountUp';
+import SectionTitle from '../components/SectionTitle';
 import Skeleton from '../components/Skeleton';
 import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
@@ -57,15 +58,6 @@ function StatTile({
     <Card padding="large" className="stat-tile" style={{ borderTopColor: color }}>
       {onClick ? <button onClick={onClick}>{content}</button> : content}
     </Card>
-  );
-}
-
-function SectionTitle({ icon, children }: { icon: IconDefinition; children: React.ReactNode }) {
-  return (
-    <h2 className="bf-h2 section-title">
-      <Icon icon={icon} />
-      {children}
-    </h2>
   );
 }
 

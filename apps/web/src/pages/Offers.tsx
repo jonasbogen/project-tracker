@@ -8,8 +8,16 @@ import Input from '@intility/bifrost-react/Input';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import TextArea from '@intility/bifrost-react/TextArea';
-import { faArrowRight, faArrowUpRightFromSquare, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowRight,
+  faArrowUpRightFromSquare,
+  faFileInvoiceDollar,
+  faPlus,
+  faTrash,
+} from '@fortawesome/free-solid-svg-icons';
 import { api, type Offer, type ProjectWithCount } from '../api';
+import SectionTitle from '../components/SectionTitle';
+import Skeleton from '../components/Skeleton';
 import { formatAmount, offerBadgeState } from '../status';
 
 interface Option {
@@ -133,7 +141,13 @@ export default function Offers() {
       )}
 
       {loading ? (
-        <Icon.Spinner aria-label="Laster tilbud" />
+        <div className="board" aria-label="Laster tilbud">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} padding="large" className="board-column">
+              <Skeleton style={{ height: 200 }} />
+            </Card>
+          ))}
+        </div>
       ) : (
         <div className="board">
           {statuses.map((status) => {
@@ -142,7 +156,7 @@ export default function Offers() {
             return (
               <Card key={status} padding="large" className="board-column">
                 <div className="board-column-header">
-                  <h2 className="bf-h2">{status}</h2>
+                  <SectionTitle icon={faFileInvoiceDollar}>{status}</SectionTitle>
                   <Badge state={offerBadgeState(status)}>{columnOffers.length}</Badge>
                 </div>
                 <p className="muted" style={{ marginTop: -8, marginBottom: 8 }}>
@@ -204,7 +218,7 @@ export default function Offers() {
       )}
 
       <Card padding="large" className="stack-sm">
-        <h2 className="bf-h2">Nytt tilbud</h2>
+        <SectionTitle icon={faPlus}>Nytt tilbud</SectionTitle>
 
         <div className="offer-billing-link">
           <div>

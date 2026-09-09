@@ -7,8 +7,10 @@ import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
 import Table from '@intility/bifrost-react/Table';
 import TextArea from '@intility/bifrost-react/TextArea';
-import { faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faPen, faPlus, faTags, faTrash, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { api, type Price, type PriceCategory } from '../api';
+import SectionTitle from '../components/SectionTitle';
+import Skeleton from '../components/Skeleton';
 
 interface Option {
   value: string;
@@ -61,6 +63,11 @@ export default function Prices() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [newCategoryOpen, setNewCategoryOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [renamingCategoryId, setRenamingCategoryId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
   function load() {
     setLoading(true);
     api
@@ -110,22 +117,38 @@ export default function Prices() {
     setFormError(null);
   }
 
-  async function handleNewCategory() {
-    const name = window.prompt('New category name?');
-    if (!name?.trim()) return;
+  function startNewCategory() {
+    setNewCategoryOpen(true);
+    setNewCategoryName('');
+  }
+
+  async function submitNewCategory(e: FormEvent) {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
     try {
-      await api.createPriceCategory(name.trim());
+      await api.createPriceCategory(newCategoryName.trim());
+      setNewCategoryOpen(false);
+      setNewCategoryName('');
       load();
     } catch (e) {
       setError((e as Error).message);
     }
   }
 
-  async function handleRenameCategory(category: PriceCategory) {
-    const name = window.prompt('Rename category to:', category.name);
-    if (!name?.trim() || name.trim() === category.name) return;
+  function startRenameCategory(category: PriceCategory) {
+    setRenamingCategoryId(category.id);
+    setRenameValue(category.name);
+  }
+
+  async function submitRenameCategory(e: FormEvent, category: PriceCategory) {
+    e.preventDefault();
+    if (!renameValue.trim() || renameValue.trim() === category.name) {
+      setRenamingCategoryId(null);
+      return;
+    }
     try {
-      await api.renamePriceCategory(category.id, name.trim());
+      await api.renamePriceCategory(category.id, renameValue.trim());
+      setRenamingCategoryId(null);
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -247,7 +270,17 @@ export default function Prices() {
     }
   }
 
-  if (loading) return <Icon.Spinner aria-label="Laster prisliste" />;
+  if (loading) {
+    return (
+      <div className="stack" aria-label="Laster prisliste">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} padding="large">
+            <Skeleton style={{ height: 140 }} />
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -263,21 +296,66 @@ export default function Prices() {
     <div className="stack">
       <div className="page-header">
         <h1 className="bf-h1">Prisliste</h1>
-        <Button variant="filled" onClick={handleNewCategory}>
-          <Icon icon={faPlus} marginRight />
-          New category
-        </Button>
+        {newCategoryOpen ? (
+          <form className="inline-actions" onSubmit={submitNewCategory}>
+            <Input
+              label="New category"
+              hideLabel
+              autoFocus
+              placeholder="Category name"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+            />
+            <Button type="submit" variant="filled" aria-label="Save">
+              <Icon icon={faCheck} />
+            </Button>
+            <Button type="button" variant="flat" aria-label="Cancel" onClick={() => setNewCategoryOpen(false)}>
+              <Icon icon={faXmark} />
+            </Button>
+          </form>
+        ) : (
+          <Button variant="filled" onClick={startNewCategory}>
+            <Icon icon={faPlus} marginRight />
+            New category
+          </Button>
+        )}
       </div>
       <p className="muted">Tjenester og priser teamet tilbyr. Redigerbar av alle som bruker verktøyet.</p>
 
       {categories.map((category) => (
         <Card key={category.id} padding="large" className="stack-sm">
           <div className="price-category-header">
-            <h2 className="bf-h2">{category.name}</h2>
+            {renamingCategoryId === category.id ? (
+              <form className="inline-actions" onSubmit={(e) => submitRenameCategory(e, category)}>
+                <Input
+                  label="Rename category"
+                  hideLabel
+                  autoFocus
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                />
+                <Button small type="submit" variant="filled" aria-label="Save">
+                  <Icon icon={faCheck} />
+                </Button>
+                <Button
+                  small
+                  type="button"
+                  variant="flat"
+                  aria-label="Cancel"
+                  onClick={() => setRenamingCategoryId(null)}
+                >
+                  <Icon icon={faXmark} />
+                </Button>
+              </form>
+            ) : (
+              <SectionTitle icon={faTags}>{category.name}</SectionTitle>
+            )}
             <div className="inline-actions">
-              <Button small variant="flat" onClick={() => handleRenameCategory(category)}>
-                Rename
-              </Button>
+              {renamingCategoryId !== category.id && (
+                <Button small variant="flat" onClick={() => startRenameCategory(category)}>
+                  Rename
+                </Button>
+              )}
               <Button small variant="flat" onClick={() => startNewService(category.id)}>
                 <Icon icon={faPlus} marginRight />
                 New service
@@ -361,7 +439,9 @@ export default function Prices() {
 
           {formCategoryId === category.id && (
             <Card padding="large" className="stack-sm price-service-form">
-              <h3 className="bf-h3">{editingPriceId ? 'Edit service' : 'New service'}</h3>
+              <SectionTitle as="h3" icon={editingPriceId ? faPen : faPlus}>
+                {editingPriceId ? 'Edit service' : 'New service'}
+              </SectionTitle>
               {formError && (
                 <Message state="alert" header="Could not save">
                   {formError}

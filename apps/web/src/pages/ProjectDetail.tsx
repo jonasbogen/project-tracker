@@ -9,7 +9,16 @@ import Input from '@intility/bifrost-react/Input';
 import TextArea from '@intility/bifrost-react/TextArea';
 import Message from '@intility/bifrost-react/Message';
 import Select from '@intility/bifrost-react-select';
-import { faArrowLeft, faPen, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowLeft,
+  faCalendarDays,
+  faChartColumn,
+  faClockRotateLeft,
+  faListCheck,
+  faPen,
+  faPlus,
+  faTrash,
+} from '@fortawesome/free-solid-svg-icons';
 import { api, type Assignee, type Case, type Project, type RepoLabel, type ServiceUmbrella } from '../api';
 import {
   caseBadgeState,
@@ -24,6 +33,8 @@ import BarChart from '../charts/BarChart';
 import FormattedText from '../components/FormattedText';
 import CompanyLogo from '../components/CompanyLogo';
 import MilestoneBoard from '../components/MilestoneBoard';
+import SectionTitle from '../components/SectionTitle';
+import Skeleton from '../components/Skeleton';
 
 interface Option {
   value: string;
@@ -213,7 +224,27 @@ export default function ProjectDetail() {
     }
   }
 
-  if (loading) return <Icon.Spinner aria-label="Laster prosjekt" />;
+  if (loading) {
+    return (
+      <div className="stack" aria-label="Laster prosjekt">
+        <Skeleton style={{ height: 32, width: 240 }} />
+        <Card padding="large">
+          <Skeleton style={{ height: 140 }} />
+        </Card>
+        <div className="dashboard-grid">
+          <Card padding="large">
+            <Skeleton style={{ height: 160 }} />
+          </Card>
+          <Card padding="large">
+            <Skeleton style={{ height: 160 }} />
+          </Card>
+        </div>
+        <Card padding="large">
+          <Skeleton style={{ height: 200 }} />
+        </Card>
+      </div>
+    );
+  }
 
   if (notFound) {
     return (
@@ -309,7 +340,7 @@ export default function ProjectDetail() {
 
       <div className="dashboard-grid">
         <Card padding="large">
-          <h2 className="bf-h2">Frist og aktivitet</h2>
+          <SectionTitle icon={faCalendarDays}>Frist og aktivitet</SectionTitle>
           {project.end_date ? (
             <div className="deadline-list">
               <div className="deadline-row deadline-row-static">
@@ -334,7 +365,9 @@ export default function ProjectDetail() {
             <p className="muted">Ingen frist satt for dette prosjektet.</p>
           )}
 
-          <h3 className="bf-h3 recent-activity-heading">Siste aktivitet</h3>
+          <SectionTitle as="h3" icon={faClockRotateLeft} className="recent-activity-heading">
+            Siste aktivitet
+          </SectionTitle>
           {cases.length === 0 ? (
             <p className="muted">Ingen issuer registrert enda.</p>
           ) : (
@@ -367,7 +400,7 @@ export default function ProjectDetail() {
           )}
         </Card>
         <Card padding="large">
-          <h2 className="bf-h2">Issuer per status</h2>
+          <SectionTitle icon={faChartColumn}>Issuer per status</SectionTitle>
           <BarChart
             items={caseStatuses.map((status) => ({
               label: status,
@@ -386,7 +419,7 @@ export default function ProjectDetail() {
       )}
 
       <Card padding="large" className="stack-sm">
-        <h2 className="bf-h2">Issuer</h2>
+        <SectionTitle icon={faListCheck}>Issuer</SectionTitle>
         {cases.length === 0 ? (
           <Message noIcon header="Ingen issuer knyttet til prosjektet enda." />
         ) : (
@@ -473,7 +506,7 @@ export default function ProjectDetail() {
       </Card>
 
       <Card padding="large" className="stack-sm">
-        <h2 className="bf-h2">Legg til issue</h2>
+        <SectionTitle icon={faPlus}>Legg til issue</SectionTitle>
         <p className="muted">Opprettes automatisk som en issue på GitHub.</p>
         {formError && (
           <Message state="alert" header="Kunne ikke opprette issue">
