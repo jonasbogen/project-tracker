@@ -396,7 +396,10 @@
 }
 
 .chat-widget-fab:hover {
-  background: hsl(var(--bfc-brand-hsl) / 0.9);
+  /* brightness(), not a lower-opacity background: opacity blends toward
+     whatever's behind it, which on a dark page made hover read as darker -
+     brightness() reliably lightens the button itself either way. */
+  filter: brightness(1.15);
 }
 
 .chat-widget-panel {

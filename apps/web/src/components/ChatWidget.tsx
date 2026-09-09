@@ -6,23 +6,30 @@ import TextArea from '@intility/bifrost-react/TextArea';
 import { faPaperPlane, faRobot, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { api, type ChatMessage } from '../api';
 
-const SUGGESTIONS = [
-  'Hvilke prosjekter er forsinket akkurat nå?',
-  'Oppsummer status for Arbion-prosjektene',
-  'Hvem har flest åpne issuer akkurat nå?',
-  'Foreslå neste steg for et prosjekt uten nylig aktivitet',
-  'Skriv et utkast til en statusoppdatering jeg kan sende til en kunde',
-  'Forklar forskjellen på REST og GraphQL',
+// Each capability the welcome message lists is also a clickable shortcut -
+// clicking one sends `prompt` as if the person had typed it themselves.
+const CAPABILITIES: { label: string; prompt: string }[] = [
+  {
+    label: 'Slå opp prosjekter og vise status, kunde og frister',
+    prompt: 'Vis meg en oversikt over prosjektene, med status og frister.',
+  },
+  {
+    label: 'Vise hvem som eier hvilke issuer, og hvor mange',
+    prompt: 'Hvem eier flest åpne issuer akkurat nå?',
+  },
+  {
+    label: 'Oppsummere tallene fra oversikten (status, forsinkelser, blokkerte)',
+    prompt: 'Oppsummer tallene fra oversikten - status, forsinkelser og blokkerte.',
+  },
+  {
+    label: 'Svare på generelle spørsmål, ikke bare om verktøyet her',
+    prompt: 'Forklar forskjellen på REST og GraphQL.',
+  },
 ];
 
 const WELCOME_MESSAGE: ChatMessage = {
   role: 'assistant',
-  content:
-    'Velkommen! Er det noe jeg kan bistå med? Blant annet kan jeg:\n\n' +
-    '- Slå opp prosjekter og vise status, kunde og frister\n' +
-    '- Vise hvem som eier hvilke issuer, og hvor mange\n' +
-    '- Oppsummere tallene fra oversikten (status, forsinkelser, blokkerte)\n' +
-    '- Svare på generelle spørsmål, ikke bare om verktøyet her',
+  content: 'Velkommen! Er det noe jeg kan bistå med? Blant annet kan jeg:',
 };
 
 // Mounted once at the app root (outside <Routes>), so it survives page
@@ -88,6 +95,8 @@ export default function ChatWidget() {
     void send(input);
   }
 
+  const hasUserMessage = messages.some((m) => m.role === 'user');
+
   if (!open) {
     return (
       <button
@@ -125,13 +134,6 @@ export default function ChatWidget() {
               eller issuene her, slår jeg opp i den samme dataen du ser ellers i appen, men
               skriver aldri noe tilbake selv.
             </p>
-            <div className="chat-suggestions">
-              {SUGGESTIONS.map((s) => (
-                <Button key={s} variant="flat" small onClick={() => void send(s)}>
-                  {s}
-                </Button>
-              ))}
-            </div>
           </div>
         )}
 
@@ -143,6 +145,16 @@ export default function ChatWidget() {
             </div>
           </div>
         ))}
+
+        {!hasUserMessage && (
+          <div className="chat-suggestions">
+            {CAPABILITIES.map((c) => (
+              <Button key={c.label} variant="flat" small onClick={() => void send(c.prompt)}>
+                {c.label}
+              </Button>
+            ))}
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
