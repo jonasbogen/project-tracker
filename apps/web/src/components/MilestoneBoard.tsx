@@ -66,12 +66,12 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
           0,
         );
         log(
-          `Lastet: ${totalIssues} issue(r) totalt, ${withStatus} har status. Kolonner: [${data.statusOrder.join(', ') || 'ingen'}]. StatusCounts: ${JSON.stringify(data.statusCounts)}`,
+          `Lastet: ${totalIssues} issue(r) totalt, ${withStatus} har status. Kolonner: [${data.statusOrder.join(', ') || 'ingen'}]. StatusCounts: ${JSON.stringify(data.statusCounts)}. Detaljer: ${data.statusDebug ?? '(ingen)'}`,
         );
       })
       .catch((e: Error) => {
         log(`Kunne ikke laste tavlen: ${e.message}`);
-        setBoard({ statusCounts: [], groups: [], statusOrder: [], boardUrl: '' });
+        setBoard({ statusCounts: [], groups: [], statusOrder: [], boardUrl: '', statusDebug: null });
         setColumns({});
       })
       .finally(() => setLoading(false));

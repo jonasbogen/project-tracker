@@ -282,7 +282,13 @@ api.get('/projects/:id/board', async (c) => {
   const project = await repo.getProject(id);
   if (!project) return c.json({ error: 'Prosjektet finnes ikke.' }, 404);
   if (!project.github_milestone_number) {
-    return c.json({ statusCounts: [], groups: [], statusOrder: [], boardUrl: BOARD_URL });
+    return c.json({
+      statusCounts: [],
+      groups: [],
+      statusOrder: [],
+      boardUrl: BOARD_URL,
+      statusDebug: 'Prosjektet er ikke koblet til en GitHub-milestone.',
+    });
   }
   const board = await getMilestoneBoard(project.github_milestone_number);
   return c.json(board);

@@ -555,9 +555,15 @@ export async function listCustomerOptions(): Promise<string[]> {
 // fields. This is the same board field the Kunde project field lives on, so it
 // needs the same org-Projects-scoped PROJECT_TOKEN; without it every issue comes
 // back with a null status and the milestone board just shows no status counts.
-async function fetchIssueStatuses(issueNumbers: number[]): Promise<Record<number, string | null>> {
+interface IssueStatusesResult {
+  statuses: Record<number, string | null>;
+  debug: string | null;
+}
+
+async function fetchIssueStatuses(issueNumbers: number[]): Promise<IssueStatusesResult> {
   const token = process.env.PROJECT_TOKEN;
-  if (!token || issueNumbers.length === 0) return {};
+  if (!token) return { statuses: {}, debug: 'PROJECT_TOKEN er ikke satt opp.' };
+  if (issueNumbers.length === 0) return { statuses: {}, debug: null };
   try {
     const fields = issueNumbers
       .map(
@@ -591,7 +597,15 @@ async function fetchIssueStatuses(issueNumbers: number[]): Promise<Record<number
           } | null
         >;
       };
+      errors?: { message: string }[];
     };
+    if (!res.ok || json.errors?.length) {
+      const detail = json.errors?.length
+        ? json.errors.map((e) => e.message).join('; ')
+        : `HTTP ${res.status}`;
+      console.error(`GitHub sync: failed to read issue statuses: ${detail}`);
+      return { statuses: {}, debug: detail };
+    }
     const repository = json.data?.repository ?? {};
     const result: Record<number, string | null> = {};
     for (const number of issueNumbers) {
@@ -608,10 +622,15 @@ async function fetchIssueStatuses(issueNumbers: number[]): Promise<Record<number
       const status = (onThisProject ?? anyStatus)?.fieldValueByName?.name;
       result[number] = status ?? null;
     }
-    return result;
+    const totalItems = Object.values(repository).reduce((sum, r) => sum + (r?.projectItems?.nodes?.length ?? 0), 0);
+    return {
+      statuses: result,
+      debug: `${issueNumbers.length} issue(r) spurt, ${totalItems} projectItems totalt funnet på tvers av alle.`,
+    };
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Ukjent feil.';
     console.error('GitHub sync: failed to read issue statuses', err);
-    return {};
+    return { statuses: {}, debug: message };
   }
 }
 
@@ -776,6 +795,7 @@ export interface MilestoneBoard {
   groups: MilestoneBoardGroup[];
   statusOrder: string[];
   boardUrl: string;
+  statusDebug: string | null;
 }
 
 interface GithubIssueDetailed extends GithubIssue {
@@ -797,7 +817,9 @@ function parentNumberFromUrl(url: string | null): number | null {
 // back empty without it. Never throws — an unreachable repo or missing token
 // just yields an empty board.
 export async function getMilestoneBoard(milestoneNumber: number): Promise<MilestoneBoard> {
-  if (!process.env.GITHUB_TOKEN) return { statusCounts: [], groups: [], statusOrder: [], boardUrl: BOARD_URL };
+  if (!process.env.GITHUB_TOKEN) {
+    return { statusCounts: [], groups: [], statusOrder: [], boardUrl: BOARD_URL, statusDebug: 'GITHUB_TOKEN er ikke satt opp.' };
+  }
   try {
     const allIssues = await paginate<GithubIssueDetailed>(
       `/repos/${ORG}/${REPO}/issues?milestone=${milestoneNumber}&state=all`,
@@ -825,7 +847,7 @@ export async function getMilestoneBoard(milestoneNumber: number): Promise<Milest
     );
     const parents = new Map(parentEntries.filter((e) => e !== null));
 
-    const statuses = await fetchIssueStatuses(issues.map((i) => i.number));
+    const { statuses, debug: statusDebug } = await fetchIssueStatuses(issues.map((i) => i.number));
 
     const issuesByParent = new Map<number | null, GithubIssueDetailed[]>();
     for (const issue of issues) {
@@ -881,10 +903,12 @@ export async function getMilestoneBoard(milestoneNumber: number): Promise<Milest
       groups,
       statusOrder,
       boardUrl: BOARD_URL,
+      statusDebug,
     };
   } catch (err) {
     console.error(`GitHub sync: failed to build the milestone board for #${milestoneNumber}`, err);
-    return { statusCounts: [], groups: [], statusOrder: [], boardUrl: BOARD_URL };
+    const message = err instanceof Error ? err.message : 'Ukjent feil.';
+    return { statusCounts: [], groups: [], statusOrder: [], boardUrl: BOARD_URL, statusDebug: message };
   }
 }
 

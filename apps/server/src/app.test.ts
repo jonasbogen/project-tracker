@@ -167,6 +167,7 @@ describe('project-tracker API', () => {
       groups: [],
       statusOrder: [],
       boardUrl: 'https://github.com/orgs/intility/projects/318',
+      statusDebug: 'Prosjektet er ikke koblet til en GitHub-milestone.',
     });
     expect(githubSync.getMilestoneBoard).not.toHaveBeenCalled();
   });

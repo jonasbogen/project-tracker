@@ -134,6 +134,7 @@ export interface MilestoneBoard {
   groups: MilestoneBoardGroup[];
   statusOrder: string[];
   boardUrl: string;
+  statusDebug: string | null;
 }
 
 export interface Customer {
