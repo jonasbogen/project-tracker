@@ -595,11 +595,16 @@ async function fetchIssueStatuses(issueNumbers: number[]): Promise<Record<number
     const result: Record<number, string | null> = {};
     for (const number of issueNumbers) {
       const nodes = repository[`i${number}`]?.projectItems?.nodes ?? [];
-      // Scoped to this specific board (org project #318) - an issue can sit
-      // on other Projects V2 boards too, and their Status options don't mean
-      // anything here (a different board could even have a same-named option
-      // that means something else entirely).
-      const status = nodes.find((node) => node?.project?.number === PROJECT_NUMBER)?.fieldValueByName?.name;
+      // Prefer this specific board (org project #318) - an issue can sit on
+      // other Projects V2 boards too, whose Status options don't mean
+      // anything here. Fall back to the first Status value found at all if
+      // nothing matched project 318 by number, rather than reporting no
+      // status - most issues only ever sit on this one board anyway, so a
+      // failed or unexpected project-number match shouldn't lose the value
+      // entirely.
+      const onThisProject = nodes.find((node) => node?.project?.number === PROJECT_NUMBER);
+      const anyStatus = nodes.find((node) => node?.fieldValueByName?.name);
+      const status = (onThisProject ?? anyStatus)?.fieldValueByName?.name;
       result[number] = status ?? null;
     }
     return result;
