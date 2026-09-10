@@ -25,7 +25,7 @@ import Board from './pages/Board';
 import Customers from './pages/Customers';
 import Prices from './pages/Prices';
 import Offers from './pages/Offers';
-import Reports from './pages/Reports';
+import Documentation from './pages/Documentation';
 import NotFound from './pages/NotFound';
 import ChatWidget from './components/ChatWidget';
 
@@ -70,8 +70,8 @@ export default function App() {
           <NavLink to="/offers">
             <Nav.Item icon={faFileInvoiceDollar}>Tilbud</Nav.Item>
           </NavLink>
-          <NavLink to="/reports">
-            <Nav.Item icon={faFileLines}>Rapporter</Nav.Item>
+          <NavLink to="/documentation">
+            <Nav.Item icon={faFileLines}>Dokumentasjon</Nav.Item>
           </NavLink>
         </>
       }
@@ -91,7 +91,7 @@ export default function App() {
           <Route path="/customers" element={<Customers />} />
           <Route path="/prices" element={<Prices />} />
           <Route path="/offers" element={<Offers />} />
-          <Route path="/reports" element={<Reports />} />
+          <Route path="/documentation" element={<Documentation />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

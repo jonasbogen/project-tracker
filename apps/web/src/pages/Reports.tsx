@@ -119,7 +119,8 @@ function statusdeckBadge(run: StatusdeckRun): { state: 'success' | 'alert' | 'ne
 
 // Archive of the two reports the repo's own workflows already produce every
 // week (ukesrapport.yml, statusdeck.yml) but that otherwise disappear into
-// Teams - a free history/trend view over the last 12 weeks of each.
+// Teams - a free history/trend view over the last 12 weeks of each. Rendered
+// as the "Rapporter" tab on the Documentation page, not its own route.
 export default function Reports() {
   const [reports, setReports] = useState<WeeklyReport[]>([]);
   const [reportsError, setReportsError] = useState<string | null>(null);
@@ -141,12 +142,6 @@ export default function Reports() {
 
   return (
     <div className="stack">
-      <h1 className="bf-h1">Rapporter</h1>
-      <p className="muted">
-        Ukesrapport og statusdeck produseres allerede av GitHub Actions hver uke - dette er
-        arkivet, så de ikke bare forsvinner i Teams.
-      </p>
-
       {loading && (
         <div className="stack" aria-label="Laster rapporter">
           <Card padding="large">
