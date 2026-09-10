@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import * as repo from '../repo.js';
 import type { CaseInput, ProjectInput } from '../repo.js';
 import {
+  BOARD_URL,
   createGithubIssue,
   createGithubMilestone,
   getMilestoneBoard,
@@ -280,7 +281,9 @@ api.get('/projects/:id/board', async (c) => {
   if (id === null) return c.json({ error: 'Ugyldig id.' }, 400);
   const project = await repo.getProject(id);
   if (!project) return c.json({ error: 'Prosjektet finnes ikke.' }, 404);
-  if (!project.github_milestone_number) return c.json({ statusCounts: [], groups: [], statusOrder: [] });
+  if (!project.github_milestone_number) {
+    return c.json({ statusCounts: [], groups: [], statusOrder: [], boardUrl: BOARD_URL });
+  }
   const board = await getMilestoneBoard(project.github_milestone_number);
   return c.json(board);
 });

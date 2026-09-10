@@ -35,6 +35,8 @@ vi.mock('./repo.js', async (importActual) => {
 
 // Keeps this suite hermetic: no test here should ever reach the real GitHub API.
 vi.mock('./github-sync.js', () => ({
+  BOARD_URL: 'https://github.com/orgs/intility/projects/318',
+  moveIssueStatus: vi.fn().mockResolvedValue({ ok: true, status: 'Done' }),
   createGithubMilestone: vi.fn().mockResolvedValue(null),
   createGithubIssue: vi.fn().mockResolvedValue(null),
   listActiveIssueOwners: vi.fn().mockResolvedValue([]),
@@ -160,7 +162,12 @@ describe('project-tracker API', () => {
     });
     const res = await app.request('/api/projects/1/board');
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ statusCounts: [], groups: [], statusOrder: [] });
+    expect(await res.json()).toEqual({
+      statusCounts: [],
+      groups: [],
+      statusOrder: [],
+      boardUrl: 'https://github.com/orgs/intility/projects/318',
+    });
     expect(githubSync.getMilestoneBoard).not.toHaveBeenCalled();
   });
 

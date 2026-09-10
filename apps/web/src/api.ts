@@ -133,6 +133,7 @@ export interface MilestoneBoard {
   statusCounts: { status: string; count: number }[];
   groups: MilestoneBoardGroup[];
   statusOrder: string[];
+  boardUrl: string;
 }
 
 export interface Customer {

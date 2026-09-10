@@ -495,6 +495,7 @@ function displayNameFromLabelSlug(slug: string): string {
 // The org's single Projects V2 board that both the "Kunde" and "Status" fields
 // live on - the same board the repo's issues show up on under github.com/orgs/<org>/projects.
 const PROJECT_NUMBER = 318;
+export const BOARD_URL = `https://github.com/orgs/${ORG}/projects/${PROJECT_NUMBER}`;
 
 // The canonical "Kunde" list lives in a Kunde single-select field on the org's
 // Projects V2 board (org project #318), which needs an org-Projects-scoped token
@@ -774,6 +775,7 @@ export interface MilestoneBoard {
   statusCounts: { status: string; count: number }[];
   groups: MilestoneBoardGroup[];
   statusOrder: string[];
+  boardUrl: string;
 }
 
 interface GithubIssueDetailed extends GithubIssue {
@@ -795,7 +797,7 @@ function parentNumberFromUrl(url: string | null): number | null {
 // back empty without it. Never throws — an unreachable repo or missing token
 // just yields an empty board.
 export async function getMilestoneBoard(milestoneNumber: number): Promise<MilestoneBoard> {
-  if (!process.env.GITHUB_TOKEN) return { statusCounts: [], groups: [], statusOrder: [] };
+  if (!process.env.GITHUB_TOKEN) return { statusCounts: [], groups: [], statusOrder: [], boardUrl: BOARD_URL };
   try {
     const allIssues = await paginate<GithubIssueDetailed>(
       `/repos/${ORG}/${REPO}/issues?milestone=${milestoneNumber}&state=all`,
@@ -878,10 +880,11 @@ export async function getMilestoneBoard(milestoneNumber: number): Promise<Milest
       statusCounts: [...statusCounts.entries()].map(([status, count]) => ({ status, count })),
       groups,
       statusOrder,
+      boardUrl: BOARD_URL,
     };
   } catch (err) {
     console.error(`GitHub sync: failed to build the milestone board for #${milestoneNumber}`, err);
-    return { statusCounts: [], groups: [], statusOrder: [] };
+    return { statusCounts: [], groups: [], statusOrder: [], boardUrl: BOARD_URL };
   }
 }
 

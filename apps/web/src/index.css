@@ -707,6 +707,15 @@
   flex-shrink: 0;
 }
 
+.board-column-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.board-column-title-link:hover {
+  text-decoration: underline;
+}
+
 .board-column-body {
   display: flex;
   flex-direction: column;

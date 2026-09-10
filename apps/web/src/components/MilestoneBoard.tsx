@@ -60,12 +60,22 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
       .then((data) => {
         setBoard(data);
         setColumns(bucketByStatus(data));
+        const totalIssues = data.groups.reduce((sum, g) => sum + g.total, 0);
+        const withStatus = data.groups.reduce(
+          (sum, g) => sum + g.issues.filter((i) => i.status).length,
+          0,
+        );
+        log(
+          `Lastet: ${totalIssues} issue(r) totalt, ${withStatus} har status. Kolonner: [${data.statusOrder.join(', ') || 'ingen'}]. StatusCounts: ${JSON.stringify(data.statusCounts)}`,
+        );
       })
-      .catch(() => {
-        setBoard({ statusCounts: [], groups: [], statusOrder: [] });
+      .catch((e: Error) => {
+        log(`Kunne ikke laste tavlen: ${e.message}`);
+        setBoard({ statusCounts: [], groups: [], statusOrder: [], boardUrl: '' });
         setColumns({});
       })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   function moveCard(issueNumber: number, targetStatus: string) {
@@ -151,7 +161,15 @@ export default function MilestoneBoard({ projectId }: { projectId: number }) {
               onDrop={(e) => handleDrop(e, status)}
             >
               <div className="board-column-header">
-                <span className="bf-h3">{status}</span>
+                <a
+                  className="bf-h3 board-column-title-link"
+                  href={`${board.boardUrl}?filterQuery=${encodeURIComponent(`status:"${status}"`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`Åpne "${status}" på GitHub`}
+                >
+                  {status}
+                </a>
                 <Badge state="neutral">{columns[status]?.length ?? 0}</Badge>
               </div>
               <div className="board-column-body">
