@@ -308,8 +308,13 @@ describe('project board status sync', () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            repository: {
-              issue: { projectItems: { nodes: [{ id: 'PVTI_1', project: { number: 318 } }] } },
+            organization: {
+              projectV2: {
+                items: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [{ id: 'PVTI_1', content: { number: 42 }, fieldValueByName: null }],
+                },
+              },
             },
           },
         }),
@@ -362,7 +367,15 @@ describe('project board status sync', () => {
           },
         }),
       )
-      .mockResolvedValueOnce(jsonResponse({ data: { repository: { issue: { projectItems: { nodes: [] } } } } }));
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            organization: {
+              projectV2: { items: { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] } },
+            },
+          },
+        }),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     const { moveIssueStatus } = await import('./github-sync.js');

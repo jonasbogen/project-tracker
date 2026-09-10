@@ -560,78 +560,91 @@ interface IssueStatusesResult {
   debug: string | null;
 }
 
-async function fetchIssueStatuses(issueNumbers: number[]): Promise<IssueStatusesResult> {
+interface ProjectItemInfo {
+  id: string;
+  issueNumber: number | null;
+  status: string | null;
+}
+
+// Every item on the org's Projects V2 board (#318), paginated - queried from
+// the *project* side (organization -> projectV2 -> items), never from
+// repository(owner,name) -> issue -> projectItems. A fine-grained PROJECT_TOKEN
+// scoped to "Organization permissions: Projects" does not necessarily carry
+// repository read access, and GitHub's API then fails the repository-rooted
+// query outright ("Could not resolve to a Repository...") even though the
+// exact same token can read the project fine directly - this sidesteps that
+// gap entirely rather than requiring a token with broader access.
+async function fetchAllProjectItems(): Promise<{ items: ProjectItemInfo[]; error: string | null }> {
   const token = process.env.PROJECT_TOKEN;
-  if (!token) return { statuses: {}, debug: 'PROJECT_TOKEN er ikke satt opp.' };
-  if (issueNumbers.length === 0) return { statuses: {}, debug: null };
+  if (!token) return { items: [], error: 'PROJECT_TOKEN er ikke satt opp.' };
+  const items: ProjectItemInfo[] = [];
   try {
-    const fields = issueNumbers
-      .map(
-        (n) => `i${n}: issue(number: ${n}) {
-          projectItems(first: 10) {
-            nodes {
-              project { number }
-              fieldValueByName(name: "Status") {
-                ... on ProjectV2ItemFieldSingleSelectValue { name }
-              }
-            }
-          }
-        }`,
-      )
-      .join('\n');
-    const res = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: `query { repository(owner: "${ORG}", name: "${REPO}") { ${fields} } }`,
-      }),
-    });
-    const json = (await res.json()) as {
-      data?: {
-        repository?: Record<
-          string,
-          {
-            projectItems?: {
-              nodes?: ({ project?: { number: number }; fieldValueByName?: { name?: string } | null } | null)[];
+    let cursor: string | null = null;
+    for (let page = 0; page < 20; page++) {
+      const res = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query:
+            'query($org:String!,$num:Int!,$after:String){organization(login:$org){projectV2(number:$num){items(first:100,after:$after){pageInfo{hasNextPage endCursor}nodes{id content{... on Issue{number}}fieldValueByName(name:"Status"){... on ProjectV2ItemFieldSingleSelectValue{name}}}}}}}',
+          variables: { org: ORG, num: PROJECT_NUMBER, after: cursor },
+        }),
+      });
+      const json = (await res.json()) as {
+        data?: {
+          organization?: {
+            projectV2?: {
+              items?: {
+                pageInfo?: { hasNextPage: boolean; endCursor: string | null };
+                nodes?: (
+                  | { id: string; content?: { number?: number } | null; fieldValueByName?: { name?: string } | null }
+                  | null
+                )[];
+              };
             };
-          } | null
-        >;
+          };
+        };
+        errors?: { message: string }[];
       };
-      errors?: { message: string }[];
-    };
-    if (!res.ok || json.errors?.length) {
-      const detail = json.errors?.length
-        ? json.errors.map((e) => e.message).join('; ')
-        : `HTTP ${res.status}`;
-      console.error(`GitHub sync: failed to read issue statuses: ${detail}`);
-      return { statuses: {}, debug: detail };
+      if (!res.ok || json.errors?.length) {
+        const detail = json.errors?.length ? json.errors.map((e) => e.message).join('; ') : `HTTP ${res.status}`;
+        return { items, error: detail };
+      }
+      const page = json.data?.organization?.projectV2?.items;
+      for (const node of page?.nodes ?? []) {
+        if (!node) continue;
+        items.push({
+          id: node.id,
+          issueNumber: node.content?.number ?? null,
+          status: node.fieldValueByName?.name ?? null,
+        });
+      }
+      if (!page?.pageInfo?.hasNextPage) break;
+      cursor = page.pageInfo.endCursor ?? null;
     }
-    const repository = json.data?.repository ?? {};
-    const result: Record<number, string | null> = {};
-    for (const number of issueNumbers) {
-      const nodes = repository[`i${number}`]?.projectItems?.nodes ?? [];
-      // Prefer this specific board (org project #318) - an issue can sit on
-      // other Projects V2 boards too, whose Status options don't mean
-      // anything here. Fall back to the first Status value found at all if
-      // nothing matched project 318 by number, rather than reporting no
-      // status - most issues only ever sit on this one board anyway, so a
-      // failed or unexpected project-number match shouldn't lose the value
-      // entirely.
-      const onThisProject = nodes.find((node) => node?.project?.number === PROJECT_NUMBER);
-      const anyStatus = nodes.find((node) => node?.fieldValueByName?.name);
-      const status = (onThisProject ?? anyStatus)?.fieldValueByName?.name;
-      result[number] = status ?? null;
-    }
-    const totalItems = Object.values(repository).reduce((sum, r) => sum + (r?.projectItems?.nodes?.length ?? 0), 0);
-    return {
-      statuses: result,
-      debug: `${issueNumbers.length} issue(r) spurt, ${totalItems} projectItems totalt funnet på tvers av alle.`,
-    };
+    return { items, error: null };
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Ukjent feil.';
-    console.error('GitHub sync: failed to read issue statuses', err);
-    return { statuses: {}, debug: message };
+    console.error('GitHub sync: failed to list project items', err);
+    return { items, error: err instanceof Error ? err.message : 'Ukjent feil.' };
   }
+}
+
+async function fetchIssueStatuses(issueNumbers: number[]): Promise<IssueStatusesResult> {
+  if (issueNumbers.length === 0) return { statuses: {}, debug: null };
+  const { items, error } = await fetchAllProjectItems();
+  if (error) {
+    console.error(`GitHub sync: failed to read issue statuses: ${error}`);
+    return { statuses: {}, debug: error };
+  }
+  const byNumber = new Map(
+    items.filter((i) => i.issueNumber != null).map((i) => [i.issueNumber as number, i.status]),
+  );
+  const result: Record<number, string | null> = {};
+  for (const number of issueNumbers) result[number] = byNumber.get(number) ?? null;
+  return {
+    statuses: result,
+    debug: `${items.length} item(er) på tavlen totalt, ${issueNumbers.length} issue(r) spurt.`,
+  };
 }
 
 interface StatusFieldMeta {
@@ -689,35 +702,11 @@ export async function listStatusOptions(): Promise<string[]> {
   return meta?.options.map((o) => o.name) ?? [];
 }
 
-// This issue's Projects V2 item id *on this specific board* (org project
-// #318) - an issue can belong to other projects too, so this is not the same
-// as "the first project item found" the way fetchIssueStatuses reads status.
+// This issue's Projects V2 item id on the board (see fetchAllProjectItems for
+// why this queries the project's own items rather than the issue's).
 async function fetchProjectItemId(issueNumber: number): Promise<string | null> {
-  const token = process.env.PROJECT_TOKEN;
-  if (!token) return null;
-  try {
-    const res = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query:
-          'query($org:String!,$repo:String!,$num:Int!){repository(owner:$org,name:$repo){issue(number:$num){projectItems(first:10){nodes{id project{number}}}}}}',
-        variables: { org: ORG, repo: REPO, num: issueNumber },
-      }),
-    });
-    const json = (await res.json()) as {
-      data?: {
-        repository?: {
-          issue?: { projectItems?: { nodes?: ({ id: string; project?: { number: number } } | null)[] } };
-        };
-      };
-    };
-    const nodes = json.data?.repository?.issue?.projectItems?.nodes ?? [];
-    return nodes.find((n) => n?.project?.number === PROJECT_NUMBER)?.id ?? null;
-  } catch (err) {
-    console.error(`GitHub sync: failed to find the project item for issue #${issueNumber}`, err);
-    return null;
-  }
+  const { items } = await fetchAllProjectItems();
+  return items.find((i) => i.issueNumber === issueNumber)?.id ?? null;
 }
 
 export type MoveIssueStatusResult = { ok: true; status: string } | { ok: false; error: string };
