@@ -563,6 +563,7 @@ async function fetchIssueStatuses(issueNumbers: number[]): Promise<Record<number
         (n) => `i${n}: issue(number: ${n}) {
           projectItems(first: 10) {
             nodes {
+              project { number }
               fieldValueByName(name: "Status") {
                 ... on ProjectV2ItemFieldSingleSelectValue { name }
               }
@@ -582,7 +583,11 @@ async function fetchIssueStatuses(issueNumbers: number[]): Promise<Record<number
       data?: {
         repository?: Record<
           string,
-          { projectItems?: { nodes?: ({ fieldValueByName?: { name?: string } | null } | null)[] } } | null
+          {
+            projectItems?: {
+              nodes?: ({ project?: { number: number }; fieldValueByName?: { name?: string } | null } | null)[];
+            };
+          } | null
         >;
       };
     };
@@ -590,7 +595,11 @@ async function fetchIssueStatuses(issueNumbers: number[]): Promise<Record<number
     const result: Record<number, string | null> = {};
     for (const number of issueNumbers) {
       const nodes = repository[`i${number}`]?.projectItems?.nodes ?? [];
-      const status = nodes.find((node) => node?.fieldValueByName?.name)?.fieldValueByName?.name;
+      // Scoped to this specific board (org project #318) - an issue can sit
+      // on other Projects V2 boards too, and their Status options don't mean
+      // anything here (a different board could even have a same-named option
+      // that means something else entirely).
+      const status = nodes.find((node) => node?.project?.number === PROJECT_NUMBER)?.fieldValueByName?.name;
       result[number] = status ?? null;
     }
     return result;

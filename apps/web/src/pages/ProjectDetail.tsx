@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import Table from '@intility/bifrost-react/Table';
 import Badge from '@intility/bifrost-react/Badge';
 import Button from '@intility/bifrost-react/Button';
 import Card from '@intility/bifrost-react/Card';
@@ -14,7 +13,6 @@ import {
   faCalendarDays,
   faChartColumn,
   faClockRotateLeft,
-  faListCheck,
   faPen,
   faPlus,
   faTrash,
@@ -214,16 +212,6 @@ export default function ProjectDetail() {
     }
   }
 
-  async function handleDeleteCase(caseId: number) {
-    if (!confirm('Fjerne denne issuen?')) return;
-    try {
-      await api.deleteCase(projectId, caseId);
-      setCases((prev) => prev.filter((c) => c.id !== caseId));
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-
   if (loading) {
     return (
       <div className="stack" aria-label="Laster prosjekt">
@@ -417,93 +405,6 @@ export default function ProjectDetail() {
           <MilestoneBoard projectId={project.id} />
         </Card>
       )}
-
-      <Card padding="large" className="stack-sm">
-        <SectionTitle icon={faListCheck}>Issues</SectionTitle>
-        {cases.length === 0 ? (
-          <Message noIcon header="Ingen issues knyttet til prosjektet enda." />
-        ) : (
-          <Table>
-            <Table.Header>
-              <Table.Row>
-                <Table.HeaderCell>Tittel</Table.HeaderCell>
-                <Table.HeaderCell>Beskrivelse</Table.HeaderCell>
-                <Table.HeaderCell>Status</Table.HeaderCell>
-                <Table.HeaderCell>Eier</Table.HeaderCell>
-                <Table.HeaderCell>Dato</Table.HeaderCell>
-                <Table.HeaderCell>{''}</Table.HeaderCell>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {cases.map((c) => {
-                const issueUrl =
-                  c.github_repo && c.github_issue_number
-                    ? githubIssueUrl(c.github_repo, c.github_issue_number)
-                    : null;
-                return (
-                <Table.Row
-                  key={c.id}
-                  onClick={issueUrl ? () => window.open(issueUrl, '_blank', 'noopener,noreferrer') : undefined}
-                  style={issueUrl ? { cursor: 'pointer' } : undefined}
-                >
-                  <Table.Cell>
-                    {c.title}
-                    {c.github_repo && (
-                      <Badge state="neutral" style={{ marginLeft: 8 }}>
-                        GitHub
-                      </Badge>
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {c.description ? (
-                      <span className="cell-clamp">
-                        <FormattedText text={c.description} />
-                      </span>
-                    ) : (
-                      <span className="muted">–</span>
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
-                  </Table.Cell>
-                  <Table.Cell>
-                    {c.owner ? (
-                      <span className="team-member">
-                        <img
-                          className="team-avatar"
-                          src={`https://github.com/${c.owner}.png?size=64`}
-                          alt=""
-                          width={20}
-                          height={20}
-                        />
-                        {c.owner}
-                      </span>
-                    ) : (
-                      <span className="muted">–</span>
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>{formatDate(c.case_date)}</Table.Cell>
-                  <Table.Cell>
-                    <Button
-                      small
-                      variant="flat"
-                      state="alert"
-                      aria-label="Fjern issue"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteCase(c.id);
-                      }}
-                    >
-                      <Icon icon={faTrash} />
-                    </Button>
-                  </Table.Cell>
-                </Table.Row>
-                );
-              })}
-            </Table.Body>
-          </Table>
-        )}
-      </Card>
 
       <Card padding="large" className="stack-sm">
         <SectionTitle icon={faPlus}>Legg til issue</SectionTitle>
