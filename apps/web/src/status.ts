@@ -1,4 +1,4 @@
-type BadgeState = 'default' | 'neutral' | 'brand' | 'chill' | 'attn' | 'success' | 'warning' | 'alert';
+export type BadgeState = 'default' | 'neutral' | 'brand' | 'chill' | 'attn' | 'success' | 'warning' | 'alert';
 
 const PROJECT_BADGE: Record<string, BadgeState> = {
   Planlagt: 'neutral',
@@ -52,16 +52,33 @@ export function formatAmount(amount: string): string {
   return `${n.toLocaleString('nb-NO')} kr`;
 }
 
+// Bifrost's own badge pills use its "fade" tokens (a pale tint + dark text),
+// which already read as calm. But the accents this app draws directly with
+// these colors - stat-tile top borders, board-column top borders, chart bars
+// - use the *raw*, ~100%-saturated brand tokens (e.g. --bfc-warning-hsl is a
+// pure, traffic-sign yellow), which reads as loud precisely because those
+// are large, solid color surfaces instead of small pills. This is a
+// deliberately muted, same-family-feeling palette for exactly those large
+// surfaces - similar saturation/lightness across every state so they read as
+// one coherent set rather than each being its own fully-saturated hue.
 const BADGE_STATE_COLOR: Record<BadgeState, string> = {
-  default: 'hsl(var(--bfc-neutral-hsl))',
-  neutral: 'hsl(var(--bfc-neutral-hsl))',
-  brand: 'hsl(var(--bfc-brand-hsl))',
-  chill: 'hsl(var(--bfc-chill-hsl))',
-  attn: 'hsl(var(--bfc-attn-hsl))',
-  success: 'hsl(var(--bfc-success-hsl))',
-  warning: 'hsl(var(--bfc-warning-hsl))',
-  alert: 'hsl(var(--bfc-alert-hsl))',
+  default: 'hsl(220, 9%, 46%)',
+  neutral: 'hsl(220, 9%, 46%)',
+  brand: 'hsl(174, 45%, 36%)',
+  chill: 'hsl(212, 40%, 50%)',
+  attn: 'hsl(324, 30%, 52%)',
+  success: 'hsl(152, 40%, 38%)',
+  warning: 'hsl(36, 55%, 46%)',
+  alert: 'hsl(4, 55%, 48%)',
 };
+
+// The one place any accent color (a stat tile's top border, a bar in a
+// chart, a board column's top border) is picked, so the whole app draws
+// from the exact same muted palette instead of each spot re-deriving its
+// own shade of "warning" or "chill".
+export function accentColor(state: BadgeState): string {
+  return BADGE_STATE_COLOR[state];
+}
 
 // Reuse the same reserved status palette as the badges, so a chart bar for
 // "Forsinket" is drawn in the exact color as the "Forsinket" badge elsewhere.

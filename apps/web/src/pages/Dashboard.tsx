@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import Card from '@intility/bifrost-react/Card';
-import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import Badge from '@intility/bifrost-react/Badge';
 import {
@@ -9,12 +8,7 @@ import {
   faCalendarDays,
   faChartColumn,
   faClockRotateLeft,
-  faDiagramProject,
-  faListCheck,
-  faSpinner,
-  faTriangleExclamation,
   faUsers,
-  type IconDefinition,
 } from '@fortawesome/free-solid-svg-icons';
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
@@ -22,33 +16,22 @@ import CountUp from '../components/CountUp';
 import Reveal from '../components/Reveal';
 import SectionTitle from '../components/SectionTitle';
 import Skeleton from '../components/Skeleton';
-import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
-
-const ACCENT_COLOR: Record<string, string> = {
-  brand: 'hsl(var(--bfc-brand-hsl))',
-  chill: 'hsl(var(--bfc-chill-hsl))',
-  warning: 'hsl(var(--bfc-warning-hsl))',
-  alert: 'hsl(var(--bfc-alert-hsl))',
-  neutral: 'hsl(var(--bfc-neutral-hsl))',
-};
+import { accentColor, daysUntil, formatDate, projectStatusColor, timeAgo, type BadgeState } from '../status';
 
 function StatTile({
   label,
   value,
-  icon,
   accent,
   onClick,
 }: {
   label: string;
   value: number;
-  icon: IconDefinition;
-  accent: keyof typeof ACCENT_COLOR;
+  accent: BadgeState;
   onClick?: () => void;
 }) {
-  const color = ACCENT_COLOR[accent];
+  const color = accentColor(accent);
   const content = (
     <>
-      <Icon icon={icon} className="stat-tile-icon" style={{ color }} />
       <div className="stat-tile-label">{label}</div>
       <div className="stat-tile-value">
         <CountUp value={value} />
@@ -145,7 +128,6 @@ export default function Dashboard() {
           <StatTile
             label="Prosjekter totalt"
             value={totalProjects}
-            icon={faDiagramProject}
             accent="brand"
             onClick={() => navigate('/projects')}
           />
@@ -154,7 +136,6 @@ export default function Dashboard() {
           <StatTile
             label="Pågår"
             value={countByStatus(stats.projectStatusCounts, 'Pågår')}
-            icon={faSpinner}
             accent="chill"
             onClick={() => navigate('/projects?status=Pågår')}
           />
@@ -163,7 +144,6 @@ export default function Dashboard() {
           <StatTile
             label="Forsinket"
             value={countByStatus(stats.projectStatusCounts, 'Forsinket')}
-            icon={faTriangleExclamation}
             accent="warning"
             onClick={() => navigate('/projects?status=Forsinket')}
           />
@@ -172,7 +152,6 @@ export default function Dashboard() {
           <StatTile
             label="Åpne issues"
             value={totalOpenCases}
-            icon={faListCheck}
             accent="neutral"
             onClick={() => navigate('/board')}
           />
@@ -181,7 +160,6 @@ export default function Dashboard() {
           <StatTile
             label="Blokkert"
             value={blocked.length}
-            icon={faBan}
             accent="alert"
             onClick={() =>
               document.getElementById('blokkert-card')?.scrollIntoView({ behavior: 'smooth' })

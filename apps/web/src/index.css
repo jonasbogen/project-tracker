@@ -300,11 +300,6 @@
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 
-.stat-tile-icon {
-  font-size: 1.125rem;
-  margin-bottom: 6px;
-}
-
 .stat-tile:has(button:hover) {
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.08);
   transform: translateY(-1px);
