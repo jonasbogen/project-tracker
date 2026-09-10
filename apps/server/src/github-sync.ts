@@ -641,9 +641,11 @@ async function fetchIssueStatuses(issueNumbers: number[]): Promise<IssueStatuses
   );
   const result: Record<number, string | null> = {};
   for (const number of issueNumbers) result[number] = byNumber.get(number) ?? null;
+  const withoutContent = items.filter((i) => i.issueNumber == null).length;
+  const foundNumbers = [...byNumber.keys()].sort((a, b) => a - b);
   return {
     statuses: result,
-    debug: `${items.length} item(er) på tavlen totalt, ${issueNumbers.length} issue(r) spurt.`,
+    debug: `${items.length} item(er) på tavlen totalt (${withoutContent} uten issue-innhold). Issue-numre funnet på tavlen: [${foundNumbers.join(', ')}]. Spurte etter: [${issueNumbers.join(', ')}].`,
   };
 }
 
