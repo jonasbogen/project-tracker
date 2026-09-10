@@ -740,6 +740,13 @@
    the drop will land. */
 .board-card-draggable {
   cursor: grab;
+  /* Without this, pressing down on the card's own text can start a native
+     text selection instead of the drag - the browser has to pick one, and
+     a draggable element with selectable text inside it is exactly the
+     ambiguous case where it can pick wrong. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: element;
 }
 
 .board-card-dragging {
