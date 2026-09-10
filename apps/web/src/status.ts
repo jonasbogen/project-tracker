@@ -20,6 +20,20 @@ const OFFER_BADGE: Record<string, BadgeState> = {
   Fakturert: 'success',
 };
 
+// The org's GitHub Projects V2 Status field options (see MilestoneBoard) -
+// a different axis from the app's own case/project status, so its own map.
+const BOARD_BADGE: Record<string, BadgeState> = {
+  Backlog: 'neutral',
+  'To do': 'chill',
+  'In progress': 'attn',
+  Blocked: 'alert',
+  Done: 'success',
+};
+
+export function boardStatusBadgeState(status: string): BadgeState {
+  return BOARD_BADGE[status] ?? 'default';
+}
+
 export function projectBadgeState(status: string): BadgeState {
   return PROJECT_BADGE[status] ?? 'default';
 }
@@ -57,6 +71,10 @@ export function projectStatusColor(status: string): string {
 
 export function caseStatusColor(status: string): string {
   return BADGE_STATE_COLOR[caseBadgeState(status)];
+}
+
+export function boardStatusColor(status: string): string {
+  return BADGE_STATE_COLOR[boardStatusBadgeState(status)];
 }
 
 export function formatDate(value: string | null): string {

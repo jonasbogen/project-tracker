@@ -691,6 +691,10 @@
   background: var(--bfc-base-2);
 }
 
+.board-column {
+  border-top: 3px solid transparent;
+}
+
 .board-column-header {
   display: flex;
   align-items: center;
@@ -769,11 +773,16 @@
     0 4px 12px rgb(0 0 0 / 0.1);
 }
 
-.board-debug-log-lines {
-  font-size: 0.75rem;
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin: 0;
+.board-column-empty {
+  border: 1px dashed var(--bfc-base-dimmed);
+  border-radius: 8px;
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 0.8125rem;
+}
+
+.board-card-number {
+  font-variant-numeric: tabular-nums;
 }
 
 .board-card-title {
@@ -922,20 +931,43 @@
 
 .calendar-weekday {
   text-align: center;
-  font-size: 0.8125rem;
-  padding-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding-bottom: 6px;
+}
+
+/* Saturday/Sunday, in both the weekday-label row and the day cells below it -
+   every 6th and 7th cell in this Monday-first, 7-column grid, header row
+   included, so the two line up as one visual weekend band down the grid. */
+.calendar-weekday:nth-child(7n + 6),
+.calendar-weekday:nth-child(7n),
+.calendar-day:nth-child(7n + 6),
+.calendar-day:nth-child(7n) {
+  background: var(--bfc-base-2);
+}
+
+.calendar-day:nth-child(7n + 6),
+.calendar-day:nth-child(7n) {
+  border-radius: var(--bf-radius-s);
 }
 
 .calendar-day {
   min-width: 0;
-  height: 96px;
+  height: 100px;
   overflow: hidden;
   border: 1px solid var(--bfc-base-3);
   border-radius: var(--bf-radius-s);
-  padding: 4px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  transition: box-shadow 0.15s ease;
+}
+
+.calendar-day:has(.calendar-day-item):hover {
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
 }
 
 .calendar-day-outside {
@@ -945,12 +977,24 @@
 .calendar-day-today {
   border-color: hsl(var(--bfc-brand-hsl));
   border-width: 2px;
+  background: hsl(var(--bfc-brand-hsl) / 0.05);
 }
 
 .calendar-day-number {
   flex: none;
   font-size: 0.8125rem;
   font-weight: 600;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.calendar-day-today .calendar-day-number {
+  background: hsl(var(--bfc-brand-hsl));
+  color: var(--bfc-base-1);
 }
 
 .calendar-day-items {
@@ -984,12 +1028,20 @@
   flex: none;
 }
 
+.calendar-day-item:hover {
+  filter: brightness(0.95);
+}
+
 .calendar-day-item-project {
   background: hsl(var(--bfc-brand-hsl) / 0.15);
+  color: hsl(var(--bfc-brand-hsl));
+  font-weight: 600;
 }
 
 .calendar-day-item-case {
   background: hsl(var(--bfc-chill-hsl) / 0.2);
+  color: hsl(var(--bfc-chill-hsl));
+  font-weight: 600;
 }
 
 .calendar-day-more {
