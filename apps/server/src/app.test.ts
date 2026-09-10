@@ -46,6 +46,7 @@ vi.mock('./github-sync.js', () => ({
   listRecentPullRequests: vi.fn().mockResolvedValue({ pulls: [], error: null }),
   getMilestoneBoard: vi.fn().mockResolvedValue({ statusCounts: [], groups: [] }),
   listStatusOptions: vi.fn().mockResolvedValue([]),
+  createCaseAndSync: vi.fn(),
   listRepoTeams: vi.fn().mockResolvedValue([]),
   listRepoLabels: vi.fn().mockResolvedValue([]),
   listTeamMembers: vi.fn().mockResolvedValue([]),
@@ -337,7 +338,11 @@ describe('project-tracker API', () => {
     expect(body.github_milestone_number).toBe(99);
   });
 
-  it('POST /api/projects/:id/cases passes the chosen owner through', async () => {
+  // The actual create-then-push-to-GitHub-then-set-board-status orchestration
+  // lives in createCaseAndSync (see github-sync.test.ts) - the route's own
+  // job is just parsing/validating the request body and forwarding it, which
+  // is all these two tests check.
+  it('POST /api/projects/:id/cases forwards the parsed body to createCaseAndSync and returns its case', async () => {
     vi.mocked(repo.getProject).mockResolvedValue({
       id: 1,
       name: 'X',
@@ -352,7 +357,7 @@ describe('project-tracker API', () => {
       github_milestone_number: null,
       created_at: '2026-08-05T00:00:00Z',
     });
-    vi.mocked(repo.createCase).mockResolvedValue({
+    const created = {
       id: 1,
       project_id: 1,
       title: 'Ny sak',
@@ -363,7 +368,8 @@ describe('project-tracker API', () => {
       github_repo: null,
       github_issue_number: null,
       created_at: '2026-08-05T00:00:00Z',
-    });
+    };
+    vi.mocked(githubSync.createCaseAndSync).mockResolvedValue({ case: created, boardStatusError: null });
 
     const res = await app.request('/api/projects/1/cases', {
       method: 'POST',
@@ -372,13 +378,14 @@ describe('project-tracker API', () => {
     });
 
     expect(res.status).toBe(201);
-    expect(repo.createCase).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({ owner: 'endsan' }),
+    expect(githubSync.createCaseAndSync).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1 }),
+      expect.objectContaining({ title: 'Ny sak', owner: 'endsan' }),
     );
+    expect(await res.json()).toEqual(created);
   });
 
-  it('POST /api/projects/:id/cases pushes the new case to GitHub as an issue and links it back', async () => {
+  it('POST /api/projects/:id/cases forwards kunde, tjenesteparaply, and board_status', async () => {
     vi.mocked(repo.getProject).mockResolvedValue({
       id: 1,
       name: 'Kundeprosjekt',
@@ -393,20 +400,7 @@ describe('project-tracker API', () => {
       github_milestone_number: 42,
       created_at: '2026-08-05T00:00:00Z',
     });
-    vi.mocked(repo.createCase).mockResolvedValue({
-      id: 9,
-      project_id: 1,
-      title: 'Ny issue',
-      description: 'Beskrivelse',
-      status: 'Åpen',
-      case_date: null,
-      owner: 'endsan',
-      github_repo: null,
-      github_issue_number: null,
-      created_at: '2026-08-05T00:00:00Z',
-    });
-    vi.mocked(githubSync.createGithubIssue).mockResolvedValue({ number: 101 });
-    vi.mocked(repo.setCaseGithubLink).mockResolvedValue({
+    const created = {
       id: 9,
       project_id: 1,
       title: 'Ny issue',
@@ -417,7 +411,8 @@ describe('project-tracker API', () => {
       github_repo: 'Prosjektmappe',
       github_issue_number: 101,
       created_at: '2026-08-05T00:00:00Z',
-    });
+    };
+    vi.mocked(githubSync.createCaseAndSync).mockResolvedValue({ case: created, boardStatusError: null });
 
     const res = await app.request('/api/projects/1/cases', {
       method: 'POST',
@@ -428,113 +423,24 @@ describe('project-tracker API', () => {
         owner: 'endsan',
         kunde: 'Acme',
         tjenesteparaply: 'Network',
+        board_status: 'To do',
       }),
     });
 
     expect(res.status).toBe(201);
-    expect(githubSync.createGithubIssue).toHaveBeenCalledWith({
-      title: 'Ny issue',
-      description: 'Beskrivelse',
-      status: 'Åpen',
-      owner: 'endsan',
-      frist: null,
-      kunde: 'Acme',
-      tjenesteparaply: 'Network',
-      label: '',
-      milestoneNumber: 42,
-    });
-    expect(repo.setCaseGithubLink).toHaveBeenCalledWith(1, 9, 'Prosjektmappe', 101);
-    const body = await res.json();
-    expect(body.github_issue_number).toBe(101);
-  });
-
-  it('POST /api/projects/:id/cases formats a Frist when the repo returns case_date as a Date (node-postgres\'s real DATE shape, not the string the Case type claims)', async () => {
-    vi.mocked(repo.getProject).mockResolvedValue({
-      id: 1,
-      name: 'Kundeprosjekt',
-      customer: 'Acme',
-      status: 'Pågår',
-      responsible: 'Jonas',
-      team: 'OT',
-      start_date: null,
-      end_date: null,
-      challenges: '',
-      github_repo: 'Prosjektmappe',
-      github_milestone_number: 42,
-      created_at: '2026-08-05T00:00:00Z',
-    });
-    vi.mocked(repo.createCase).mockResolvedValue({
-      id: 10,
-      project_id: 1,
-      title: 'Ny issue med frist',
-      description: 'Beskrivelse',
-      status: 'Åpen',
-      // node-postgres parses a DATE column into a Date, not a string - a
-      // plain '2026-09-30' string here would hide the exact bug this guards.
-      case_date: new Date('2026-09-30T00:00:00.000Z') as unknown as string,
-      owner: 'endsan',
-      github_repo: null,
-      github_issue_number: null,
-      created_at: '2026-08-05T00:00:00Z',
-    });
-    vi.mocked(githubSync.createGithubIssue).mockResolvedValue(null);
-
-    const res = await app.request('/api/projects/1/cases', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        title: 'Ny issue med frist',
+    expect(githubSync.createCaseAndSync).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1 }),
+      expect.objectContaining({
+        title: 'Ny issue',
         description: 'Beskrivelse',
         owner: 'endsan',
-        case_date: '2026-09-30',
         kunde: 'Acme',
         tjenesteparaply: 'Network',
+        board_status: 'To do',
       }),
-    });
-
-    expect(res.status).toBe(201);
-    expect(githubSync.createGithubIssue).toHaveBeenCalledWith(
-      expect.objectContaining({ frist: '2026-09-30' }),
     );
-  });
-
-  it('POST /api/projects/:id/cases defaults Kunde to the project customer when not given', async () => {
-    vi.mocked(repo.getProject).mockResolvedValue({
-      id: 1,
-      name: 'Kundeprosjekt',
-      customer: 'Acme',
-      status: 'Pågår',
-      responsible: 'Jonas',
-      team: '',
-      start_date: null,
-      end_date: null,
-      challenges: '',
-      github_repo: null,
-      github_milestone_number: null,
-      created_at: '2026-08-05T00:00:00Z',
-    });
-    vi.mocked(repo.createCase).mockResolvedValue({
-      id: 2,
-      project_id: 1,
-      title: 'Ny issue',
-      description: '',
-      status: 'Åpen',
-      case_date: null,
-      owner: '',
-      github_repo: null,
-      github_issue_number: null,
-      created_at: '2026-08-05T00:00:00Z',
-    });
-
-    await app.request('/api/projects/1/cases', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: 'Ny issue' }),
-    });
-
-    expect(githubSync.createGithubIssue).toHaveBeenCalledWith(
-      expect.objectContaining({ kunde: 'Acme' }),
-    );
+    const body = await res.json();
+    expect(body.github_issue_number).toBe(101);
   });
 
   it('GET /api/cases passes project/owner filters through to the repo', async () => {

@@ -6,6 +6,7 @@ import type {
   ChatCompletionTool,
 } from 'openai/resources/chat/completions';
 import * as repo from '../repo.js';
+import { createCaseAndSync, listStatusOptions } from '../github-sync.js';
 
 export const chat = new Hono();
 
@@ -70,11 +71,48 @@ const TOOLS: ChatCompletionTool[] = [
       parameters: { type: 'object', properties: {} },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'list_board_statuses',
+      description:
+        'List the org GitHub Projects board\'s Status column names, in their real left-to-right order (e.g. Backlog, To do, In progress, Blocked, Done). Call this before create_case if you plan to pass board_status, so you use a real column name instead of guessing one.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_case',
+      description:
+        'Create a new issue (case) under a project, and push it to GitHub as a real issue - the same action as submitting the "Legg til issue" form in the app. Always call search_projects first to find the right project_id; never guess it. Set board_status (from list_board_statuses) to place the new card directly in the right column on the project board - otherwise it lands wherever GitHub\'s own default is.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_id: { type: 'integer', description: 'Project id, from search_projects' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          owner: { type: 'string', description: 'GitHub login to assign, if any' },
+          case_date: { type: 'string', description: 'Deadline, YYYY-MM-DD' },
+          board_status: {
+            type: 'string',
+            description: 'One of the column names from list_board_statuses, e.g. "To do"',
+          },
+          kunde: { type: 'string', description: 'Customer name; defaults to the project\'s own customer' },
+          tjenesteparaply: { type: 'string', description: 'Service umbrella name, if relevant' },
+        },
+        required: ['project_id', 'title'],
+      },
+    },
+  },
 ];
 
-// Every tool here is read-only: the assistant can search and summarize, but has
-// no way to create/update/delete anything. Suggestions it makes (next steps, a
-// draft comment) are just text in its reply, never applied to the database.
+// Every tool here is read-only except create_case, which really does create a
+// case and push it to GitHub as a real issue - the same effect as submitting
+// the "Legg til issue" form, going through the exact same createCaseAndSync
+// the route itself uses. Everything else is look-up only: the assistant can
+// search and summarize, but any other suggestion (next steps, a draft
+// comment) is just text in its reply, never applied to the database.
 async function executeTool(name: string, input: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case 'search_projects': {
@@ -115,6 +153,34 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       return repo.listActiveCasesByOwner(String(input.owner ?? ''));
     case 'get_dashboard_stats':
       return repo.getDashboardStats();
+    case 'list_board_statuses':
+      return listStatusOptions();
+    case 'create_case': {
+      const projectId = Number(input.project_id);
+      if (!Number.isInteger(projectId) || projectId <= 0) {
+        return { error: 'project_id må være en gyldig prosjekt-id - bruk search_projects for å finne den.' };
+      }
+      const project = await repo.getProject(projectId);
+      if (!project) return { error: 'Fant ikke et prosjekt med den iden.' };
+      const title = typeof input.title === 'string' ? input.title.trim() : '';
+      if (!title) return { error: 'title er påkrevd.' };
+
+      const { case: created, boardStatusError } = await createCaseAndSync(project, {
+        title,
+        description: typeof input.description === 'string' ? input.description : '',
+        owner: typeof input.owner === 'string' ? input.owner : '',
+        case_date: typeof input.case_date === 'string' ? input.case_date : null,
+        board_status: typeof input.board_status === 'string' ? input.board_status : '',
+        kunde: typeof input.kunde === 'string' ? input.kunde : '',
+        tjenesteparaply: typeof input.tjenesteparaply === 'string' ? input.tjenesteparaply : '',
+      });
+      return {
+        created_case_id: created.id,
+        title: created.title,
+        github_issue_number: created.github_issue_number,
+        board_status_error: boardStatusError,
+      };
+    }
     default:
       return { error: `Ukjent verktøy: ${name}` };
   }
@@ -133,7 +199,9 @@ I tillegg har du noen verktøy for å slå opp live data i selve Prosjektsporing
 - Et "prosjekt" tilsvarer en GitHub-milestone: ett per kundeprosjekt, med status (Planlagt/Pågår/Forsinket/Fullført), kunde, ansvarlig, team, tidsfrist og en liste av "issues".
 - En "issue" tilsvarer en GitHub-issue: en oppgave knyttet til ett prosjekt, med status (Åpen/Under arbeid/Løst) og en eier (GitHub-brukernavn). Issues opprettet i appen blir automatisk opprettet som ekte issues i GitHub.
 
-Bruk disse verktøyene når spørsmålet faktisk handler om et prosjekt, en issue eller en person i verktøyet - de er skrivebeskyttet (read-only), du kan ikke opprette, endre eller slette noe der. Vis til konkrete prosjekt- og saksnavn du fant i stedet for å gjette. Når du foreslår neste steg eller et utkast til en kommentar for noe i verktøyet, gjør det tydelig at det er et forslag brukeren selv må skrive inn - du har ingen måte å lagre det på.
+Bruk disse verktøyene når spørsmålet faktisk handler om et prosjekt, en issue eller en person i verktøyet. De fleste er skrivebeskyttet (read-only) - vis til konkrete prosjekt- og saksnavn du fant i stedet for å gjette, og når du foreslår et utkast til en kommentar for noe i verktøyet, gjør det tydelig at det er et forslag brukeren selv må skrive inn.
+
+Ett verktøy er ikke read-only: create_case oppretter en ekte issue (samme handling som å fylle ut "Legg til issue"-skjemaet i appen) og skyver den til GitHub med én gang. Bruk det når brukeren tydelig ber deg opprette/legge til en issue/sak - du trenger ikke å be om bekreftelse først, akkurat som å trykke "Lagre" i skjemaet ikke krever en ekstra bekreftelse. Finn alltid riktig project_id med search_projects først (spør brukeren hvilket prosjekt hvis det er reelt tvetydig mellom flere), og sjekk list_board_statuses før du setter board_status. Fortell alltid tydelig hva du opprettet etterpå (tittel, issue-nummer, hvilket prosjekt og hvilken kolonne) - aldri opprett noe stille uten å nevne det.
 
 Spørsmål om verktøyet er ofte korte og upresise ("hvordan går det med Arbion", "hvem har mest å gjøre"). Ikke be om presisering med mindre spørsmålet er reelt tvetydig mellom to helt ulike tolkninger - gjør heller en fornuftig antakelse, bruk verktøyene bredt (søk, sjekk flere prosjekter/personer om nødvendig), og nevn kort hvilken tolkning du la til grunn hvis den ikke er opplagt.
 

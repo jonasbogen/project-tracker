@@ -18,6 +18,10 @@ const CAPABILITIES: { label: string; prompt: string }[] = [
     prompt: 'Hvem eier flest åpne issues akkurat nå?',
   },
   {
+    label: 'Opprette en ny issue direkte i et prosjekt',
+    prompt: 'Opprett en ny issue i [prosjektnavn] med tittel "..." og sett den i "To do".',
+  },
+  {
     label: 'Oppsummere tallene fra oversikten (status, forsinkelser, blokkerte)',
     prompt: 'Oppsummer tallene fra oversikten - status, forsinkelser og blokkerte.',
   },

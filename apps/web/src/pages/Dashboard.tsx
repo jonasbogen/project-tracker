@@ -12,38 +12,11 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { api, type BlockedIssue, type DashboardStats } from '../api';
 import BarChart from '../charts/BarChart';
-import CountUp from '../components/CountUp';
 import Reveal from '../components/Reveal';
 import SectionTitle from '../components/SectionTitle';
 import Skeleton from '../components/Skeleton';
-import { accentColor, daysUntil, formatDate, projectStatusColor, timeAgo, type BadgeState } from '../status';
-
-function StatTile({
-  label,
-  value,
-  accent,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  accent: BadgeState;
-  onClick?: () => void;
-}) {
-  const color = accentColor(accent);
-  const content = (
-    <>
-      <div className="stat-tile-label">{label}</div>
-      <div className="stat-tile-value">
-        <CountUp value={value} />
-      </div>
-    </>
-  );
-  return (
-    <Card padding="large" className="stat-tile" style={{ borderTopColor: color }}>
-      {onClick ? <button onClick={onClick}>{content}</button> : content}
-    </Card>
-  );
-}
+import StatTile from '../components/StatTile';
+import { daysUntil, formatDate, projectStatusColor, timeAgo } from '../status';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);

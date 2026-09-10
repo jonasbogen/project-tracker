@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
 import * as repo from '../repo.js';
-import type { CaseInput, ProjectInput } from '../repo.js';
+import type { ProjectInput } from '../repo.js';
 import {
   BOARD_URL,
-  createGithubIssue,
+  createCaseAndSync,
   createGithubMilestone,
   getMilestoneBoard,
   githubRepoName,
@@ -356,46 +356,17 @@ api.post('/projects/:id/cases', async (c) => {
     return c.json({ error: 'Ugyldig status.' }, 400);
   }
 
-  const data: CaseInput = {
+  const { case: created } = await createCaseAndSync(project, {
     title,
     description: String(body.description ?? '').trim(),
     status: status || undefined,
     case_date: body.case_date ? String(body.case_date) : null,
     owner: String(body.owner ?? '').trim(),
-  };
-  const kunde = String(body.kunde ?? '').trim() || project.customer;
-  const tjenesteparaply = String(body.tjenesteparaply ?? '').trim();
-  const label = String(body.label ?? '').trim();
-  const boardStatus = String(body.board_status ?? '').trim();
-  let created = await repo.createCase(id, data);
-
-  const issue = await createGithubIssue({
-    title: created.title,
-    description: created.description,
-    status: created.status,
-    owner: created.owner,
-    // node-postgres returns a DATE column as a Date object, not the ISO string
-    // the Case type claims - so .slice() on it directly throws. new Date(...)
-    // normalizes either shape (Date passthrough or a string re-parse) before
-    // formatting.
-    frist: created.case_date ? new Date(created.case_date).toISOString().slice(0, 10) : null,
-    kunde,
-    tjenesteparaply,
-    label,
-    milestoneNumber: project.github_milestone_number,
+    kunde: String(body.kunde ?? '').trim(),
+    tjenesteparaply: String(body.tjenesteparaply ?? '').trim(),
+    label: String(body.label ?? '').trim(),
+    board_status: String(body.board_status ?? '').trim(),
   });
-  if (issue) {
-    created = (await repo.setCaseGithubLink(id, created.id, githubRepoName(), issue.number)) ?? created;
-    // Places the new card in the right column on the project board right
-    // away - best-effort, same as the issue creation above, since a new
-    // issue otherwise lands wherever GitHub's own default column is (and
-    // sometimes not on the board at all yet), not necessarily where the
-    // person creating it meant it to start.
-    if (boardStatus) {
-      const result = await moveIssueStatus(issue.number, boardStatus);
-      if (!result.ok) console.error(`Failed to set initial board status for issue #${issue.number}: ${result.error}`);
-    }
-  }
 
   return c.json(created, 201);
 });

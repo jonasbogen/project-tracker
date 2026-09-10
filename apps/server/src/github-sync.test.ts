@@ -8,6 +8,8 @@ vi.mock('./repo.js', async (importActual) => {
     upsertProjectFromGithub: vi.fn(),
     getProjectIdByGithubMilestone: vi.fn(),
     upsertCaseFromGithub: vi.fn(),
+    createCase: vi.fn(),
+    setCaseGithubLink: vi.fn(),
   };
 });
 
@@ -420,5 +422,158 @@ describe('project board status sync', () => {
       ok: false,
       error: 'Fant ikke issue #42 på GitHub-prosjekttavlen.',
     });
+  });
+});
+
+describe('createCaseAndSync', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env.GITHUB_TOKEN = 'test-token';
+    process.env.GITHUB_ORG = 'intility';
+    process.env.GITHUB_REPO = 'Prosjektmappe';
+    delete process.env.PROJECT_TOKEN;
+  });
+
+  const project = {
+    id: 1,
+    name: 'Kundeprosjekt',
+    customer: 'Acme',
+    status: 'Pågår',
+    responsible: 'Jonas',
+    team: 'OT',
+    start_date: null,
+    end_date: null,
+    challenges: '',
+    github_repo: 'Prosjektmappe',
+    github_milestone_number: 42,
+    created_at: '2026-08-05T00:00:00Z',
+  };
+
+  it('creates the case locally, pushes it to GitHub, links it back, and sets the initial board status', async () => {
+    process.env.PROJECT_TOKEN = 'proj-token';
+    vi.mocked(repo.createCase).mockResolvedValue({
+      id: 9,
+      project_id: 1,
+      title: 'Ny issue',
+      description: 'Beskrivelse',
+      status: 'Åpen',
+      case_date: null,
+      owner: 'endsan',
+      github_repo: null,
+      github_issue_number: null,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    vi.mocked(repo.setCaseGithubLink).mockResolvedValue({
+      id: 9,
+      project_id: 1,
+      title: 'Ny issue',
+      description: 'Beskrivelse',
+      status: 'Åpen',
+      case_date: null,
+      owner: 'endsan',
+      github_repo: 'Prosjektmappe',
+      github_issue_number: 101,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ number: 101 }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            organization: {
+              projectV2: { id: 'PVT_1', field: { id: 'PVTSSF_1', options: [{ id: 'opt-todo', name: 'To do' }] } },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [{ id: 'PVTI_1', content: { number: 101 }, fieldValueByName: null }],
+                },
+              },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: { updateProjectV2ItemFieldValue: { clientMutationId: null } } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { createCaseAndSync } = await import('./github-sync.js');
+    const result = await createCaseAndSync(project, {
+      title: 'Ny issue',
+      description: 'Beskrivelse',
+      owner: 'endsan',
+      kunde: 'Acme',
+      tjenesteparaply: 'Network',
+      board_status: 'To do',
+    });
+
+    expect(repo.createCase).toHaveBeenCalledWith(1, expect.objectContaining({ title: 'Ny issue', owner: 'endsan' }));
+    expect(repo.setCaseGithubLink).toHaveBeenCalledWith(1, 9, 'Prosjektmappe', 101);
+    expect(result.case.github_issue_number).toBe(101);
+    expect(result.boardStatusError).toBeNull();
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.github.com/repos/intility/Prosjektmappe/issues');
+  });
+
+  it('formats a Date case_date into a Frist string before pushing to GitHub', async () => {
+    vi.mocked(repo.createCase).mockResolvedValue({
+      id: 10,
+      project_id: 1,
+      title: 'Ny issue med frist',
+      description: 'Beskrivelse',
+      status: 'Åpen',
+      // node-postgres parses a DATE column into a Date, not a string - a
+      // plain '2026-09-30' string here would hide the exact bug this guards.
+      case_date: new Date('2026-09-30T00:00:00.000Z') as unknown as string,
+      owner: 'endsan',
+      github_repo: null,
+      github_issue_number: null,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response('', { status: 500 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { createCaseAndSync } = await import('./github-sync.js');
+    await createCaseAndSync(project, {
+      title: 'Ny issue med frist',
+      description: 'Beskrivelse',
+      owner: 'endsan',
+      case_date: '2026-09-30',
+      kunde: 'Acme',
+      tjenesteparaply: 'Network',
+    });
+
+    const payload = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(payload.body).toContain('### Frist\n\n2026-09-30');
+  });
+
+  it("defaults kunde to the project's own customer when not given", async () => {
+    vi.mocked(repo.createCase).mockResolvedValue({
+      id: 2,
+      project_id: 1,
+      title: 'Ny issue',
+      description: '',
+      status: 'Åpen',
+      case_date: null,
+      owner: '',
+      github_repo: null,
+      github_issue_number: null,
+      created_at: '2026-08-05T00:00:00Z',
+    });
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response('', { status: 500 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { createCaseAndSync } = await import('./github-sync.js');
+    await createCaseAndSync(project, { title: 'Ny issue' });
+
+    const payload = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(payload.body).toContain('### Kunde\n\nAcme');
   });
 });

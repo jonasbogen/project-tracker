@@ -105,6 +105,24 @@
   white-space: nowrap;
 }
 
+/* A SectionTitle that's also a click target (e.g. a project group header
+   linking to that project) - reset the <button> chrome around it so it
+   still just reads as the heading. */
+.my-tasks-project-link {
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.my-tasks-project-link:hover .section-title-text {
+  text-decoration: underline;
+}
+
 .stack {
   display: flex;
   flex-direction: column;

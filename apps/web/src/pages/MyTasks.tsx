@@ -6,10 +6,14 @@ import Card from '@intility/bifrost-react/Card';
 import Icon from '@intility/bifrost-react/Icon';
 import Message from '@intility/bifrost-react/Message';
 import Table from '@intility/bifrost-react/Table';
+import Tabs from '@intility/bifrost-react/Tabs';
 import Select from '@intility/bifrost-react-select';
+import { faDiagramProject } from '@fortawesome/free-solid-svg-icons';
 import { api, type Assignee, type CaseWithProjectInfo } from '../api';
 import { clearCurrentUser, getCurrentUser, setCurrentUser } from '../currentUser';
+import SectionTitle from '../components/SectionTitle';
 import Skeleton from '../components/Skeleton';
+import StatTile from '../components/StatTile';
 import { caseBadgeState, formatDate, githubIssueUrl } from '../status';
 
 interface Option {
@@ -17,15 +21,39 @@ interface Option {
   label: string;
 }
 
+function daysUntilCase(caseDate: string): number {
+  return Math.round((new Date(caseDate).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24));
+}
+
 function deadlineBadge(caseDate: string | null): { state: 'alert' | 'warning' | 'neutral'; text: string } {
   if (!caseDate) return { state: 'neutral', text: 'Ingen frist' };
-  const days = Math.round(
-    (new Date(caseDate).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24),
-  );
+  const days = daysUntilCase(caseDate);
   if (days < 0) return { state: 'alert', text: `${Math.abs(days)} dager forsinket` };
   if (days === 0) return { state: 'warning', text: 'I dag' };
   if (days <= 7) return { state: 'warning', text: `${days} dager` };
   return { state: 'neutral', text: `${days} dager` };
+}
+
+interface ProjectGroup {
+  project_id: number;
+  project_name: string;
+  customer: string;
+  cases: CaseWithProjectInfo[];
+}
+
+function groupByProject(cases: CaseWithProjectInfo[]): ProjectGroup[] {
+  const groups = new Map<number, ProjectGroup>();
+  for (const c of cases) {
+    const group = groups.get(c.project_id) ?? {
+      project_id: c.project_id,
+      project_name: c.project_name,
+      customer: c.customer,
+      cases: [],
+    };
+    group.cases.push(c);
+    groups.set(c.project_id, group);
+  }
+  return [...groups.values()].sort((a, b) => a.project_name.localeCompare(b.project_name, 'nb'));
 }
 
 // The page people actually open in the morning: one person's own open issues
@@ -41,6 +69,7 @@ export default function MyTasks() {
   const [cases, setCases] = useState<CaseWithProjectInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<'prosjekt' | 'issues'>('prosjekt');
 
   useEffect(() => {
     if (login) return;
@@ -121,6 +150,14 @@ export default function MyTasks() {
       if (!b.case_date) return -1;
       return a.case_date.localeCompare(b.case_date);
     });
+  const overdueCount = openCases.filter((c) => c.case_date && daysUntilCase(c.case_date) < 0).length;
+  const projectGroups = groupByProject(openCases);
+
+  function openCase(c: CaseWithProjectInfo) {
+    const issueUrl = c.github_repo && c.github_issue_number ? githubIssueUrl(c.github_repo, c.github_issue_number) : null;
+    if (issueUrl) window.open(issueUrl, '_blank', 'noopener,noreferrer');
+    else navigate(`/projects/${c.project_id}`);
+  }
 
   return (
     <div className="stack">
@@ -144,11 +181,21 @@ export default function MyTasks() {
       </div>
 
       {loading && (
-        <Card padding="large" className="stack-sm" aria-label="Laster oppgaver">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} style={{ height: 20 }} />
-          ))}
-        </Card>
+        <div className="stack" aria-label="Laster oppgaver">
+          <div className="stat-tile-row">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} padding="large" className="stat-tile">
+                <Skeleton style={{ height: 12, width: '60%', margin: '0 auto 10px' }} />
+                <Skeleton style={{ height: 30, width: '40%', margin: '0 auto' }} />
+              </Card>
+            ))}
+          </div>
+          <Card padding="large" className="stack-sm">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} style={{ height: 20 }} />
+            ))}
+          </Card>
+        </div>
       )}
 
       {error && (
@@ -158,63 +205,117 @@ export default function MyTasks() {
       )}
 
       {!loading && !error && (
-        <Card padding="large" className="stack-sm">
+        <>
+          <div className="stat-tile-row">
+            <StatTile label="Åpne issues" value={openCases.length} accent="neutral" />
+            <StatTile label="Prosjekter" value={projectGroups.length} accent="brand" />
+            <StatTile label="Forsinket" value={overdueCount} accent={overdueCount > 0 ? 'alert' : 'success'} />
+          </div>
+
           {openCases.length === 0 ? (
-            <Message header="Ingen åpne issues" noIcon>
-              Du eier ingen åpne issues akkurat nå.
-            </Message>
+            <Card padding="large">
+              <Message header="Ingen åpne issues" noIcon>
+                Du eier ingen åpne issues akkurat nå.
+              </Message>
+            </Card>
           ) : (
-            <Table>
-              <Table.Header>
-                <Table.Row>
-                  <Table.HeaderCell>Tittel</Table.HeaderCell>
-                  <Table.HeaderCell>Prosjekt</Table.HeaderCell>
-                  <Table.HeaderCell>Status</Table.HeaderCell>
-                  <Table.HeaderCell>Frist</Table.HeaderCell>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {openCases.map((c) => {
-                  const issueUrl =
-                    c.github_repo && c.github_issue_number
-                      ? githubIssueUrl(c.github_repo, c.github_issue_number)
-                      : null;
-                  const deadline = deadlineBadge(c.case_date);
-                  return (
-                    <Table.Row
-                      key={c.id}
-                      onClick={
-                        issueUrl
-                          ? () => window.open(issueUrl, '_blank', 'noopener,noreferrer')
-                          : () => navigate(`/projects/${c.project_id}`)
-                      }
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <Table.Cell>
-                        {c.title}
-                        {c.github_repo && (
-                          <Badge state="neutral" style={{ marginLeft: 8 }}>
-                            GitHub
-                          </Badge>
-                        )}
-                      </Table.Cell>
-                      <Table.Cell>{c.project_name}</Table.Cell>
-                      <Table.Cell>
-                        <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <span className="deadline-when">
-                          <span>{formatDate(c.case_date)}</span>
-                          <Badge state={deadline.state}>{deadline.text}</Badge>
-                        </span>
-                      </Table.Cell>
-                    </Table.Row>
-                  );
-                })}
-              </Table.Body>
-            </Table>
+            <Tabs>
+              <Tabs.Item
+                active={tab === 'prosjekt'}
+                onClick={() => setTab('prosjekt')}
+                content={
+                  <div className="stack-sm">
+                    {projectGroups.map((group) => (
+                      <Card key={group.project_id} padding="large" className="stack-sm">
+                        <div className="page-header" style={{ marginBottom: 0 }}>
+                          <button className="my-tasks-project-link" onClick={() => navigate(`/projects/${group.project_id}`)}>
+                            <SectionTitle icon={faDiagramProject}>{group.project_name}</SectionTitle>
+                          </button>
+                          <Badge state="neutral">{group.cases.length}</Badge>
+                        </div>
+                        <div className="deadline-list">
+                          {group.cases.map((c) => {
+                            const deadline = deadlineBadge(c.case_date);
+                            return (
+                              <button key={c.id} className="deadline-row" onClick={() => openCase(c)}>
+                                <div>
+                                  <div className="deadline-name">
+                                    {c.title}
+                                    {c.github_repo && (
+                                      <Badge state="neutral" style={{ marginLeft: 8 }}>
+                                        GitHub
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="muted">
+                                    <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
+                                  </div>
+                                </div>
+                                <div className="deadline-when">
+                                  <span>{formatDate(c.case_date)}</span>
+                                  <Badge state={deadline.state}>{deadline.text}</Badge>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                }
+              >
+                Per prosjekt
+              </Tabs.Item>
+              <Tabs.Item
+                active={tab === 'issues'}
+                onClick={() => setTab('issues')}
+                content={
+                  <Card padding="large" className="stack-sm">
+                    <Table>
+                      <Table.Header>
+                        <Table.Row>
+                          <Table.HeaderCell>Tittel</Table.HeaderCell>
+                          <Table.HeaderCell>Prosjekt</Table.HeaderCell>
+                          <Table.HeaderCell>Status</Table.HeaderCell>
+                          <Table.HeaderCell>Frist</Table.HeaderCell>
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        {openCases.map((c) => {
+                          const deadline = deadlineBadge(c.case_date);
+                          return (
+                            <Table.Row key={c.id} onClick={() => openCase(c)} style={{ cursor: 'pointer' }}>
+                              <Table.Cell>
+                                {c.title}
+                                {c.github_repo && (
+                                  <Badge state="neutral" style={{ marginLeft: 8 }}>
+                                    GitHub
+                                  </Badge>
+                                )}
+                              </Table.Cell>
+                              <Table.Cell>{c.project_name}</Table.Cell>
+                              <Table.Cell>
+                                <Badge state={caseBadgeState(c.status)}>{c.status}</Badge>
+                              </Table.Cell>
+                              <Table.Cell>
+                                <span className="deadline-when">
+                                  <span>{formatDate(c.case_date)}</span>
+                                  <Badge state={deadline.state}>{deadline.text}</Badge>
+                                </span>
+                              </Table.Cell>
+                            </Table.Row>
+                          );
+                        })}
+                      </Table.Body>
+                    </Table>
+                  </Card>
+                }
+              >
+                Alle issues
+              </Tabs.Item>
+            </Tabs>
           )}
-        </Card>
+        </>
       )}
     </div>
   );

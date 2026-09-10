@@ -1,8 +1,13 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import {
+  createCase,
   getProjectIdByGithubMilestone,
+  setCaseGithubLink,
   upsertCaseFromGithub,
   upsertProjectFromGithub,
+  type Case,
+  type CaseInput,
+  type Project,
 } from './repo.js';
 
 const GITHUB_API = 'https://api.github.com';
@@ -434,6 +439,72 @@ export async function createGithubIssue(
     console.error('GitHub sync: failed to create issue', err);
     return null;
   }
+}
+
+export interface CreateCaseAndSyncInput {
+  title: string;
+  description?: string;
+  status?: string;
+  case_date?: string | null;
+  owner?: string;
+  kunde?: string;
+  tjenesteparaply?: string;
+  label?: string;
+  board_status?: string;
+}
+
+export interface CreateCaseAndSyncResult {
+  case: Case;
+  boardStatusError: string | null;
+}
+
+// The one place a case gets created AND pushed to GitHub (as a real issue,
+// optionally placed straight into a board column) - shared by the "Legg til
+// issue" form's route and the chat assistant's create_case tool, so the two
+// can never drift into doing this differently.
+export async function createCaseAndSync(
+  project: Project,
+  input: CreateCaseAndSyncInput,
+): Promise<CreateCaseAndSyncResult> {
+  const data: CaseInput = {
+    title: input.title,
+    description: (input.description ?? '').trim(),
+    status: input.status || undefined,
+    case_date: input.case_date ?? null,
+    owner: (input.owner ?? '').trim(),
+  };
+  const kunde = (input.kunde ?? '').trim() || project.customer;
+  const tjenesteparaply = (input.tjenesteparaply ?? '').trim();
+  const label = (input.label ?? '').trim();
+  const boardStatus = (input.board_status ?? '').trim();
+
+  let created = await createCase(project.id, data);
+
+  const issue = await createGithubIssue({
+    title: created.title,
+    description: created.description,
+    status: created.status,
+    owner: created.owner,
+    frist: created.case_date ? new Date(created.case_date).toISOString().slice(0, 10) : null,
+    kunde,
+    tjenesteparaply,
+    label,
+    milestoneNumber: project.github_milestone_number,
+  });
+
+  let boardStatusError: string | null = null;
+  if (issue) {
+    created = (await setCaseGithubLink(project.id, created.id, githubRepoName(), issue.number)) ?? created;
+    if (boardStatus) {
+      const result = await moveIssueStatus(issue.number, boardStatus);
+      if (!result.ok) {
+        console.error(`Failed to set initial board status for issue #${issue.number}: ${result.error}`);
+        boardStatusError = result.error;
+      }
+    }
+  }
+
+  return { case: created, boardStatusError };
 }
 
 export interface ServiceUmbrella {
