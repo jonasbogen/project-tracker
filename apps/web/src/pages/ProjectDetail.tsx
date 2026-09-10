@@ -80,6 +80,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<Project | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [caseStatuses, setCaseStatuses] = useState<string[]>([]);
+  const [boardStatuses, setBoardStatuses] = useState<string[]>([]);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [customerOptions, setCustomerOptions] = useState<string[]>([]);
   const [serviceUmbrellas, setServiceUmbrellas] = useState<ServiceUmbrella[]>([]);
@@ -91,7 +92,7 @@ export default function ProjectDetail() {
   // Add-case form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [caseStatus, setCaseStatus] = useState<string>('');
+  const [boardStatus, setBoardStatus] = useState<string>('');
   const [caseDate, setCaseDate] = useState('');
   const [owner, setOwner] = useState('');
   const [kunde, setKunde] = useState('');
@@ -130,6 +131,7 @@ export default function ProjectDetail() {
       setProject(data.project);
       setCases(data.cases);
       setCaseStatuses(meta.caseStatuses);
+      setBoardStatuses(meta.boardStatuses);
       setAssignees(assigneeList);
       setCustomerOptions(customerList);
       setServiceUmbrellas(umbrellaList);
@@ -188,16 +190,16 @@ export default function ProjectDetail() {
       await api.createCase(projectId, {
         title: title.trim(),
         description: description.trim(),
-        status: caseStatus || undefined,
         case_date: caseDate || null,
         owner: owner || undefined,
         kunde: kunde.trim(),
         tjenesteparaply: tjenesteparaply.trim(),
         label: label || undefined,
+        board_status: boardStatus || undefined,
       });
       setTitle('');
       setDescription('');
-      setCaseStatus('');
+      setBoardStatus('');
       setCaseDate('');
       setOwner('');
       setTjenesteparaply('');
@@ -253,7 +255,7 @@ export default function ProjectDetail() {
     );
   }
 
-  const statusOptions: Option[] = caseStatuses.map((s) => ({ value: s, label: s }));
+  const boardStatusOptions: Option[] = boardStatuses.map((s) => ({ value: s, label: s }));
 
   return (
     <div className="stack">
@@ -424,11 +426,11 @@ export default function ProjectDetail() {
             />
             <Select
               label="Status"
-              options={statusOptions}
-              value={caseStatus ? { value: caseStatus, label: caseStatus } : null}
-              onChange={(opt) => setCaseStatus((opt as Option | null)?.value ?? '')}
+              options={boardStatusOptions}
+              value={boardStatus ? { value: boardStatus, label: boardStatus } : null}
+              onChange={(opt) => setBoardStatus((opt as Option | null)?.value ?? '')}
               isClearable
-              placeholder="Åpen"
+              placeholder={boardStatusOptions[0]?.label ?? 'Backlog'}
             />
             {assignees.length > 0 ? (
               <Select

@@ -706,9 +706,50 @@ export async function listStatusOptions(): Promise<string[]> {
 
 // This issue's Projects V2 item id on the board (see fetchAllProjectItems for
 // why this queries the project's own items rather than the issue's).
+// Adds an issue to the board as a Projects V2 item and returns its new item
+// id. A freshly-created issue isn't necessarily on the board yet - the
+// repo's own auto-add automation reacts to the same "issue opened" webhook
+// this app's REST issue creation triggers, so there's a real race between
+// that and setting an initial board status right after creating an issue
+// here. Doing the add ourselves removes the race instead of hoping the other
+// automation already ran.
+async function addIssueToProject(issueNumber: number): Promise<string | null> {
+  const token = process.env.PROJECT_TOKEN;
+  if (!token) return null;
+  try {
+    const issue = await githubFetch<{ node_id: string }>(`/repos/${ORG}/${REPO}/issues/${issueNumber}`);
+    const meta = await getStatusFieldMeta();
+    if (!meta) return null;
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        query:
+          'mutation($project:ID!,$content:ID!){addProjectV2ItemById(input:{projectId:$project,contentId:$content}){item{id}}}',
+        variables: { project: meta.projectId, content: issue.node_id },
+      }),
+    });
+    const json = (await res.json()) as {
+      data?: { addProjectV2ItemById?: { item?: { id: string } } };
+      errors?: { message: string }[];
+    };
+    if (!res.ok || json.errors?.length) {
+      console.error(
+        `GitHub sync: failed to add issue #${issueNumber} to the project board: ${json.errors?.map((e) => e.message).join('; ') ?? `HTTP ${res.status}`}`,
+      );
+      return null;
+    }
+    return json.data?.addProjectV2ItemById?.item?.id ?? null;
+  } catch (err) {
+    console.error(`GitHub sync: failed to add issue #${issueNumber} to the project board`, err);
+    return null;
+  }
+}
+
 async function fetchProjectItemId(issueNumber: number): Promise<string | null> {
   const { items } = await fetchAllProjectItems();
-  return items.find((i) => i.issueNumber === issueNumber)?.id ?? null;
+  const existing = items.find((i) => i.issueNumber === issueNumber)?.id;
+  return existing ?? (await addIssueToProject(issueNumber));
 }
 
 export type MoveIssueStatusResult = { ok: true; status: string } | { ok: false; error: string };

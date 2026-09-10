@@ -354,7 +354,7 @@ describe('project board status sync', () => {
     expect(await moveIssueStatus(42, 'Nonexistent')).toEqual({ ok: false, error: 'Ukjent status: Nonexistent' });
   });
 
-  it('moveIssueStatus fails when the issue has no item on this project board', async () => {
+  it('moveIssueStatus adds the issue to the board first when it has no item there yet', async () => {
     process.env.PROJECT_TOKEN = 'proj-token';
     const fetchMock = vi
       .fn()
@@ -375,7 +375,43 @@ describe('project board status sync', () => {
             },
           },
         }),
-      );
+      )
+      .mockResolvedValueOnce(jsonResponse({ node_id: 'I_kwDOnode42' }))
+      .mockResolvedValueOnce(jsonResponse({ data: { addProjectV2ItemById: { item: { id: 'PVTI_new' } } } }))
+      .mockResolvedValueOnce(jsonResponse({ data: { updateProjectV2ItemFieldValue: { clientMutationId: null } } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { moveIssueStatus } = await import('./github-sync.js');
+
+    expect(await moveIssueStatus(42, 'Done')).toEqual({ ok: true, status: 'Done' });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    const mutationBody = JSON.parse(fetchMock.mock.calls[4][1].body as string);
+    expect(mutationBody.variables).toEqual({ project: 'PVT_1', item: 'PVTI_new', field: 'PVTSSF_1', option: 'opt-done' });
+  });
+
+  it('moveIssueStatus fails when the issue has no item and cannot be added to the board either', async () => {
+    process.env.PROJECT_TOKEN = 'proj-token';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            organization: {
+              projectV2: { id: 'PVT_1', field: { id: 'PVTSSF_1', options: [{ id: 'opt-done', name: 'Done' }] } },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            organization: {
+              projectV2: { items: { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] } },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(new Response('not found', { status: 404 }));
     vi.stubGlobal('fetch', fetchMock);
 
     const { moveIssueStatus } = await import('./github-sync.js');

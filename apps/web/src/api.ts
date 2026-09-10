@@ -262,12 +262,14 @@ export interface CaseInput {
   kunde?: string;
   tjenesteparaply?: string;
   label?: string;
+  board_status?: string;
 }
 
 export interface Meta {
   projectStatuses: string[];
   caseStatuses: string[];
   offerStatuses: string[];
+  boardStatuses: string[];
 }
 
 export interface Offer {

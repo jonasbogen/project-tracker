@@ -45,6 +45,7 @@ vi.mock('./github-sync.js', () => ({
   listOpenMilestones: vi.fn().mockResolvedValue([]),
   listRecentPullRequests: vi.fn().mockResolvedValue({ pulls: [], error: null }),
   getMilestoneBoard: vi.fn().mockResolvedValue({ statusCounts: [], groups: [] }),
+  listStatusOptions: vi.fn().mockResolvedValue([]),
   listRepoTeams: vi.fn().mockResolvedValue([]),
   listRepoLabels: vi.fn().mockResolvedValue([]),
   listTeamMembers: vi.fn().mockResolvedValue([]),
@@ -64,12 +65,14 @@ beforeEach(() => {
 
 describe('project-tracker API', () => {
   it('GET /api/meta returns the status enums', async () => {
+    vi.mocked(githubSync.listStatusOptions).mockResolvedValue(['Backlog', 'To do', 'In progress', 'Blocked', 'Done']);
     const res = await app.request('/api/meta');
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       projectStatuses: repo.PROJECT_STATUSES,
       caseStatuses: repo.CASE_STATUSES,
       offerStatuses: repo.OFFER_STATUSES,
+      boardStatuses: ['Backlog', 'To do', 'In progress', 'Blocked', 'Done'],
     });
   });
 

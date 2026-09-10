@@ -16,6 +16,7 @@ import {
   listRepoTeams,
   listServiceUmbrellas,
   listStatusdeckRuns,
+  listStatusOptions,
   listTeamMembers,
   listWeeklyReports,
   moveIssueStatus,
@@ -58,11 +59,12 @@ function projectFromBody(body: Record<string, unknown>): ProjectInput | { error:
 }
 
 // GET /api/meta — status enums used to populate form dropdowns.
-api.get('/meta', (c) =>
+api.get('/meta', async (c) =>
   c.json({
     projectStatuses: repo.PROJECT_STATUSES,
     caseStatuses: repo.CASE_STATUSES,
     offerStatuses: repo.OFFER_STATUSES,
+    boardStatuses: await listStatusOptions(),
   }),
 );
 
@@ -364,6 +366,7 @@ api.post('/projects/:id/cases', async (c) => {
   const kunde = String(body.kunde ?? '').trim() || project.customer;
   const tjenesteparaply = String(body.tjenesteparaply ?? '').trim();
   const label = String(body.label ?? '').trim();
+  const boardStatus = String(body.board_status ?? '').trim();
   let created = await repo.createCase(id, data);
 
   const issue = await createGithubIssue({
@@ -383,6 +386,15 @@ api.post('/projects/:id/cases', async (c) => {
   });
   if (issue) {
     created = (await repo.setCaseGithubLink(id, created.id, githubRepoName(), issue.number)) ?? created;
+    // Places the new card in the right column on the project board right
+    // away - best-effort, same as the issue creation above, since a new
+    // issue otherwise lands wherever GitHub's own default column is (and
+    // sometimes not on the board at all yet), not necessarily where the
+    // person creating it meant it to start.
+    if (boardStatus) {
+      const result = await moveIssueStatus(issue.number, boardStatus);
+      if (!result.ok) console.error(`Failed to set initial board status for issue #${issue.number}: ${result.error}`);
+    }
   }
 
   return c.json(created, 201);
