@@ -37,7 +37,6 @@ export interface EventResult {
 export type Phase =
   | { name: 'setup' }
   | { name: 'intro' }
-  | { name: 'journey' }
   | { name: 'event-intro'; index: number }
   | { name: 'event-play'; index: number }
   | { name: 'event-rank'; index: number }

@@ -8,7 +8,7 @@ import { EmojiScreen } from './screens/EmojiScreen';
 import { EventIntroScreen } from './screens/EventIntroScreen';
 import { HorseScreen } from './screens/HorseScreen';
 import { IntroScreen } from './screens/IntroScreen';
-import { JourneyScreen } from './screens/JourneyScreen';
+import { Cinematic } from './screens/Cinematic';
 import { MafiaScreen } from './screens/MafiaScreen';
 import { PodiumScreen } from './screens/PodiumScreen';
 import { PointsScreen } from './screens/PointsScreen';
@@ -16,9 +16,12 @@ import { RankScreen } from './screens/RankScreen';
 import { SetupScreen } from './screens/SetupScreen';
 import { SixScreen } from './screens/SixScreen';
 
+const FILM_SEEN_KEY = 'spillkveld-film-seen';
+
 export default function App() {
   const { state, update, reset, ready } = useGameStore();
   const [fullscreen, setFullscreen] = useState(false);
+  const [showFilm, setShowFilm] = useState(() => !sessionStorage.getItem(FILM_SEEN_KEY));
 
   const go = useCallback((phase: Phase) => update((s) => ({ ...s, phase })), [update]);
 
@@ -81,6 +84,17 @@ export default function App() {
     return null;
   }
 
+  if (showFilm) {
+    return (
+      <Cinematic
+        onDone={() => {
+          sessionStorage.setItem(FILM_SEEN_KEY, '1');
+          setShowFilm(false);
+        }}
+      />
+    );
+  }
+
   const props = { state, update, go };
 
   let screen: JSX.Element;
@@ -90,9 +104,6 @@ export default function App() {
       break;
     case 'intro':
       screen = <IntroScreen {...props} />;
-      break;
-    case 'journey':
-      screen = <JourneyScreen {...props} />;
       break;
     case 'event-intro':
       screen = <EventIntroScreen {...props} index={phase.index} />;
@@ -177,6 +188,9 @@ export default function App() {
               Oppsett
             </button>
           )}
+          <button className="btn btn-icon" title="Spill filmen igjen" onClick={() => setShowFilm(true)}>
+            🎬
+          </button>
         </div>
       </header>
       <main className="stage">{screen}</main>

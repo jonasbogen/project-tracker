@@ -49,7 +49,7 @@ export function IntroScreen({ state, go }: ScreenProps) {
         data-primary
         onClick={() => {
           audio.sfx('fanfare');
-          go({ name: 'journey' });
+          go({ name: 'event-intro', index: 0 });
         }}
       >
         Kjør i gang! →

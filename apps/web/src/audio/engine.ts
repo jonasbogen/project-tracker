@@ -6,7 +6,8 @@ export type MusicName =
   | 'daylight'
   | 'victory'
   | 'drumroll'
-  | 'alarm';
+  | 'alarm'
+  | 'cinema';
 
 export type SfxName =
   | 'click'
@@ -439,6 +440,33 @@ class AudioEngine {
           this.noise({ t: t0 + i * b * 0.125, dur: 0.02, gain: 0.12 + (i % 2) * 0.04, release: 0.04, filter: 'bandpass', freq: 2000, q: 0.8, dest });
         }
         if (bar % 2 === 0) this.tone({ t: t0, dur: 0.3, freq: 75, type: 'sine', gain: 0.3, release: 0.3, dest });
+      },
+    },
+
+    cinema: {
+      bpm: 72,
+      beats: 4,
+      bar: (t0, bar, b, dest) => {
+        const prog = [
+          { root: 'C2', chord: ['C3', 'E3', 'G3', 'B3'], arp: ['E4', 'G4', 'B4', 'D5'] },
+          { root: 'A1', chord: ['A2', 'C3', 'E3', 'G3'], arp: ['C4', 'E4', 'G4', 'B4'] },
+          { root: 'F1', chord: ['F2', 'A2', 'C3', 'E3'], arp: ['A3', 'C4', 'E4', 'G4'] },
+          { root: 'G1', chord: ['G2', 'B2', 'D3', 'F3'], arp: ['B3', 'D4', 'G4', 'A4'] },
+        ][bar % 4];
+        for (const n of prog.chord) {
+          this.tone({ t: t0, dur: b * 4.2, freq: freq(n), type: 'sawtooth', lowpass: 700, gain: 0.03, attack: 1.2, release: 1.5, detune: -6, vibrato: { rate: 0.3, depth: 1 }, dest });
+          this.tone({ t: t0, dur: b * 4.2, freq: freq(n), type: 'triangle', gain: 0.035, attack: 1.0, release: 1.5, detune: 6, dest });
+        }
+        this.tone({ t: t0, dur: b * 3.8, freq: freq(prog.root), type: 'sine', gain: 0.22, attack: 0.3, release: 1.0, dest });
+        for (let i = 0; i < 8; i++) {
+          const n = prog.arp[[0, 1, 2, 3, 2, 1, 3, 2][i]];
+          this.tone({ t: t0 + i * b * 0.5, dur: b * 0.6, freq: freq(n), type: 'triangle', gain: 0.05, attack: 0.005, decay: 0.3, sustain: 0.3, release: 0.5, dest });
+        }
+        if (bar % 2 === 1) {
+          const n = ['E5', 'D5', 'C5', 'B4'][(bar >> 1) % 4];
+          this.tone({ t: t0 + b, dur: b * 2.5, freq: freq(n), type: 'sine', gain: 0.05, attack: 0.4, release: 1.2, vibrato: { rate: 4.5, depth: 2 }, dest });
+        }
+        this.noise({ t: t0, dur: b * 4, gain: 0.008, attack: 1, release: 1, filter: 'lowpass', freq: 700, dest });
       },
     },
 
