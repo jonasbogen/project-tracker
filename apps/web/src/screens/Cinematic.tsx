@@ -12,12 +12,12 @@ interface Scene {
 }
 
 const SCENES: Scene[] = [
-  { id: 'dawn', duration: 11000, music: 'cinema', sfx: [['snore', 400], ['snore', 2200], ['engine', 4800]], kicker: 'Riihimäki, Finland · lørdag 06:40', caption: 'Du våkner i en lastebil hos NG Nordic. Hodet er tungt. Helgen har vært lang.' },
-  { id: 'esko', duration: 9000, music: 'cinema', sfx: [['ding', 1800]], kicker: 'Lasterampen · NG Nordic', caption: 'Esko står der med kaffen. Han takker for en fin helg og ønsker deg god tur hjem.' },
-  { id: 'bike', duration: 10000, music: 'cinema', sfx: [['bell', 900], ['bell', 5200]], kicker: 'Riksvei 3 · retning Helsinki-Vantaa', caption: 'Ingen buss. Ingen taxi. Du sykler til flyplassen.' },
-  { id: 'flight', duration: 10000, music: 'cinema', sfx: [['rocket', 1200], ['whoosh', 5000]], kicker: 'HEL → OSL · 10 000 fot', caption: 'Et sete ved vinduet, Oslo om en time. Endelig litt ro.' },
-  { id: 'train', duration: 13000, music: 'cinema', sfx: [['train', 400], ['buzz', 6000], ['fail', 8200]], kicker: 'Flytoget · Gardermoen – Oslo S', caption: 'Du ser at Flytoget er Intility-kunde. Så forsvinner dekningen. «Forbanna Edvard…» tenker du.' },
-  { id: 'party', duration: 0, music: 'victory', sfx: [['cheer', 400], ['fanfare', 1800]], kicker: 'Oslo · 19:30', caption: 'Du kommer frem til vors – klar for festiviteter med Management Gradsa!' },
+  { id: 'dawn', duration: 6000, music: 'cinema', sfx: [['snore', 300], ['snore', 1300], ['engine', 2500]], kicker: 'Riihimäki, Finland · lørdag 06:40', caption: 'Du våkner i en lastebil hos NG Nordic. Hodet er tungt. Helgen har vært lang.' },
+  { id: 'esko', duration: 5000, music: 'cinema', sfx: [['ding', 1100]], kicker: 'Lasterampen · NG Nordic', caption: 'Esko står der med kaffen. Han takker for en fin helg og ønsker deg god tur hjem.' },
+  { id: 'bike', duration: 5500, music: 'cinema', sfx: [['bell', 500], ['bell', 3000]], kicker: 'Riksvei 3 · retning Helsinki-Vantaa', caption: 'Ingen buss. Ingen taxi. Du sykler til flyplassen.' },
+  { id: 'flight', duration: 5500, music: 'cinema', sfx: [['rocket', 600], ['whoosh', 2800]], kicker: 'HEL → OSL · 10 000 fot', caption: 'Et sete ved vinduet, Oslo om en time. Endelig litt ro.' },
+  { id: 'train', duration: 7000, music: 'cinema', sfx: [['train', 300], ['buzz', 3000], ['fail', 4300]], kicker: 'Flytoget · Gardermoen – Oslo S', caption: 'Du ser at Flytoget er Intility-kunde. Så forsvinner dekningen. «Forbanna Edvard…» tenker du.' },
+  { id: 'party', duration: 0, music: 'victory', sfx: [['cheer', 300], ['fanfare', 1200]], kicker: 'Oslo · 19:30', caption: 'Du kommer frem til vors – klar for festiviteter med Management Gradsa!' },
 ];
 
 function rng(seed: number): () => number {
@@ -69,7 +69,8 @@ function Cloud({ x, y, s = 1, o = 0.95 }: { x: number; y: number; s?: number; o?
 
 function Truck({ x, y, lights, smoke }: { x: number; y: number; lights?: boolean; smoke?: boolean }) {
   return (
-    <g transform={`translate(${x} ${y})`} className="truck-g">
+    <g transform={`translate(${x} ${y})`}>
+      <g className="truck-g">
       <ellipse cx={330} cy={238} rx={360} ry={16} fill="#000" opacity={0.35} />
       <rect x={0} y={0} width={520} height={200} rx={12} fill="url(#trailer)" stroke="#9aa3b5" strokeWidth={3} />
       <rect x={0} y={150} width={520} height={14} fill="#0b3a8a" opacity={0.85} />
@@ -91,8 +92,9 @@ function Truck({ x, y, lights, smoke }: { x: number; y: number; lights?: boolean
       ))}
       {smoke &&
         [0, 1, 2, 3].map((i) => (
-          <circle key={i} cx={540} cy={20} r={12 + i * 3} fill="#cfd3dc" opacity={0.5} className="smoke" style={{ animationDelay: `${i * 0.7}s` }} />
+          <circle key={i} cx={540} cy={20} r={12 + i * 3} fill="#cfd3dc" opacity={0.5} className="smoke" style={{ animationDelay: `${i * 0.5}s` }} />
         ))}
+      </g>
     </g>
   );
 }
@@ -100,7 +102,8 @@ function Truck({ x, y, lights, smoke }: { x: number; y: number; lights?: boolean
 function Person({ x, y, vest, helmet, beard, hoodie, wave, bag, className }: { x: number; y: number; vest?: boolean; helmet?: boolean; beard?: boolean; hoodie?: boolean; wave?: boolean; bag?: boolean; className?: string }) {
   const body = vest ? '#ff7a1a' : hoodie ? '#4a5568' : '#2b6cb0';
   return (
-    <g transform={`translate(${x} ${y})`} className={className}>
+    <g transform={`translate(${x} ${y})`}>
+      <g className={className}>
       <ellipse cx={0} cy={232} rx={56} ry={10} fill="#000" opacity={0.3} />
       <rect x={-22} y={120} width={18} height={110} rx={6} fill="#1e2a4a" />
       <rect x={6} y={120} width={18} height={110} rx={6} fill="#1e2a4a" />
@@ -137,6 +140,7 @@ function Person({ x, y, vest, helmet, beard, hoodie, wave, bag, className }: { x
       ) : (
         <path d="M-32 -6 A32 32 0 0 1 32 -6 L32 -2 L-32 -2 Z" fill="#2d3748" />
       )}
+      </g>
     </g>
   );
 }
@@ -233,7 +237,7 @@ function Defs() {
 
 function SceneDawn() {
   return (
-    <svg className="cine-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+    <svg className="cine-svg" viewBox="0 100 1600 700" preserveAspectRatio="xMidYMid slice">
       <Defs />
       <rect width="1600" height="900" fill="url(#night)" />
       <rect width="1600" height="900" fill="url(#dawn)" className="fade-in-7" />
@@ -257,7 +261,7 @@ function SceneDawn() {
         <ellipse cx={400} cy={650} rx={520} ry={40} fill="#c9d4ff" filter="url(#blur12)" />
         <ellipse cx={1300} cy={670} rx={420} ry={34} fill="#c9d4ff" filter="url(#blur12)" />
       </g>
-      <g transform="translate(120 420)">
+      <g transform="translate(250 420)">
         <rect x={0} y={0} width={10} height={220} fill="#3a3f55" />
         <rect x={-150} y={0} width={310} height={70} rx={8} fill="#0b3a8a" stroke="#fff" strokeWidth={3} />
         <text x={5} y={30} textAnchor="middle" fontSize={22} fontWeight={800} fill="#fff" fontFamily="Segoe UI, Arial, sans-serif">
@@ -279,7 +283,7 @@ function SceneDawn() {
 
 function SceneEsko() {
   return (
-    <svg className="cine-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+    <svg className="cine-svg" viewBox="0 100 1600 700" preserveAspectRatio="xMidYMid slice">
       <Defs />
       <rect width="1600" height="900" fill="url(#morning)" />
       <circle cx={1350} cy={160} r={240} fill="url(#sunglow)" />
@@ -332,7 +336,7 @@ function SceneEsko() {
 
 function SceneBike() {
   return (
-    <svg className="cine-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+    <svg className="cine-svg" viewBox="0 100 1600 700" preserveAspectRatio="xMidYMid slice">
       <Defs />
       <rect width="1600" height="900" fill="url(#day)" />
       <circle cx={1300} cy={150} r={220} fill="url(#sunglow)" />
@@ -363,7 +367,7 @@ function SceneBike() {
       <rect x={0} y={620} width={1600} height={60} fill="#4f8f3d" />
       <rect x={0} y={678} width={1600} height={240} fill="#3a3d46" />
       <rect x={0} y={678} width={1600} height={6} fill="#6f7380" />
-      <line x1={0} y1={790} x2={1600} y2={790} stroke="#f2e6b0" strokeWidth={8} strokeDasharray="90 90" className="dash-run" />
+      <line x1={0} y1={745} x2={1600} y2={745} stroke="#f2e6b0" strokeWidth={8} strokeDasharray="90 90" className="dash-run" />
       <g className="drift-5">
         {[200, 700, 1200, 1700, 2200, 2700].map((x) => (
           <g key={x}>
@@ -376,6 +380,7 @@ function SceneBike() {
         <path d="M0 0 L60 0 L75 -6 L62 -2 L30 -2 L24 10 L18 10 L20 -2 L8 -2 L0 6 Z" fill="#fff" opacity={0.85} />
         <line x1={-200} y1={0} x2={0} y2={0} stroke="#fff" strokeWidth={4} opacity={0.4} />
       </g>
+      <g transform="translate(0 -60)">
       <g className="cyclist-g">
         <ellipse cx={720} cy={850} rx={170} ry={14} fill="#000" opacity={0.3} />
         <g transform="translate(620 790)">
@@ -415,6 +420,7 @@ function SceneBike() {
           <rect x={775} y={640} width={34} height={60} rx={10} fill="#8a3b12" />
         </g>
       </g>
+      </g>
       <g className="sign-in-right">
         <rect x={1380} y={520} width={14} height={160} fill="#555" />
         <rect x={1260} y={500} width={260} height={80} rx={10} fill="#0b3a8a" stroke="#fff" strokeWidth={4} />
@@ -431,11 +437,11 @@ function SceneBike() {
 
 function SceneFlight() {
   return (
-    <svg className="cine-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+    <svg className="cine-svg" viewBox="0 100 1600 700" preserveAspectRatio="xMidYMid slice">
       <Defs />
       <rect width="1600" height="900" fill="url(#high)" />
-      <circle cx={260} cy={140} r={300} fill="url(#sunglow)" opacity={0.9} />
-      <circle cx={260} cy={140} r={60} fill="#fffbe6" />
+      <circle cx={260} cy={230} r={300} fill="url(#sunglow)" opacity={0.9} />
+      <circle cx={260} cy={230} r={60} fill="#fffbe6" />
       <circle cx={520} cy={300} r={40} fill="#fff" opacity={0.12} />
       <circle cx={700} cy={420} r={70} fill="#ffd27a" opacity={0.08} />
       <g className="drift-40" opacity={0.9}>
@@ -474,10 +480,10 @@ function SceneFlight() {
         </g>
       </g>
       <g className="board-pop">
-        <rect x={1060} y={60} width={470} height={150} rx={14} fill="#0e1016" stroke="#2a2f3a" strokeWidth={4} />
-        <text x={1090} y={110} fontSize={30} fontWeight={800} fill="#ffd86b" fontFamily="Courier New, monospace">HEL → OSL   FINN 653</text>
-        <text x={1090} y={150} fontSize={26} fontWeight={700} fill="#cfd6e0" fontFamily="Courier New, monospace">Gate 12     11:05</text>
-        <text x={1090} y={190} fontSize={26} fontWeight={800} fill="#3ddc84" fontFamily="Courier New, monospace" className="blink">BOARDING</text>
+        <rect x={1060} y={140} width={470} height={150} rx={14} fill="#0e1016" stroke="#2a2f3a" strokeWidth={4} />
+        <text x={1090} y={190} fontSize={30} fontWeight={800} fill="#ffd86b" fontFamily="Courier New, monospace">HEL → OSL   FINN 653</text>
+        <text x={1090} y={230} fontSize={26} fontWeight={700} fill="#cfd6e0" fontFamily="Courier New, monospace">Gate 12     11:05</text>
+        <text x={1090} y={270} fontSize={26} fontWeight={800} fill="#3ddc84" fontFamily="Courier New, monospace" className="blink">BOARDING</text>
       </g>
     </svg>
   );
@@ -487,7 +493,7 @@ function SceneTrain() {
   const r = rng(42);
   const buildings = Array.from({ length: 40 }).map((_, i) => ({ x: i * 64, w: 44 + r() * 30, h: 90 + r() * 220 }));
   return (
-    <svg className="cine-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+    <svg className="cine-svg" viewBox="0 100 1600 700" preserveAspectRatio="xMidYMid slice">
       <Defs />
       <rect width="1600" height="900" fill="url(#evening)" />
       <Stars count={30} seed={77} />
@@ -565,7 +571,7 @@ function SceneParty() {
   const r = rng(99);
   const colors = ['#ff4d6d', '#ffc53d', '#3ddc84', '#4da3ff', '#b388ff', '#ff9f43'];
   return (
-    <svg className="cine-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+    <svg className="cine-svg" viewBox="0 100 1600 700" preserveAspectRatio="xMidYMid slice">
       <Defs />
       <rect width="1600" height="900" fill="url(#room)" />
       <rect x={0} y={640} width={1600} height={300} fill="#1a0c2a" />
@@ -583,8 +589,8 @@ function SceneParty() {
         ))}
       </g>
       <rect x={300} y={660} width={1000} height={30} rx={6} fill="#3a2a4a" />
-      <rect x={340} y={690} width={30} height={160} fill="#2a1a3a" />
-      <rect x={1230} y={690} width={30} height={160} fill="#2a1a3a" />
+      <rect x={340} y={690} width={30} height={110} fill="#2a1a3a" />
+      <rect x={1230} y={690} width={30} height={110} fill="#2a1a3a" />
       {[420, 520, 1080, 1180].map((x, i) => (
         <g key={x}>
           <rect x={x} y={560} width={34} height={100} rx={8} fill={i % 2 ? '#1f6f3a' : '#6b2d12'} />
@@ -628,7 +634,7 @@ export function Cinematic({ onDone }: { onDone: () => void }) {
     setPrev(index);
     setIndex(i);
     if (prevTimer.current) window.clearTimeout(prevTimer.current);
-    prevTimer.current = window.setTimeout(() => setPrev(null), 1800);
+    prevTimer.current = window.setTimeout(() => setPrev(null), 1100);
   };
 
   useEffect(() => {
@@ -677,28 +683,31 @@ export function Cinematic({ onDone }: { onDone: () => void }) {
   return (
     <div className="cine">
       <Confetti active={last} />
-      {PrevView && (
-        <div className="cine-scene cine-exit" key={`prev-${prev}`}>
-          <PrevView />
+      <div className="cine-stage">
+        {PrevView && (
+          <div className="cine-scene cine-exit" key={`prev-${prev}`}>
+            <PrevView />
+          </div>
+        )}
+        <div className={`cine-scene cine-enter scene-${scene!.id}`} key={`cur-${index}`}>
+          <View />
         </div>
-      )}
-      <div className={`cine-scene cine-enter scene-${scene!.id}`} key={`cur-${index}`}>
-        <View />
-      </div>
-      <div className="vignette" />
-      <div className="grain" />
-      <div className="letterbox letterbox-top" />
-      <div className="letterbox letterbox-bottom" />
-
-      <div className="cine-caption" key={`cap-${index}`}>
-        <div className="cine-kicker">{scene!.kicker}</div>
-        <div className="cine-text">{scene!.caption}</div>
+        <div className="vignette" />
+        <div className="grain" />
       </div>
 
-      <div className="cine-progress">
-        {SCENES.map((s, i) => (
-          <span key={s.id} className={i <= index ? 'on' : ''} />
-        ))}
+      <div className="letterbox letterbox-top">
+        <div className="cine-progress">
+          {SCENES.map((s, i) => (
+            <span key={s.id} className={i <= index ? 'on' : ''} />
+          ))}
+        </div>
+      </div>
+      <div className="letterbox letterbox-bottom">
+        <div className="cine-caption" key={`cap-${index}`}>
+          <div className="cine-kicker">{scene!.kicker}</div>
+          <div className="cine-text">{scene!.caption}</div>
+        </div>
       </div>
 
       {last ? (

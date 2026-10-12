@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { audio } from '../audio/engine';
 import { placementsFromGroups } from '../game/scoring';
 import type { MafiaPlayer, MafiaRole, MafiaState, Team, TeamId } from '../game/types';
@@ -37,6 +37,15 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
   const teams = state.teams;
   const m = state.mafia;
   const [now, setNow] = useState(Date.now());
+  const [revealAnim, setRevealAnim] = useState<{ name: string; role: MafiaRole; by: 'mafia' | 'vote'; variant: number } | null>(null);
+  const revealTimer = useRef<number | null>(null);
+
+  const showReveal = (name: string, role: MafiaRole, by: 'mafia' | 'vote'): void => {
+    setRevealAnim({ name, role, by, variant: Math.floor(Math.random() * 3) });
+    if (revealTimer.current) window.clearTimeout(revealTimer.current);
+    revealTimer.current = window.setTimeout(() => setRevealAnim(null), 4200);
+    window.setTimeout(() => audio.sfx(role === 'mafia' ? 'cheer' : role === 'politi' ? 'boo' : 'fail'), 700);
+  };
 
   const setM = (fn: (m: MafiaState) => MafiaState): void => update((s) => ({ ...s, mafia: s.mafia ? fn(s.mafia) : s.mafia }));
 
@@ -87,13 +96,21 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
       return;
     }
     audio.sfx(m.step === 'night-victim' ? 'gunshot' : 'gavel');
-    const known = m.players.find((p) => p.id === id)?.role;
-    if (known) setM((st) => applyDeath(st, id, known));
-    else setM((st) => ({ ...st, pendingReveal: id }));
+    const by: 'mafia' | 'vote' = m.step === 'night-victim' ? 'mafia' : 'vote';
+    const player = m.players.find((p) => p.id === id);
+    const mafiaMarked = alive.filter((p) => p.role === 'mafia').length >= Math.max(0, m.mafiaCount - deadMafia);
+    const known = player?.role ?? (mafiaMarked ? 'sivil' : undefined);
+    if (known) {
+      showReveal(player?.name ?? '', known, by);
+      setM((st) => applyDeath(st, id, known));
+    } else {
+      setM((st) => ({ ...st, pendingReveal: id }));
+    }
   };
 
   const reveal = (role: MafiaRole): void => {
-    audio.sfx(role === 'mafia' ? 'cheer' : role === 'politi' ? 'boo' : 'ding');
+    const p = m.players.find((x) => x.id === m.pendingReveal);
+    showReveal(p?.name ?? '', role, m.step === 'night-victim' ? 'mafia' : 'vote');
     setM((st) => applyDeath(st, st.pendingReveal!, role));
   };
 
@@ -213,6 +230,19 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
     </div>
   );
 
+  const revealOverlay = revealAnim && (
+    <div className={`reveal-overlay reveal-${revealAnim.role} reveal-v${revealAnim.variant}`} onClick={() => setRevealAnim(null)}>
+      <div className="reveal-flash" />
+      <div className="reveal-card-big">
+        <div className="reveal-by">{revealAnim.by === 'mafia' ? '🌙 Drept i natt' : '🗳️ Stemt ut av byen'}</div>
+        <div className="reveal-name-big">{revealAnim.name}</div>
+        <div className="reveal-role-emoji">{ROLE_EMOJI[revealAnim.role]}</div>
+        <div className="reveal-role-text">{revealAnim.role === 'mafia' ? 'VAR MAFIA!' : revealAnim.role === 'politi' ? 'VAR POLITI' : 'VAR SIVIL'}</div>
+        <div className="reveal-drink">🍻 5 slurker</div>
+      </div>
+    </div>
+  );
+
   if (m.pendingReveal) {
     const p = m.players.find((x) => x.id === m.pendingReveal);
     return (
@@ -231,6 +261,7 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
     );
   }
 
+  const body = (() => {
   switch (m.step) {
     case 'setup':
       return (
@@ -426,4 +457,12 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
       );
     }
   }
+  })();
+
+  return (
+    <>
+      {body}
+      {revealOverlay}
+    </>
+  );
 }

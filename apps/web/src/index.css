@@ -1713,10 +1713,20 @@ input[type='color'] {
   opacity: 0.6;
 }
 
+.cine-stage {
+  position: absolute;
+  top: 8vh;
+  bottom: 15vh;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  background: #000;
+}
+
 .cine-scene {
   position: absolute;
   inset: 0;
-  animation: kenburns 14s ease-in-out both;
+  animation: kenburns 8s ease-in-out both;
 }
 
 .cine-svg {
@@ -1726,11 +1736,11 @@ input[type='color'] {
 }
 
 .cine-enter {
-  animation: kenburns 14s ease-in-out both, cine-fade-in 1.6s ease both;
+  animation: kenburns 8s ease-in-out both, cine-fade-in 1s ease both;
 }
 
 .cine-exit {
-  animation: cine-fade-out 1.6s ease both;
+  animation: cine-fade-out 1s ease both;
   z-index: 1;
   pointer-events: none;
 }
@@ -1758,12 +1768,12 @@ input[type='color'] {
     transform: scale(1);
   }
   to {
-    transform: scale(1.07);
+    transform: scale(1.05);
   }
 }
 
 .scene-dawn {
-  animation: kenburns 14s ease-in-out both, cine-fade-in 1.6s ease both, unblur 4s ease-out both;
+  animation: kenburns 8s ease-in-out both, cine-fade-in 1s ease both, unblur 2.4s ease-out both;
 }
 
 @keyframes unblur {
@@ -1771,10 +1781,10 @@ input[type='color'] {
     filter: blur(14px) brightness(0.3);
   }
   35% {
-    filter: blur(8px) brightness(0.5);
+    filter: blur(6px) brightness(0.6);
   }
   50% {
-    filter: blur(10px) brightness(0.4);
+    filter: blur(9px) brightness(0.45);
   }
   100% {
     filter: blur(0) brightness(1);
@@ -1821,55 +1831,48 @@ input[type='color'] {
   position: absolute;
   left: 0;
   right: 0;
-  height: 7vh;
   background: #000;
   z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .letterbox-top {
   top: 0;
+  height: 8vh;
 }
 
 .letterbox-bottom {
   bottom: 0;
+  height: 15vh;
 }
 
 .cine-caption {
-  position: absolute;
-  left: 50%;
-  bottom: 12vh;
-  transform: translateX(-50%);
-  width: min(1100px, 90vw);
+  width: min(1200px, 92vw);
   text-align: center;
-  z-index: 4;
-  animation: caption-in 1.2s ease both;
-  animation-delay: 1.2s;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9), 0 0 2px #000;
+  animation: caption-in 0.7s ease both;
+  animation-delay: 0.5s;
 }
 
 .cine-kicker {
   text-transform: uppercase;
   letter-spacing: 0.35em;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #ffd86b;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .cine-text {
-  font-size: clamp(1.3rem, 2.6vw, 2.1rem);
+  font-size: clamp(1.1rem, 2.2vw, 1.8rem);
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.35;
   color: #fff;
 }
 
 .cine-progress {
-  position: absolute;
-  left: 50%;
-  bottom: 8.5vh;
-  transform: translateX(-50%);
   display: flex;
   gap: 8px;
-  z-index: 4;
 }
 
 .cine-progress span {
@@ -1886,7 +1889,7 @@ input[type='color'] {
 .cine-controls {
   position: absolute;
   right: 24px;
-  bottom: 9vh;
+  top: 1.5vh;
   display: flex;
   gap: 8px;
   z-index: 4;
@@ -1896,11 +1899,11 @@ input[type='color'] {
 .cine-cta {
   position: absolute;
   left: 50%;
-  bottom: 22vh;
+  bottom: 18vh;
   transform: translateX(-50%);
   z-index: 4;
   animation: pop-in 0.8s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-  animation-delay: 1.5s;
+  animation-delay: 1s;
 }
 
 /* scene animations (SVG) */
@@ -1920,20 +1923,20 @@ input[type='color'] {
 }
 
 .fade-in-7 {
-  animation: cine-fade-in 7s ease-in-out both;
+  animation: cine-fade-in 4s ease-in-out both;
 }
 
 .fade-out-7 {
-  animation: cine-fade-out 7s ease-in-out both;
+  animation: cine-fade-out 4s ease-in-out both;
 }
 
 .fade-in-late {
-  animation: cine-fade-in 1.5s ease both;
-  animation-delay: 1.2s;
+  animation: cine-fade-in 1.2s ease both;
+  animation-delay: 0.9s;
 }
 
 .sun-rise-g {
-  animation: sun-up 9s ease-out both;
+  animation: sun-up 5s ease-out both;
 }
 
 @keyframes sun-up {
@@ -2014,7 +2017,7 @@ input[type='color'] {
 
 .truck-g {
   animation: idle-v 0.22s ease-in-out infinite;
-  animation-delay: 4.8s;
+  animation-delay: 2.5s;
 }
 
 @keyframes idle-v {
@@ -2029,7 +2032,7 @@ input[type='color'] {
 
 .headlight {
   animation: headlight 0.6s ease both;
-  animation-delay: 5s;
+  animation-delay: 2.6s;
   opacity: 0;
 }
 
@@ -2050,8 +2053,8 @@ input[type='color'] {
 
 .smoke {
   opacity: 0;
-  animation: smoke 3s ease-out infinite;
-  animation-delay: 5.2s;
+  animation: smoke 2.4s ease-out infinite;
+  animation-delay: 2.7s;
   transform-box: fill-box;
   transform-origin: center;
 }
@@ -2099,7 +2102,7 @@ input[type='color'] {
 }
 
 .walk-in {
-  animation: walk-in 2.6s ease-out both;
+  animation: walk-in 1.4s ease-out both;
 }
 
 @keyframes walk-in {
@@ -2127,7 +2130,7 @@ input[type='color'] {
 
 .bubble-pop {
   animation: pop-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-  animation-delay: 2.2s;
+  animation-delay: 1.2s;
 }
 
 .dash-run {
@@ -2198,8 +2201,8 @@ input[type='color'] {
 }
 
 .sign-in-right {
-  animation: sign-slide 2.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
-  animation-delay: 5.5s;
+  animation: sign-slide 1.6s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  animation-delay: 2.8s;
 }
 
 @keyframes sign-slide {
@@ -2212,8 +2215,8 @@ input[type='color'] {
 }
 
 .plane-far {
-  animation: plane-far 12s linear both;
-  animation-delay: 1s;
+  animation: plane-far 6s linear both;
+  animation-delay: 0.5s;
 }
 
 @keyframes plane-far {
@@ -2226,7 +2229,7 @@ input[type='color'] {
 }
 
 .plane-g {
-  animation: plane-cruise 10s ease-in-out both;
+  animation: plane-cruise 5.5s ease-in-out both;
 }
 
 @keyframes plane-cruise {
@@ -2246,7 +2249,7 @@ input[type='color'] {
 
 .board-pop {
   animation: pop-in 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-  animation-delay: 0.8s;
+  animation-delay: 0.5s;
   transform-box: fill-box;
   transform-origin: center;
 }
@@ -2256,7 +2259,7 @@ input[type='color'] {
 }
 
 .train-in {
-  animation: train-in 3.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: train-in 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @keyframes train-in {
@@ -2284,11 +2287,11 @@ input[type='color'] {
 
 .phone-pop {
   animation: pop-in 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-  animation-delay: 4.5s;
+  animation-delay: 2.2s;
 }
 
 .phone-shake {
-  animation: phone-shake 0.25s linear 8.2s 6;
+  animation: phone-shake 0.25s linear 4.3s 6;
 }
 
 @keyframes phone-shake {
@@ -2309,19 +2312,19 @@ input[type='color'] {
 }
 
 .sig-3 {
-  animation-delay: 5.6s;
+  animation-delay: 2.8s;
 }
 
 .sig-2 {
-  animation-delay: 6.2s;
+  animation-delay: 3.1s;
 }
 
 .sig-1 {
-  animation-delay: 6.8s;
+  animation-delay: 3.4s;
 }
 
 .sig-0 {
-  animation-delay: 7.4s;
+  animation-delay: 3.7s;
 }
 
 @keyframes sig-off {
@@ -2333,13 +2336,13 @@ input[type='color'] {
 .no-signal-t {
   opacity: 0;
   animation: cine-fade-in 0.4s ease both;
-  animation-delay: 7.6s;
+  animation-delay: 3.9s;
 }
 
 .thought-t {
   opacity: 0;
   animation: cine-fade-in 0.6s ease both;
-  animation-delay: 8.6s;
+  animation-delay: 4.4s;
 }
 
 .rays {
@@ -2383,7 +2386,7 @@ input[type='color'] {
 
 .title-pop {
   animation: pop-in 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-  animation-delay: 0.4s;
+  animation-delay: 0.3s;
 }
 
 .six-side-actions {
@@ -2392,6 +2395,191 @@ input[type='color'] {
   right: 24px;
   display: flex;
   gap: 8px;
+}
+
+/* ---------- mafia reveal overlay ---------- */
+
+.reveal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  animation: reveal-bg-in 0.3s ease both, reveal-out 0.5s ease 3.7s both;
+}
+
+@keyframes reveal-bg-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes reveal-out {
+  to {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.reveal-mafia {
+  background: radial-gradient(circle at 50% 40%, #6a0b1f 0%, #1a0308 70%);
+}
+
+.reveal-politi {
+  background: radial-gradient(circle at 50% 40%, #0b3a8a 0%, #040a1f 70%);
+}
+
+.reveal-sivil {
+  background: radial-gradient(circle at 50% 40%, #4a4f5e 0%, #0b0d14 70%);
+}
+
+.reveal-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.reveal-mafia .reveal-flash {
+  background: radial-gradient(circle at 30% 30%, #000 0 14px, transparent 15px), radial-gradient(circle at 70% 65%, #000 0 18px, transparent 19px),
+    radial-gradient(circle at 55% 20%, #000 0 10px, transparent 11px);
+  animation: bullet-holes 0.2s steps(1) 0.1s both;
+  opacity: 0;
+}
+
+@keyframes bullet-holes {
+  to {
+    opacity: 0.8;
+  }
+}
+
+.reveal-politi .reveal-flash {
+  background: linear-gradient(90deg, rgba(255, 60, 80, 0.35) 0 50%, rgba(60, 120, 255, 0.35) 50% 100%);
+  animation: siren 0.3s steps(2) infinite;
+}
+
+@keyframes siren {
+  to {
+    filter: hue-rotate(180deg);
+  }
+}
+
+.reveal-sivil .reveal-flash {
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 255, 255, 0.12), transparent 60%);
+}
+
+.reveal-card-big {
+  position: relative;
+  text-align: center;
+  padding: 40px 70px;
+  border-radius: 28px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.reveal-v0 .reveal-card-big {
+  animation: card-flip-in 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.reveal-v1 .reveal-card-big {
+  animation: stamp-in 0.5s cubic-bezier(0.1, 1.2, 0.3, 1) 0.2s both;
+}
+
+.reveal-v2 .reveal-card-big {
+  animation: rise-in 0.9s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes card-flip-in {
+  from {
+    transform: perspective(1200px) rotateY(95deg) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: perspective(1200px) rotateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes stamp-in {
+  from {
+    transform: scale(3.2) rotate(-12deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(-3deg);
+    opacity: 1;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    transform: translateY(80vh);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.reveal-mafia .reveal-card-big {
+  border-color: #ff4d6d;
+}
+
+.reveal-politi .reveal-card-big {
+  border-color: #4da3ff;
+}
+
+.reveal-by {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.reveal-name-big {
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+  font-weight: 900;
+  margin: 8px 0;
+}
+
+.reveal-role-emoji {
+  font-size: 6rem;
+  line-height: 1;
+  animation: pop-in 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.6s both;
+}
+
+.reveal-role-text {
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  animation: pop-in 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.8s both;
+}
+
+.reveal-mafia .reveal-role-text {
+  color: #ff4d6d;
+  animation: pop-in 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.8s both, shake 0.3s linear 1.3s 3;
+}
+
+.reveal-politi .reveal-role-text {
+  color: #9fd3ff;
+}
+
+.reveal-sivil .reveal-role-text {
+  color: #d9dde6;
+}
+
+.reveal-drink {
+  margin-top: 14px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffd86b;
+  animation: caption-in 0.5s ease 1.4s both;
 }
 
 /* ---------- rule bullets, death banner, emoji movie ---------- */

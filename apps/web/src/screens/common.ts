@@ -26,7 +26,7 @@ export const RULE_BULLETS: Partial<Record<GameEvent['kind'], string[]>> = {
   ],
   emoji: [
     'Hvert lag får 2 filmer, forklart kun med emojis. Lagene bytter på.',
-    '30 sekunder per film. Si tittelen høyt – spill-lederen trykker riktig eller feil.',
+    '15 sekunder per film. Si tittelen høyt – spill-lederen trykker riktig eller feil.',
     'Flest riktige vinner. Ved likt antall vinner laget som brukte minst tid.',
   ],
 };

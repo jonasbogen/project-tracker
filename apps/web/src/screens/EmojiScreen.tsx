@@ -26,11 +26,10 @@ function initEmoji(): EmojiState {
 }
 
 export function EmojiScreen({ state, update, go, index }: ScreenProps & { index: number }) {
-  const event = state.events[index];
   const teams = state.teams;
   const e = state.emoji;
   const [now, setNow] = useState(Date.now());
-  const duration = event.durationSec || 30;
+  const duration = 15;
 
   const setE = (fn: (e: EmojiState) => EmojiState): void => update((s) => ({ ...s, emoji: s.emoji ? fn(s.emoji) : s.emoji }));
 

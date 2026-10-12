@@ -58,10 +58,10 @@ export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> =
     kind: 'emoji',
     title: 'Emoji Movie',
     rules:
-      'Filmer forklart kun med emojis. Hvert lag får to filmer og 30 sekunder på hver. Flest riktige vinner, raskeste tid avgjør ved likt.',
+      'Filmer forklart kun med emojis. Hvert lag får to filmer og 15 sekunder på hver. Flest riktige vinner, raskeste tid avgjør ved likt.',
     points: [10, 7, 5, 3],
     penalty: 0,
-    durationSec: 30,
+    durationSec: 15,
   },
   custom: {
     kind: 'custom',
