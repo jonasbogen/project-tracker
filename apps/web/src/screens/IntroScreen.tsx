@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { audio } from '../audio/engine';
-import { KIND_EMOJI, type ScreenProps } from './common';
+import type { ScreenProps } from './common';
 
 export function IntroScreen({ state, go }: ScreenProps) {
   useEffect(() => {
@@ -38,8 +38,8 @@ export function IntroScreen({ state, go }: ScreenProps) {
       <ol className="intro-timeline">
         {state.events.map((e, i) => (
           <li key={e.id} style={{ ['--i' as string]: i }}>
-            <span className="timeline-emoji">{KIND_EMOJI[e.kind]}</span>
-            <span>{e.title}</span>
+            <span className="timeline-emoji">❓</span>
+            <span>Hemmelig øvelse {i + 1}</span>
           </li>
         ))}
       </ol>
@@ -49,7 +49,7 @@ export function IntroScreen({ state, go }: ScreenProps) {
         data-primary
         onClick={() => {
           audio.sfx('fanfare');
-          go({ name: 'event-intro', index: 0 });
+          go({ name: 'journey' });
         }}
       >
         Kjør i gang! →

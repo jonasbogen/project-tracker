@@ -24,7 +24,12 @@ export type SfxName =
   | 'gavel'
   | 'boo'
   | 'fanfare'
-  | 'rocket';
+  | 'rocket'
+  | 'engine'
+  | 'bell'
+  | 'train'
+  | 'buzz'
+  | 'snore';
 
 const SEMITONES: Record<string, number> = {
   C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11,
@@ -613,6 +618,32 @@ class AudioEngine {
       case 'rocket':
         this.noise({ t, dur: 0.5, gain: 0.25, attack: 0.05, release: 0.2, filter: 'bandpass', freq: 200, freqEnd: 4000, q: 1.2, dest });
         this.tone({ t, dur: 0.5, freq: 120, glide: 900, type: 'sawtooth', lowpass: 1500, gain: 0.08, release: 0.1, dest });
+        break;
+      case 'engine':
+        this.tone({ t, dur: 2.5, freq: 45, glide: 70, type: 'sawtooth', lowpass: 200, gain: 0.2, attack: 0.4, release: 0.8, vibrato: { rate: 22, depth: 6 }, dest });
+        this.noise({ t, dur: 2.5, gain: 0.08, attack: 0.4, release: 0.8, filter: 'lowpass', freq: 300, dest });
+        break;
+      case 'bell':
+        for (const off of [0, 0.12]) {
+          this.tone({ t: t + off, dur: 0.05, freq: 2800, type: 'sine', gain: 0.1, release: 0.4, dest });
+          this.tone({ t: t + off, dur: 0.05, freq: 4200, type: 'sine', gain: 0.05, release: 0.3, dest });
+        }
+        break;
+      case 'train':
+        for (let i = 0; i < 8; i++) {
+          this.noise({ t: t + i * 0.22, dur: 0.03, gain: i % 2 ? 0.2 : 0.3, release: 0.06, filter: 'bandpass', freq: 700, q: 1.5, dest });
+        }
+        this.tone({ t: t + 0.3, dur: 0.6, freq: 440, type: 'sawtooth', lowpass: 1200, gain: 0.06, attack: 0.05, release: 0.2, dest });
+        this.tone({ t: t + 0.3, dur: 0.6, freq: 554, type: 'sawtooth', lowpass: 1200, gain: 0.06, attack: 0.05, release: 0.2, dest });
+        break;
+      case 'buzz':
+        for (const off of [0, 0.3, 0.6]) {
+          this.tone({ t: t + off, dur: 0.18, freq: 180, type: 'square', lowpass: 900, gain: 0.08, release: 0.03, dest });
+        }
+        break;
+      case 'snore':
+        this.noise({ t, dur: 0.9, gain: 0.12, attack: 0.3, release: 0.4, filter: 'lowpass', freq: 500, freqEnd: 250, q: 2, dest });
+        this.tone({ t, dur: 0.9, freq: 90, glide: 60, type: 'sawtooth', lowpass: 250, gain: 0.06, attack: 0.3, release: 0.4, vibrato: { rate: 18, depth: 8 }, dest });
         break;
     }
   }

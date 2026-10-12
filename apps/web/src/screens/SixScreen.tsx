@@ -7,9 +7,10 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
   const six = state.six ?? { finished: false };
   const [, setTick] = useState(0);
 
+  // While the hidden clock runs the host plays their own music, so the app stays silent.
   useEffect(() => {
     if (six.finished) audio.playMusic('alarm');
-    else if (six.startedAt) audio.playMusic('tension');
+    else if (six.startedAt) audio.stopMusic(0.3);
     else audio.playMusic('arena');
   }, [six.finished, six.startedAt]);
 
@@ -26,8 +27,11 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
   }, [six.startedAt, six.finished, event.durationSec, update]);
 
   const start = (): void => {
-    audio.sfx('rocket');
     update((s) => ({ ...s, six: { startedAt: Date.now(), finished: false } }));
+  };
+
+  const skipToAlarm = (): void => {
+    update((s) => ({ ...s, six: { startedAt: s.six?.startedAt ?? Date.now(), finished: true } }));
   };
 
   const abort = (): void => {
@@ -66,9 +70,14 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
         </div>
         <div className="six-running-text">Klokken går…</div>
         <div className="six-running-sub">Ingen får se tiden. Alarmen går når det er slutt.</div>
-        <button className="btn btn-ghost six-abort" onClick={abort}>
-          Avbryt
-        </button>
+        <div className="six-side-actions">
+          <button className="btn btn-ghost" onClick={skipToAlarm}>
+            Hopp til alarmen
+          </button>
+          <button className="btn btn-ghost six-abort" onClick={abort}>
+            Avbryt
+          </button>
+        </div>
       </div>
     );
   }

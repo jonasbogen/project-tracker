@@ -7,6 +7,7 @@ import { CustomScreen } from './screens/CustomScreen';
 import { EventIntroScreen } from './screens/EventIntroScreen';
 import { HorseScreen } from './screens/HorseScreen';
 import { IntroScreen } from './screens/IntroScreen';
+import { JourneyScreen } from './screens/JourneyScreen';
 import { MafiaScreen } from './screens/MafiaScreen';
 import { PodiumScreen } from './screens/PodiumScreen';
 import { PointsScreen } from './screens/PointsScreen';
@@ -88,6 +89,9 @@ export default function App() {
       break;
     case 'intro':
       screen = <IntroScreen {...props} />;
+      break;
+    case 'journey':
+      screen = <JourneyScreen {...props} />;
       break;
     case 'event-intro':
       screen = <EventIntroScreen {...props} index={phase.index} />;
