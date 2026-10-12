@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { audio, type MusicName } from '../audio/engine';
-import { KIND_EMOJI, type ScreenProps } from './common';
+import { KIND_EMOJI, RULE_BULLETS, type ScreenProps } from './common';
 
 const INTRO_MUSIC: Record<string, MusicName> = {
   six: 'arena',
   horse: 'gallop',
   mafia: 'noir',
+  emoji: 'arena',
   custom: 'arena',
 };
 
@@ -19,7 +20,7 @@ export function EventIntroScreen({ state, update, go, index }: ScreenProps & { i
 
   const start = (): void => {
     audio.sfx('click');
-    update((s) => ({ ...s, pending: undefined, six: undefined, mafia: undefined }));
+    update((s) => ({ ...s, pending: undefined, six: undefined, mafia: undefined, emoji: undefined }));
     go({ name: 'event-play', index });
   };
 
@@ -30,7 +31,17 @@ export function EventIntroScreen({ state, update, go, index }: ScreenProps & { i
       </div>
       <div className="event-intro-emoji">{KIND_EMOJI[event.kind]}</div>
       <h1 className="event-intro-title">{event.title}</h1>
-      <p className="event-intro-rules">{event.rules}</p>
+      {RULE_BULLETS[event.kind] ? (
+        <ul className="event-intro-bullets">
+          {RULE_BULLETS[event.kind]!.map((line, i) => (
+            <li key={i} style={{ ['--i' as string]: i }}>
+              {line}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="event-intro-rules">{event.rules}</p>
+      )}
 
       <div className="points-chips">
         {event.kind === 'six' ? (

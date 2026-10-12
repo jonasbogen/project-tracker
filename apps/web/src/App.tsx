@@ -4,6 +4,7 @@ import { totals } from './game/scoring';
 import { useGameStore } from './game/store';
 import type { Phase } from './game/types';
 import { CustomScreen } from './screens/CustomScreen';
+import { EmojiScreen } from './screens/EmojiScreen';
 import { EventIntroScreen } from './screens/EventIntroScreen';
 import { HorseScreen } from './screens/HorseScreen';
 import { IntroScreen } from './screens/IntroScreen';
@@ -106,6 +107,9 @@ export default function App() {
           break;
         case 'mafia':
           screen = <MafiaScreen {...props} index={phase.index} />;
+          break;
+        case 'emoji':
+          screen = <EmojiScreen {...props} index={phase.index} />;
           break;
         default:
           screen = <CustomScreen {...props} index={phase.index} />;

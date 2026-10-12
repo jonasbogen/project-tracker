@@ -205,6 +205,7 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
           <button className="btn btn-ghost" onClick={() => addEvent('six')}>⏱️ 6 minutter</button>
           <button className="btn btn-ghost" onClick={() => addEvent('horse')}>🐎 Hesteveddeløp</button>
           <button className="btn btn-ghost" onClick={() => addEvent('mafia')}>🕵️ Mafia og politi</button>
+          <button className="btn btn-ghost" onClick={() => addEvent('emoji')}>🎬 Emoji Movie</button>
         </div>
       </section>
 

@@ -54,6 +54,15 @@ export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> =
     penalty: 0,
     durationSec: 0,
   },
+  emoji: {
+    kind: 'emoji',
+    title: 'Emoji Movie',
+    rules:
+      'Filmer forklart kun med emojis. Hvert lag får to filmer og 30 sekunder på hver. Flest riktige vinner, raskeste tid avgjør ved likt.',
+    points: [10, 7, 5, 3],
+    penalty: 0,
+    durationSec: 30,
+  },
   custom: {
     kind: 'custom',
     title: 'Egen øvelse',
@@ -72,7 +81,7 @@ export function initialState(): GameState {
   return {
     version: 1,
     teams: defaultTeams(),
-    events: [newEvent('six'), newEvent('horse'), newEvent('mafia')],
+    events: [newEvent('six'), newEvent('horse'), newEvent('mafia'), newEvent('emoji')],
     results: [],
     phase: { name: 'setup' },
     settings: { muted: false, volume: 0.7, discussSec: 180 },

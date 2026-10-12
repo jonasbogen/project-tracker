@@ -8,7 +8,7 @@ export interface Team {
   players: string[];
 }
 
-export type EventKind = 'six' | 'horse' | 'mafia' | 'custom';
+export type EventKind = 'six' | 'horse' | 'mafia' | 'emoji' | 'custom';
 
 export interface GameEvent {
   id: string;
@@ -77,6 +77,21 @@ export interface MafiaState {
   pendingReveal?: string;
   discussStartedAt?: number;
   winner?: 'mafia' | 'byen';
+  lastDeath?: { name: string; role: MafiaRole };
+}
+
+export interface EmojiAnswer {
+  card: number;
+  teamId: TeamId;
+  correct: boolean;
+  seconds: number;
+}
+
+export interface EmojiState {
+  current: number;
+  answers: EmojiAnswer[];
+  startedAt?: number;
+  revealed: boolean;
 }
 
 export interface SixState {
@@ -94,6 +109,7 @@ export interface GameState {
   pending?: { placements?: Placements; loser?: TeamId; note?: string };
   six?: SixState;
   mafia?: MafiaState;
+  emoji?: EmojiState;
   settings: { muted: boolean; volume: number; discussSec: number };
   updatedAt: number;
 }

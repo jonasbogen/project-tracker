@@ -73,26 +73,59 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
     return { ...st, step: 'night-sleep', round: st.round + 1 };
   };
 
+  const applyDeath = (st: MafiaState, id: string, role: MafiaRole): MafiaState => {
+    const by: 'mafia' | 'vote' = st.step === 'night-victim' ? 'mafia' : 'vote';
+    const players = st.players.map((p) => (p.id === id ? { ...p, alive: false, role, diedRound: st.round, diedBy: by } : p));
+    const name = st.players.find((p) => p.id === id)?.name ?? '';
+    return afterDeath({ ...st, players, pendingReveal: undefined, lastDeath: { name, role } });
+  };
+
   const kill = (id: string | null): void => {
     if (!id) {
       audio.sfx('click');
-      setM((st) => afterDeath(st));
+      setM((st) => afterDeath({ ...st, lastDeath: undefined }));
       return;
     }
     audio.sfx(m.step === 'night-victim' ? 'gunshot' : 'gavel');
-    setM((st) => ({ ...st, pendingReveal: id }));
+    const known = m.players.find((p) => p.id === id)?.role;
+    if (known) setM((st) => applyDeath(st, id, known));
+    else setM((st) => ({ ...st, pendingReveal: id }));
   };
 
   const reveal = (role: MafiaRole): void => {
     audio.sfx(role === 'mafia' ? 'cheer' : role === 'politi' ? 'boo' : 'ding');
-    setM((st) => {
-      const by = st.step === 'night-victim' ? 'mafia' : 'vote';
-      const players = st.players.map((p) =>
-        p.id === st.pendingReveal ? { ...p, alive: false, role, diedRound: st.round, diedBy: by as 'mafia' | 'vote' } : p,
-      );
-      return afterDeath({ ...st, players, pendingReveal: undefined });
-    });
+    setM((st) => applyDeath(st, st.pendingReveal!, role));
   };
+
+  const toggleRole = (id: string, role: MafiaRole): void => {
+    audio.sfx('tick');
+    setM((st) => ({ ...st, players: st.players.map((p) => (p.id === id ? { ...p, role: p.role === role ? undefined : role } : p)) }));
+  };
+
+  const BACK: Partial<Record<MafiaState['step'], MafiaState['step']>> = {
+    'night-mafia': 'night-sleep',
+    'night-police': 'night-mafia',
+    'night-victim': m.policeCount - deadPolice > 0 ? 'night-police' : 'night-mafia',
+    'day-discuss': 'night-victim',
+    'day-vote': 'day-discuss',
+  };
+  const backButton = BACK[m.step] && (
+    <button
+      className="btn btn-ghost btn-sm mafia-back"
+      onClick={() => {
+        audio.sfx('back');
+        setM((st) => ({ ...st, step: BACK[st.step]! }));
+      }}
+    >
+      ← Tilbake
+    </button>
+  );
+
+  const deathBanner = m.lastDeath && (
+    <div className="death-banner">
+      💀 {m.lastDeath.name} ({ROLE_EMOJI[m.lastDeath.role]} {ROLE_LABEL[m.lastDeath.role]}) er ute – <strong>5 slurker!</strong> 🍻
+    </div>
+  );
 
   const finish = (): void => {
     audio.sfx('sting');
@@ -131,7 +164,7 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
     go({ name: 'event-rank', index });
   };
 
-  const playerList = (onPick: (id: string) => void, pool: MafiaPlayer[] = alive) => (
+  const playerList = (onPick: (id: string) => void, pool: MafiaPlayer[] = alive, markRole?: MafiaRole) => (
     <div className="mafia-teams">
       {teams.map((t) => (
         <div key={t.id} className="mafia-team" style={{ ['--team' as string]: t.color }}>
@@ -141,16 +174,21 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
           <div className="mafia-players">
             {pool
               .filter((p) => p.teamId === t.id)
-              .map((p) => (
-                <button key={p.id} className="mafia-player" onClick={() => onPick(p.id)}>
-                  {p.name}
-                </button>
-              ))}
+              .map((p) => {
+                const marked = !!markRole && p.role === markRole;
+                return (
+                  <button key={p.id} className={`mafia-player ${marked ? `role-${markRole}` : ''}`} onClick={() => onPick(p.id)}>
+                    {marked ? `${ROLE_EMOJI[markRole]} ` : ''}
+                    {p.name}
+                  </button>
+                );
+              })}
           </div>
         </div>
       ))}
     </div>
   );
+  const markedCount = (role: MafiaRole): number => alive.filter((p) => p.role === role).length;
 
   const graveyard = dead.length > 0 && (
     <div className="graveyard">
@@ -179,7 +217,8 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
     const p = m.players.find((x) => x.id === m.pendingReveal);
     return (
       <div className="screen mafia mafia-night">
-        <h1 className="play-title">{p?.name} er ute av spillet</h1>
+        <h1 className="play-title">💀 {p?.name} er ute av spillet</h1>
+        <p className="play-sub big">5 slurker! 🍻</p>
         <p className="play-sub">Vis kortet! Hvilken rolle hadde {p?.name}?</p>
         <div className="role-buttons">
           {(['mafia', 'politi', 'sivil'] as MafiaRole[]).map((r) => (
@@ -244,6 +283,7 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
         <div className="screen mafia mafia-night">
           <div className="moon" />
           <h1 className="play-title">🌙 Natt {m.round}</h1>
+          {deathBanner}
           <p className="play-sub big">Byen sover. Alle lukker øynene.</p>
           {status}
           <button className="btn btn-primary btn-xl" data-primary onClick={() => { audio.sfx('click'); setM((st) => ({ ...st, step: 'night-mafia' })); }}>
@@ -255,8 +295,13 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
     case 'night-mafia':
       return (
         <div className="screen mafia mafia-night mafia-mafia">
+          {backButton}
           <h1 className="play-title">🔫 Mafiaen våkner</h1>
           <p className="play-sub big">Mafiaen åpner øynene, ser på hverandre og peker i stillhet på den de vil fjerne.</p>
+          <p className="play-sub">
+            {m.round === 1 ? 'Trykk på de som er mafia for å markere dem.' : 'Markerte mafia:'} ({markedCount('mafia')} av {Math.max(0, m.mafiaCount - deadMafia)})
+          </p>
+          {playerList((id) => toggleRole(id, 'mafia'), alive, 'mafia')}
           {status}
           <button className="btn btn-primary btn-xl" data-primary onClick={() => { audio.sfx('click'); setM((st) => ({ ...st, step: m.policeCount - deadPolice > 0 ? 'night-police' : 'night-victim' })); }}>
             Mafiaen sover →
@@ -267,8 +312,13 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
     case 'night-police':
       return (
         <div className="screen mafia mafia-night mafia-police">
+          {backButton}
           <h1 className="play-title">👮 Politiet våkner</h1>
           <p className="play-sub big">Politiet peker på én person. Spill-lederen svarer stille med tommel opp (mafia) eller ned.</p>
+          <p className="play-sub">
+            {m.round === 1 ? 'Trykk på de som er politi for å markere dem.' : 'Markert politi:'} ({markedCount('politi')} av {Math.max(0, m.policeCount - deadPolice)})
+          </p>
+          {playerList((id) => toggleRole(id, 'politi'), alive, 'politi')}
           {status}
           <button className="btn btn-primary btn-xl" data-primary onClick={() => { audio.sfx('click'); setM((st) => ({ ...st, step: 'night-victim' })); }}>
             Politiet sover →
@@ -279,6 +329,7 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
     case 'night-victim':
       return (
         <div className="screen mafia mafia-dawn">
+          {backButton}
           <h1 className="play-title">🌅 Byen våkner</h1>
           <p className="play-sub">Hvem ble tatt av mafiaen i natt? Trykk på navnet.</p>
           {playerList(kill)}
@@ -294,7 +345,9 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
       const over = left <= 0;
       return (
         <div className="screen mafia mafia-day">
+          {backButton}
           <h1 className="play-title">☀️ Dag {m.round} – byen diskuterer</h1>
+          {deathBanner}
           <div className={`countdown ${over ? 'countdown-over' : left < 30 ? 'countdown-warn' : ''}`}>{over ? 'Tiden er ute' : formatClock(left)}</div>
           <p className="play-sub">Hvem er mafia? Diskuter, anklag og forsvar dere.</p>
           {status}
@@ -314,6 +367,7 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
     case 'day-vote':
       return (
         <div className="screen mafia mafia-day">
+          {backButton}
           <h1 className="play-title">🗳️ Avstemning</h1>
           <p className="play-sub">Hvem stemmer byen ut? Trykk på navnet. Flertallet bestemmer.</p>
           {playerList(kill)}
@@ -331,8 +385,10 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
       return (
         <div className={`screen mafia ${m.winner === 'byen' ? 'mafia-day' : 'mafia-night'}`}>
           <h1 className="play-title">{m.winner === 'byen' ? '🎉 Byen vant!' : '🔫 Mafiaen vant!'}</h1>
+          {deathBanner}
           <p className="play-sub">
-            Alle som lever viser kortet sitt. Trykk på navnet for å sette rollen ({remainingMafia} mafia og {remainingPolice} politi gjenstår å avsløre).
+            Alle som lever viser kortet sitt. Sjekk at rollene stemmer – trykk på et navn for å endre
+            {remainingMafia + remainingPolice > 0 ? ` (${remainingMafia} mafia og ${remainingPolice} politi gjenstår å avsløre)` : ''}.
           </p>
           <div className="mafia-teams">
             {teams.map((t) => (
