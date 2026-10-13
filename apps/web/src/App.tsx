@@ -134,7 +134,7 @@ export default function App() {
       screen = (
         <>
           <SetupScreen {...props} onReset={() => reset(false)} />
-          <FinaleScreen {...props} />
+          <FinaleScreen {...props} onPlayAgain={() => reset(true)} />
         </>
       );
       break;
@@ -178,14 +178,7 @@ export default function App() {
       screen = <PointsScreen key={event!.id} {...props} index={phase.index} />;
       break;
     case 'podium':
-      screen = (
-        <PodiumScreen
-          {...props}
-          onPlayAgain={() => {
-            reset(true);
-          }}
-        />
-      );
+      screen = <PodiumScreen {...props} />;
       break;
   }
 

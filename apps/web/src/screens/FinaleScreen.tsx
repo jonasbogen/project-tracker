@@ -15,12 +15,12 @@ const PHOTOS = ['/finale-1.jpg', '/finale-2.jpg', '/finale-3.jpg'];
 const PHOTO_MS = 6500;
 
 /**
- * The finale after the podium's "Videre": the setup page is back underneath,
+ * The finale right after the hood sequence: the setup page is back underneath,
  * covered by the podium and the results, with the photos rolling behind as a
  * slow cavalcade and the finale song playing on top of everything. Leaving the
  * screen stops the song and hands the sound back to the backing track.
  */
-export function FinaleScreen({ state, update, go }: ScreenProps) {
+export function FinaleScreen({ state, update, go, onPlayAgain }: ScreenProps & { onPlayAgain: () => void }) {
   const rows = standings(state.teams, state.results);
   const first = rows.filter((r) => r.rank === 1);
   const rest = rows.filter((r) => r.rank > 3);
@@ -76,6 +76,9 @@ export function FinaleScreen({ state, update, go }: ScreenProps) {
               onClick={() => update((s) => ({ ...s, settings: { ...s.settings, muted: !s.settings.muted } }))}
             >
               {muted ? '🔇' : '🔊'}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={onPlayAgain}>
+              Spill igjen med samme lag
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => go({ name: 'setup' })}>
               Tilbake til hovedsiden
