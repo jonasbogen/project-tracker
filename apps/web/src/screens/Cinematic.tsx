@@ -663,7 +663,7 @@ export function Cinematic({ onDone }: { onDone: () => void }) {
       >
         <div className="grain" />
         <div className="cine-gate-inner">
-          <div className="cine-gate-kicker">Spillkveld presenterer</div>
+          <div className="cine-gate-kicker">Sosial Grunnmur presenterer</div>
           <h1 className="cine-gate-title">Veien hjem</h1>
           <div className="cine-gate-sub">En kortfilm om en lørdag i oktober</div>
           <button className="btn btn-primary btn-xl" data-primary onClick={(e) => { e.stopPropagation(); audio.ensure(); audio.sfx('click'); goTo(0); }}>

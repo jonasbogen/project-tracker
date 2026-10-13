@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { TeamMark } from '../components/TeamMark';
+import { iconSrc, TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
 import { Portal } from '../components/Portal';
@@ -232,7 +232,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
                   </button>
                   {fixLink && (
                     <button type="button" className="netfail-link" data-primary onClick={playFix}>
-                      Trykk her for å løse problemet (ikke phishing)
+                      Trykk her for å løse problemet
                     </button>
                   )}
                 </div>
@@ -310,11 +310,19 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
             {Array.from({ length: SLOTS }).map((_, i) => {
               const n = i + 1;
               const owner = ownerOfSlot(n);
-              const [tx, ty] = polar(i * SLOT_DEG + SLOT_DEG / 2, R * 0.8);
+              const mid = i * SLOT_DEG + SLOT_DEG / 2;
+              const [tx, ty] = polar(mid, R * 0.82);
+              const [ix, iy] = polar(mid, R * 0.56);
+              const ICON = 46;
               const isHit = landed && w.result === n;
               return (
                 <g key={n} className={`wheel-slot ${owner ? 'wheel-slot-taken' : ''} ${isHit ? 'wheel-slot-hit' : ''}`} onClick={() => pick(n)}>
-                  <path d={sectorPath(i, R)} fill={owner ? owner.color : SECTOR_COLORS[i % SECTOR_COLORS.length]} stroke="#f6d77a" strokeWidth={1.5} />
+                  <path
+                    d={sectorPath(i, R)}
+                    fill={owner ? owner.color : SECTOR_COLORS[i % SECTOR_COLORS.length]}
+                    stroke={owner ? '#fff' : '#f6d77a'}
+                    strokeWidth={owner ? 3 : 1.5}
+                  />
                   <text
                     x={tx}
                     y={ty}
@@ -323,10 +331,22 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
                     fontWeight={900}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    transform={`rotate(${i * SLOT_DEG + SLOT_DEG / 2} ${tx} ${ty})`}
+                    transform={`rotate(${mid} ${tx} ${ty})`}
                   >
                     {n}
                   </text>
+                  {owner && (
+                    // The team's icon on its own sector, so the picks are visible on the wheel itself.
+                    <image
+                      href={owner.icon ? iconSrc(owner.icon) : undefined}
+                      x={ix - ICON / 2}
+                      y={iy - ICON / 2}
+                      width={ICON}
+                      height={ICON}
+                      transform={`rotate(${mid} ${ix} ${iy})`}
+                      style={{ pointerEvents: 'none' }}
+                    />
+                  )}
                 </g>
               );
             })}

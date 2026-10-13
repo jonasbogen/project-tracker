@@ -56,5 +56,18 @@ export function formatClock(sec: number): string {
 }
 
 export function nextAfterPoints(state: GameState, index: number): Phase {
+  if (state.singleEvent) return { name: 'setup' };
   return index + 1 < state.events.length ? { name: 'event-intro', index: index + 1 } : { name: 'podium' };
+}
+
+/** Events already scored, in programme order. */
+export function playedEvents(state: GameState): Set<string> {
+  return new Set(state.results.map((r) => r.eventId));
+}
+
+/** Where "Fortsett spillet" goes: the first unplayed event, or the podium when all are done. */
+export function resumePhase(state: GameState): Phase {
+  const done = playedEvents(state);
+  const index = state.events.findIndex((e) => !done.has(e.id));
+  return index >= 0 ? { name: 'event-intro', index } : { name: 'podium' };
 }

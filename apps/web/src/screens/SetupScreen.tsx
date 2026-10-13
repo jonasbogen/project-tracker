@@ -2,15 +2,21 @@ import { useEffect } from 'react';
 import { audio } from '../audio/engine';
 import { newEvent, TEAM_PALETTE } from '../game/store';
 import type { GameEvent } from '../game/types';
-import { KIND_EMOJI, type ScreenProps } from './common';
+import { KIND_EMOJI, playedEvents, resumePhase, type ScreenProps } from './common';
 import { iconSrc, TEAM_ICONS, TeamMark } from '../components/TeamMark';
+
+/** The TV runs full screen from the moment a game starts. Must be called from a click. */
+function enterFullscreen(): void {
+  if (!document.fullscreenElement) void document.documentElement.requestFullscreen().catch(() => undefined);
+}
 
 export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onReset: () => void }) {
   useEffect(() => {
     audio.stopMusic();
   }, []);
 
-  const played = state.results.length;
+  const done = playedEvents(state);
+  const played = state.events.filter((e) => done.has(e.id)).length;
   const hasProgress = played > 0;
 
   const setTeam = (id: string, patch: Partial<(typeof state.teams)[number]>): void =>
@@ -36,11 +42,17 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
 
   const start = (): void => {
     audio.sfx('whoosh');
-    if (hasProgress) {
-      go(played < state.events.length ? { name: 'event-intro', index: played } : { name: 'podium' });
-    } else {
-      go({ name: 'intro' });
-    }
+    enterFullscreen();
+    update((s) => ({ ...s, singleEvent: undefined }));
+    go(hasProgress ? resumePhase(state) : { name: 'intro' });
+  };
+
+  /** Play one event on its own; its points screen comes back here. */
+  const startSingle = (index: number): void => {
+    audio.sfx('whoosh');
+    enterFullscreen();
+    update((s) => ({ ...s, singleEvent: s.events[index].id }));
+    go({ name: 'event-intro', index });
   };
 
   return (
@@ -126,7 +138,7 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
         <h2>Øvelser (i rekkefølge)</h2>
         <div className="event-list">
           {state.events.map((ev, i) => (
-            <div key={ev.id} className={`event-card ${i < played ? 'event-card-done' : ''}`}>
+            <div key={ev.id} className={`event-card ${done.has(ev.id) ? 'event-card-done' : ''}`}>
               <div className="event-card-head">
                 <span className="event-index">{i + 1}</span>
                 <span className="event-kind">{KIND_EMOJI[ev.kind]}</span>
@@ -136,15 +148,18 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
                   onChange={(e) => setEvent(ev.id, { title: e.target.value })}
                   aria-label="Navn på øvelse"
                 />
-                {i < played && <span className="pill pill-done">Spilt</span>}
+                {done.has(ev.id) && <span className="pill pill-done">Spilt</span>}
                 <div className="event-actions">
+                  <button className="btn btn-primary btn-sm event-play" onClick={() => startSingle(i)} title="Start bare denne øvelsen">
+                    ▶ Spill denne
+                  </button>
                   <button className="btn btn-ghost btn-sm" onClick={() => moveEvent(i, -1)} disabled={i === 0} title="Flytt opp">
                     ↑
                   </button>
                   <button className="btn btn-ghost btn-sm" onClick={() => moveEvent(i, 1)} disabled={i === state.events.length - 1} title="Flytt ned">
                     ↓
                   </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => removeEvent(ev.id)} disabled={i < played} title="Fjern">
+                  <button className="btn btn-ghost btn-sm" onClick={() => removeEvent(ev.id)} disabled={done.has(ev.id)} title="Fjern">
                     ✕
                   </button>
                 </div>

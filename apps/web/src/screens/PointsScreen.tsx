@@ -5,7 +5,7 @@ import { Confetti } from '../components/Confetti';
 import { Scoreboard } from '../components/Scoreboard';
 import { nextAfterPoints, type ScreenProps } from './common';
 
-export function PointsScreen({ state, go, index }: ScreenProps & { index: number }) {
+export function PointsScreen({ state, update, go, index }: ScreenProps & { index: number }) {
   const event = state.events[index];
   const result = state.results.find((r) => r.eventId === event.id);
   const teams = state.teams;
@@ -115,10 +115,12 @@ export function PointsScreen({ state, go, index }: ScreenProps & { index: number
         disabled={!done}
         onClick={() => {
           audio.sfx('whoosh');
-          go(nextAfterPoints(state, index));
+          const next = nextAfterPoints(state, index);
+          if (state.singleEvent) update((s) => ({ ...s, singleEvent: undefined }));
+          go(next);
         }}
       >
-        {index + 1 < state.events.length ? 'Neste øvelse →' : 'Til premieutdeling →'}
+        {state.singleEvent ? 'Til oppsett →' : index + 1 < state.events.length ? 'Neste øvelse →' : 'Til premieutdeling →'}
       </button>
     </div>
   );

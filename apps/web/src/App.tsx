@@ -162,7 +162,7 @@ export default function App() {
     <div className={`app phase-${phase.name} kind-${event?.kind ?? 'none'} ${!ready ? 'app-loading' : ''}`}>
       <header className="topbar">
         <div className="topbar-left">
-          <span className="topbar-brand">🏆 Spillkveld</span>
+          <span className="topbar-brand">Sosial Grunnmur</span>
           {event && (
             <span className="topbar-progress">
               Øvelse {eventIndex + 1}/{state.events.length} · {event.title}

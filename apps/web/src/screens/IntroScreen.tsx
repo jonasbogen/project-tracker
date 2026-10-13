@@ -16,9 +16,9 @@ export function IntroScreen({ state, go }: ScreenProps) {
         ))}
       </div>
       <h1 className="intro-title">
-        {'SPILLKVELD'.split('').map((ch, i) => (
+        {'SOSIAL GRUNNMUR'.split('').map((ch, i) => (
           <span key={i} className="intro-letter" style={{ ['--i' as string]: i }}>
-            {ch}
+            {ch === ' ' ? ' ' : ch}
           </span>
         ))}
       </h1>

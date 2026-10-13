@@ -2103,6 +2103,107 @@ input[type='color'] {
 
 /* ---------- podium ---------- */
 
+/* "Under panseret": a terminal window that works its way to the winners. */
+.hood {
+  justify-content: center;
+}
+
+.hood-panel {
+  width: min(900px, 100%);
+  border-radius: 16px;
+  background: #0a0d12;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  text-align: left;
+  animation: pop-in 0.4s ease both;
+}
+
+.hood-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #161b24;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hood-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ff5f57;
+}
+
+.hood-dot:nth-child(2) {
+  background: #febc2e;
+}
+
+.hood-dot:nth-child(3) {
+  background: #28c840;
+}
+
+.hood-title {
+  margin-left: 10px;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, Menlo, monospace;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.hood-log {
+  margin: 0;
+  padding: 22px 26px 10px;
+  min-height: 280px;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, Menlo, monospace;
+  font-size: clamp(1rem, 1.8vw, 1.45rem);
+  line-height: 1.6;
+  color: #7cf2b0;
+  white-space: pre-wrap;
+}
+
+.hood-line {
+  display: inline;
+  animation: hood-line-in 0.25s ease both;
+}
+
+@keyframes hood-line-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hood-cursor {
+  animation: hood-blink 0.8s steps(2) infinite;
+}
+
+.hood-bar {
+  height: 10px;
+  margin: 0 26px 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.hood-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #3ddc84, #ffc53d);
+  transition: width 0.5s ease;
+}
+
+@keyframes hood-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.event-play {
+  white-space: nowrap;
+}
+
 .podium-title {
   font-size: clamp(2rem, 6vw, 4rem);
   font-weight: 900;

@@ -178,6 +178,8 @@ export interface GameState {
   events: GameEvent[];
   results: EventResult[];
   phase: Phase;
+  /** Set when one event was started on its own from the setup page; its points screen returns to setup. */
+  singleEvent?: string;
   /** Pending (auto-suggested) placements for the current event. */
   pending?: { placements?: Placements; loser?: TeamId; note?: string };
   six?: SixState;
