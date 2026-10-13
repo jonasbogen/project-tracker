@@ -5,7 +5,7 @@ import { buildResult } from '../game/scoring';
 import type { WheelState } from '../game/types';
 import type { ScreenProps } from './common';
 
-const SLOTS = 25;
+const SLOTS = 12;
 const SLOT_DEG = 360 / SLOTS;
 const SPIN_MS = 6500;
 const R = 240;
@@ -207,7 +207,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
                     x={tx}
                     y={ty}
                     fill={owner ? '#111' : '#fff'}
-                    fontSize={owner ? 22 : 20}
+                    fontSize={owner ? 34 : 32}
                     fontWeight={900}
                     textAnchor="middle"
                     dominantBaseline="central"

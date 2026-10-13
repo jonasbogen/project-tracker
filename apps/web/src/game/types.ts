@@ -88,7 +88,7 @@ export interface EmojiAnswer {
 }
 
 export interface WheelState {
-  /** Slot number (1..25) chosen per team. */
+  /** Slot number (1..12) chosen per team. */
   picks: Record<TeamId, number>;
   /** Winning slot once spun. */
   result?: number;

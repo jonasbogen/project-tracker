@@ -38,7 +38,7 @@ export const RULE_BULLETS: Partial<Record<GameEvent['kind'], string[]>> = {
     'Første hest over målstreken vinner.',
   ],
   wheel: [
-    'Hjulet har 25 felt. Lagene velger ett felt hver, i rekkefølge. Ett lag per felt.',
+    'Hjulet har 12 felt. Lagene velger ett felt hver, i rekkefølge. Ett lag per felt.',
     'Hjulet snurres én gang. Stopper det på feltet ditt, får laget 5 poeng.',
     'Bare én runde, så går vi videre.',
   ],

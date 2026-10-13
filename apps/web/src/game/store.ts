@@ -67,7 +67,7 @@ export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> =
     kind: 'wheel',
     title: 'Wheel of Fortune',
     rules:
-      'Hjulet har 25 felt. Hvert lag velger sitt felt (ett lag per felt). Hjulet snurres én gang. Treffer hjulet feltet ditt, får laget 5 poeng.',
+      'Hjulet har 12 felt. Hvert lag velger sitt felt (ett lag per felt). Hjulet snurres én gang. Treffer hjulet feltet ditt, får laget 5 poeng.',
     points: [5, 0, 0, 0],
     penalty: 0,
     durationSec: 0,
@@ -120,6 +120,10 @@ function migrate(s: GameState): GameState {
   const emoji = events.find((e) => e.kind === 'emoji');
   if (emoji && emoji.durationSec === 15) {
     Object.assign(emoji, { durationSec: 10, rules: EVENT_TEMPLATES.emoji.rules });
+  }
+  const wheel = events.find((e) => e.kind === 'wheel');
+  if (wheel && wheel.rules.includes('25 felt')) {
+    Object.assign(wheel, { rules: EVENT_TEMPLATES.wheel.rules });
   }
   return events.length === s.events.length ? s : { ...s, events };
 }
