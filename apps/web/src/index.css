@@ -306,11 +306,6 @@ p {
   width: 100%;
 }
 
-.setup-header h1 {
-  font-size: 2.2rem;
-  font-weight: 900;
-}
-
 .setup-section h2 {
   font-size: 1.2rem;
   text-transform: uppercase;
@@ -484,6 +479,270 @@ input[type='color'] {
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
+}
+
+/* ---------- setup, Intility look ----------
+   The setup page borrows intility.com: deep navy canvas, a floating pill top
+   bar with round white icon buttons, a tall hero with a light-weight headline
+   over a soft blurred photo, and white rounded cards. Game screens keep their
+   own show look; everything here is scoped to .phase-setup / .setup. */
+
+.app.phase-setup {
+  --navy: #0e1726;
+  --navy-2: #132033;
+  --ink: #0e1726;
+  --ink-soft: #4b5668;
+  --paper: #ffffff;
+  --paper-2: #f1f4f8;
+  --line: #dfe5ee;
+  background: linear-gradient(180deg, #0b1424 0%, #101c2e 100%);
+  font-family: 'DM Sans', 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, system-ui, sans-serif;
+}
+
+.phase-setup .topbar {
+  position: sticky;
+  top: 14px;
+  margin: 14px 20px 0;
+  padding: 10px 12px 10px 26px;
+  border-radius: 999px;
+  background: var(--navy);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: none;
+}
+
+.phase-setup .topbar-brand {
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.phase-setup .topbar-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.phase-setup .topbar-right {
+  gap: 10px;
+}
+
+.phase-setup .topbar .btn-icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.phase-setup .topbar .btn-icon:hover:not(:disabled) {
+  background: #e6ebf2;
+}
+
+.phase-setup .volume {
+  accent-color: #fff;
+}
+
+.phase-setup .setup {
+  gap: 36px;
+  padding: 24px 20px 64px;
+  max-width: 1400px;
+}
+
+.setup-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: clamp(60px, 9vw, 120px) clamp(28px, 4vw, 56px) clamp(40px, 5vw, 64px);
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 22px;
+  background: var(--navy-2);
+}
+
+.setup-hero-bg {
+  position: absolute;
+  inset: -25%;
+  background:
+    radial-gradient(640px 520px at 62% 28%, rgba(150, 175, 205, 0.5), transparent 62%),
+    radial-gradient(520px 420px at 18% 85%, rgba(70, 100, 140, 0.55), transparent 62%),
+    radial-gradient(360px 300px at 86% 82%, rgba(215, 150, 90, 0.28), transparent 60%),
+    radial-gradient(300px 900px at 56% 10%, rgba(20, 30, 50, 0.9), transparent 70%),
+    linear-gradient(160deg, #22334b, #0b1424);
+  filter: blur(34px) saturate(0.85);
+  transform: rotate(-6deg);
+}
+
+.setup-hero-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 18, 32, 0.25) 0%, rgba(10, 18, 32, 0.55) 60%, rgba(10, 18, 32, 0.9) 100%);
+}
+
+.setup-hero > * {
+  position: relative;
+}
+
+.setup-hero-title {
+  font-size: clamp(2.8rem, 7vw, 6rem);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  color: #fff;
+  text-align: left;
+}
+
+.setup-hero-lead {
+  font-size: clamp(1.05rem, 1.5vw, 1.4rem);
+  line-height: 1.5;
+  max-width: 1150px;
+  color: rgba(255, 255, 255, 0.92);
+  text-align: left;
+}
+
+.setup-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.setup-hero-meta {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+}
+
+.setup .setup-section h2 {
+  font-size: 1.7rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.setup .btn {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.setup .btn-primary {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.setup .btn-primary:hover:not(:disabled) {
+  background: #e9eef5;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+}
+
+.setup .btn-xl {
+  font-size: 1.2rem;
+  padding: 16px 30px;
+}
+
+.setup .btn-ghost {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.setup .btn-danger {
+  border-radius: 999px;
+}
+
+.setup .team-card,
+.setup .event-card {
+  background: var(--paper);
+  color: var(--ink);
+  border: none;
+  border-radius: 24px;
+  padding: 18px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.setup .team-card {
+  border-top: 6px solid var(--team);
+}
+
+.setup .team-card .emoji-select,
+.setup .team-name-input,
+.setup .players-input,
+.setup .event-rules-input,
+.setup .event-points input {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 14px;
+}
+
+.setup .team-card .emoji-select {
+  border-radius: 12px;
+}
+
+.setup .team-name-input {
+  font-weight: 600;
+}
+
+.setup .players-input::placeholder,
+.setup .event-rules-input::placeholder {
+  color: #8a94a6;
+}
+
+.setup .event-index {
+  background: var(--ink);
+  color: #fff;
+}
+
+.setup .event-title-input {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+}
+
+.setup .event-points {
+  color: var(--ink-soft);
+}
+
+.setup .event-card .btn-ghost {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.setup .event-card .btn-ghost:hover:not(:disabled) {
+  background: #e3e9f1;
+}
+
+.setup .pill-done {
+  background: #e3f7ec;
+  color: #0b6b3a;
+}
+
+.setup .event-card-done {
+  opacity: 0.7;
+}
+
+.setup .add-row .muted {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 700px) {
+  .phase-setup .topbar {
+    margin: 10px 10px 0;
+    padding: 8px 10px 8px 16px;
+  }
+
+  .setup-hero {
+    min-height: 360px;
+  }
 }
 
 /* ---------- intro ---------- */

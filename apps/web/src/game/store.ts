@@ -99,7 +99,7 @@ export function initialState(): GameState {
   return {
     version: 1,
     teams: defaultTeams(),
-    events: [newEvent('six'), newEvent('horse'), newEvent('mafia'), newEvent('emoji'), newEvent('wheel'), newEvent('deal')],
+    events: [newEvent('horse'), newEvent('six'), newEvent('mafia'), newEvent('emoji'), newEvent('wheel'), newEvent('deal')],
     results: [],
     phase: { name: 'setup' },
     settings: { muted: false, volume: 0.7, discussSec: 180 },
@@ -125,7 +125,13 @@ function migrate(s: GameState): GameState {
   if (wheel && wheel.rules.includes('25 felt')) {
     Object.assign(wheel, { rules: EVENT_TEMPLATES.wheel.rules });
   }
-  return events.length === s.events.length ? s : { ...s, events };
+  // The night now opens with the horse race; older saves had 6 minutter first.
+  let reordered = false;
+  if (events[0]?.kind === 'six' && events[1]?.kind === 'horse') {
+    [events[0], events[1]] = [events[1], events[0]];
+    reordered = true;
+  }
+  return events.length === s.events.length && !reordered ? s : { ...s, events };
 }
 
 function loadLocal(): GameState | null {

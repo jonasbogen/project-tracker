@@ -46,12 +46,27 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
 
   return (
     <div className="screen setup">
-      <header className="setup-header">
-        <h1>
-          <span className="title-emoji">🏆</span> Spillkveld – oppsett
+      <section className="setup-hero">
+        <div className="setup-hero-bg" aria-hidden="true" />
+        <div className="setup-hero-fade" aria-hidden="true" />
+        <h1 className="setup-hero-title">
+          Spillkveld begynner
+          <br />
+          med gode lag
         </h1>
-        <p className="muted">Fyll inn lagene, juster øvelsene og trykk start. Alt lagres automatisk.</p>
-      </header>
+        <p className="setup-hero-lead">
+          Den virkelige utfordringen er ikke de enkelte øvelsene, men å få laget til å fungere sammen. Fyll inn lagene, juster rekkefølgen på
+          øvelsene og trykk start. Alt lagres automatisk.
+        </p>
+        <div className="setup-hero-actions">
+          <button className="btn btn-primary btn-xl" data-primary onClick={start} disabled={state.events.length === 0}>
+            {hasProgress ? 'Fortsett spillet →' : 'Start spillet →'}
+          </button>
+          <span className="setup-hero-meta">
+            {state.teams.length} lag · {state.events.length} øvelser{hasProgress ? ` · ${played} spilt` : ''}
+          </span>
+        </div>
+      </section>
 
       <section className="setup-section">
         <h2>Lag</h2>
@@ -212,8 +227,8 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
         <div className="add-row">
           <span className="muted">Legg til:</span>
           <button className="btn btn-ghost" onClick={() => addEvent('custom')}>🎯 Egen øvelse</button>
-          <button className="btn btn-ghost" onClick={() => addEvent('six')}>⏱️ 6 minutter</button>
           <button className="btn btn-ghost" onClick={() => addEvent('horse')}>🐎 Hesteveddeløp</button>
+          <button className="btn btn-ghost" onClick={() => addEvent('six')}>⏱️ 6 minutter</button>
           <button className="btn btn-ghost" onClick={() => addEvent('mafia')}>🕵️ Mafia og politi</button>
           <button className="btn btn-ghost" onClick={() => addEvent('emoji')}>🎬 Emoji Movie</button>
           <button className="btn btn-ghost" onClick={() => addEvent('wheel')}>🎡 Wheel of Fortune</button>
@@ -230,7 +245,7 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
         >
           Nullstill alt
         </button>
-        <button className="btn btn-primary btn-xl" data-primary onClick={start} disabled={state.events.length === 0}>
+        <button className="btn btn-primary btn-xl" onClick={start} disabled={state.events.length === 0}>
           {hasProgress ? 'Fortsett spillet →' : 'Start spillet →'}
         </button>
       </footer>
