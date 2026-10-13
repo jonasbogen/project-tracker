@@ -41,6 +41,8 @@ export interface EventResult {
 
 export type Phase =
   | { name: 'setup' }
+  /** The Teams video that plays right after "Start spillet", before the intro. */
+  | { name: 'start-video' }
   | { name: 'intro' }
   | { name: 'event-intro'; index: number }
   | { name: 'event-play'; index: number }

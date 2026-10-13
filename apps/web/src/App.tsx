@@ -19,6 +19,7 @@ import { PointsScreen } from './screens/PointsScreen';
 import { RankScreen } from './screens/RankScreen';
 import { SetupScreen } from './screens/SetupScreen';
 import { SixScreen } from './screens/SixScreen';
+import { StartVideoScreen } from './screens/StartVideoScreen';
 
 const FILM_SEEN_KEY = 'spillkveld-film-seen';
 
@@ -109,6 +110,9 @@ export default function App() {
   switch (phase.name) {
     case 'setup':
       screen = <SetupScreen {...props} onReset={() => reset(false)} />;
+      break;
+    case 'start-video':
+      screen = <StartVideoScreen {...props} />;
       break;
     case 'intro':
       screen = <IntroScreen {...props} />;

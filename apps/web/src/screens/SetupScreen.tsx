@@ -44,7 +44,7 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
     audio.sfx('whoosh');
     enterFullscreen();
     update((s) => ({ ...s, singleEvent: undefined }));
-    go(hasProgress ? resumePhase(state) : { name: 'intro' });
+    go(hasProgress ? resumePhase(state) : { name: 'start-video' });
   };
 
   /** Play one event on its own; its points screen comes back here. */
