@@ -120,7 +120,7 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
               <textarea
                 className="players-input"
                 rows={4}
-                placeholder={'Spillere, én per linje\n(brukes i Mafia og politi)'}
+                placeholder="Spillere, én per linje"
                 value={team.players.join('\n')}
                 onChange={(e) =>
                   setTeam(team.id, {
