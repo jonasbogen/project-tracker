@@ -68,7 +68,7 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
         </div>
       </section>
 
-      <section className="setup-section">
+      <section className="setup-section setup-band setup-band-lag">
         <h2>Lag</h2>
         <div className="team-grid">
           {state.teams.map((team, i) => (
@@ -123,7 +123,7 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
         </div>
       </section>
 
-      <section className="setup-section">
+      <section className="setup-section setup-band setup-band-ovelser">
         <h2>Øvelser (i rekkefølge)</h2>
         <div className="event-list">
           {state.events.map((ev, i) => (
