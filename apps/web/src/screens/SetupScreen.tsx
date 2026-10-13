@@ -165,6 +165,16 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
                       min
                     </label>
                   </>
+                ) : ev.kind === 'wheel' ? (
+                  <label>
+                    Treff gir
+                    <input
+                      type="number"
+                      value={ev.points[0] ?? 0}
+                      onChange={(e) => setEvent(ev.id, { points: [Number(e.target.value), 0, 0, 0] })}
+                    />
+                    poeng
+                  </label>
                 ) : (
                   [0, 1, 2, 3].map((p) => (
                     <label key={p}>
@@ -206,6 +216,8 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
           <button className="btn btn-ghost" onClick={() => addEvent('horse')}>🐎 Hesteveddeløp</button>
           <button className="btn btn-ghost" onClick={() => addEvent('mafia')}>🕵️ Mafia og politi</button>
           <button className="btn btn-ghost" onClick={() => addEvent('emoji')}>🎬 Emoji Movie</button>
+          <button className="btn btn-ghost" onClick={() => addEvent('wheel')}>🎡 Wheel of Fortune</button>
+          <button className="btn btn-ghost" onClick={() => addEvent('deal')}>💼 Deal or Drink</button>
         </div>
       </section>
 

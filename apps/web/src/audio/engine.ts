@@ -7,7 +7,9 @@ export type MusicName =
   | 'victory'
   | 'drumroll'
   | 'alarm'
-  | 'cinema';
+  | 'cinema'
+  | 'casino'
+  | 'heartbeat';
 
 export type SfxName =
   | 'click'
@@ -30,7 +32,13 @@ export type SfxName =
   | 'bell'
   | 'train'
   | 'buzz'
-  | 'snore';
+  | 'snore'
+  | 'ring'
+  | 'lock'
+  | 'stamp'
+  | 'crash'
+  | 'riser'
+  | 'coin';
 
 const SEMITONES: Record<string, number> = {
   C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11,
@@ -470,6 +478,57 @@ class AudioEngine {
       },
     },
 
+    casino: {
+      bpm: 118,
+      beats: 4,
+      bar: (t0, bar, b, dest) => {
+        const prog = [
+          { walk: ['C2', 'E2', 'G2', 'A2'], chord: ['E3', 'G3', 'Bb3', 'D4'] },
+          { walk: ['F2', 'A2', 'C3', 'Eb3'], chord: ['A3', 'C4', 'Eb4', 'G4'] },
+          { walk: ['C2', 'E2', 'G2', 'Bb2'], chord: ['E3', 'G3', 'Bb3', 'D4'] },
+          { walk: ['G2', 'B2', 'D3', 'F3'], chord: ['B3', 'D4', 'F4', 'A4'] },
+        ][bar % 4];
+        const swing = 0.66;
+        for (let i = 0; i < 4; i++) {
+          const t = t0 + i * b;
+          this.tone({ t, dur: b * 0.8, freq: freq(prog.walk[i]), type: 'triangle', lowpass: 600, gain: 0.26, attack: 0.01, release: 0.08, dest });
+          this.hat(t, dest, false, 0.07);
+          this.hat(t + b * swing, dest, i === 3, 0.05);
+          this.kick(t, dest, 0.45, 50);
+          if (i % 2 === 1) this.snare(t, dest, 0.18);
+        }
+        this.chord(t0 + b * swing, b * 0.3, prog.chord, dest, { type: 'sawtooth', lowpass: 1800, gain: 0.05, attack: 0.01, release: 0.15 });
+        this.chord(t0 + b * 2 + b * swing, b * 0.3, prog.chord, dest, { type: 'sawtooth', lowpass: 1800, gain: 0.05, attack: 0.01, release: 0.15 });
+        const stabs: [number, string, number][][] = [
+          [[0, 'G5', 0.4], [1, 'E5', 0.4], [1 + swing, 'G5', 0.3], [2, 'Bb5', 0.8], [3, 'A5', 0.6]],
+          [[0.5, 'C6', 0.4], [1, 'Bb5', 0.3], [1 + swing, 'G5', 0.3], [2, 'E5', 1.2]],
+          [[0, 'G5', 0.3], [0.5, 'G5', 0.3], [1, 'Bb5', 0.5], [2, 'D6', 0.5], [2 + swing, 'C6', 0.4], [3, 'Bb5', 0.6]],
+          [[0, 'A5', 0.4], [1, 'F5', 0.4], [2, 'D5', 0.4], [2 + swing, 'F5', 0.3], [3, 'G5', 0.9]],
+        ];
+        for (const [off, note, len] of stabs[bar % 4]) {
+          this.tone({ t: t0 + off * b, dur: len * b, freq: freq(note), type: 'sawtooth', lowpass: 2600, q: 1.5, gain: 0.06, attack: 0.02, release: 0.12, vibrato: { rate: 5.5, depth: 3 }, dest });
+        }
+        if (bar % 8 === 7) this.crash(t0 + b * 3.5, dest, 0.12);
+      },
+    },
+
+    heartbeat: {
+      bpm: 64,
+      beats: 1,
+      bar: (t0, bar, b, dest) => {
+        this.kick(t0, dest, 0.8, 40);
+        this.kick(t0 + b * 0.28, dest, 0.55, 36);
+        this.tone({ t: t0, dur: b, freq: freq('A1'), type: 'sine', gain: 0.12, attack: 0.3, release: 0.4, dest });
+        if (bar % 4 === 0) {
+          this.tone({ t: t0, dur: b * 4, freq: freq('A1'), type: 'sawtooth', lowpass: 120, gain: 0.1, attack: 1, release: 1, detune: 5, dest });
+        }
+        if (bar % 3 === 1) {
+          const n = ['E5', 'Eb5', 'B4', 'F5'][Math.floor(Math.random() * 4)];
+          this.tone({ t: t0 + Math.random() * b * 0.5, dur: 1.2, freq: freq(n), type: 'sine', gain: 0.03, attack: 0.02, release: 1, dest });
+        }
+      },
+    },
+
     alarm: {
       bpm: 120,
       beats: 2,
@@ -672,6 +731,41 @@ class AudioEngine {
       case 'snore':
         this.noise({ t, dur: 0.9, gain: 0.12, attack: 0.3, release: 0.4, filter: 'lowpass', freq: 500, freqEnd: 250, q: 2, dest });
         this.tone({ t, dur: 0.9, freq: 90, glide: 60, type: 'sawtooth', lowpass: 250, gain: 0.06, attack: 0.3, release: 0.4, vibrato: { rate: 18, depth: 8 }, dest });
+        break;
+      case 'ring':
+        // Old-fashioned telephone: two bursts of a fast trill.
+        for (const off of [0, 1.0]) {
+          for (let i = 0; i < 12; i++) {
+            const tt = t + off + i * 0.05;
+            this.tone({ t: tt, dur: 0.025, freq: i % 2 ? 1450 : 1180, type: 'square', lowpass: 3200, gain: 0.07, attack: 0.003, release: 0.02, dest });
+          }
+        }
+        break;
+      case 'lock':
+        this.noise({ t, dur: 0.02, gain: 0.5, release: 0.05, filter: 'highpass', freq: 3000, dest });
+        this.tone({ t, dur: 0.03, freq: 2200, glide: 900, type: 'square', gain: 0.1, release: 0.05, dest });
+        this.noise({ t: t + 0.13, dur: 0.03, gain: 0.5, release: 0.08, filter: 'bandpass', freq: 1200, q: 2, dest });
+        this.tone({ t: t + 0.13, dur: 0.05, freq: 320, glide: 120, type: 'sine', gain: 0.3, release: 0.12, dest });
+        break;
+      case 'stamp':
+        this.noise({ t, dur: 0.03, gain: 0.8, release: 0.25, filter: 'lowpass', freq: 700, dest });
+        this.tone({ t, dur: 0.08, freq: 140, glide: 40, type: 'sine', gain: 0.7, release: 0.2, dest });
+        this.noise({ t: t + 0.01, dur: 0.02, gain: 0.3, release: 0.05, filter: 'highpass', freq: 4000, dest });
+        break;
+      case 'crash':
+        this.noise({ t, dur: 0.08, gain: 0.8, release: 0.6, filter: 'lowpass', freq: 500, dest });
+        this.tone({ t, dur: 0.3, freq: 80, glide: 25, type: 'sawtooth', lowpass: 300, gain: 0.5, release: 0.5, dest });
+        for (const n of ['C2', 'F#2', 'C3']) {
+          this.tone({ t: t + 0.05, dur: 1.4, freq: freq(n), type: 'sawtooth', lowpass: 700, gain: 0.07, attack: 0.02, release: 0.8, vibrato: { rate: 6, depth: 4 }, dest });
+        }
+        break;
+      case 'riser':
+        this.noise({ t, dur: 2.6, gain: 0.12, attack: 2.2, release: 0.3, filter: 'bandpass', freq: 200, freqEnd: 3800, q: 1.3, dest });
+        this.tone({ t, dur: 2.6, freq: 110, glide: 880, type: 'sawtooth', lowpass: 1600, gain: 0.05, attack: 1.5, release: 0.2, dest });
+        break;
+      case 'coin':
+        this.tone({ t, dur: 0.06, freq: 1975, type: 'square', gain: 0.07, release: 0.04, dest });
+        this.tone({ t: t + 0.07, dur: 0.25, freq: 2637, type: 'square', gain: 0.07, release: 0.25, dest });
         break;
     }
   }

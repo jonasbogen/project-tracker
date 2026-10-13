@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { audio } from '../audio/engine';
 import { placementsFromGroups } from '../game/scoring';
 import type { EmojiState, TeamId } from '../game/types';
-import { formatClock, type ScreenProps } from './common';
+import type { ScreenProps } from './common';
 
 interface Card {
   title: string;
@@ -21,6 +21,8 @@ const CARDS: Card[] = [
   { title: 'Forrest Gump', emojis: '🏃‍♂️🍫🪶🏓🦐', hint: 'Livet er som en eske sjokolade' },
 ];
 
+const DURATION = 10;
+
 function initEmoji(): EmojiState {
   return { current: 0, answers: [], revealed: false };
 }
@@ -29,7 +31,6 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
   const teams = state.teams;
   const e = state.emoji;
   const [now, setNow] = useState(Date.now());
-  const duration = 15;
 
   const setE = (fn: (e: EmojiState) => EmojiState): void => update((s) => ({ ...s, emoji: s.emoji ? fn(s.emoji) : s.emoji }));
 
@@ -39,18 +40,24 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
   }, [e, update]);
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 200);
+    const id = window.setInterval(() => setNow(Date.now()), 100);
     return () => window.clearInterval(id);
   }, []);
 
   const elapsed = e?.startedAt ? (now - e.startedAt) / 1000 : 0;
-  const timeLeft = Math.max(0, duration - elapsed);
+  const timeLeft = Math.max(0, DURATION - elapsed);
   const timeUp = !!e?.startedAt && timeLeft <= 0;
+  const secondsLeft = Math.ceil(timeLeft);
 
   useEffect(() => {
     if (timeUp && !e?.revealed) audio.sfx('buzz');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeUp]);
+
+  useEffect(() => {
+    if (e?.startedAt && !timeUp && secondsLeft <= 3 && secondsLeft > 0) audio.sfx('tick');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft]);
 
   if (!e) return null;
 
@@ -61,11 +68,10 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
 
   const answer = (correct: boolean): void => {
     audio.sfx(correct ? 'ding' : 'fail');
-    const seconds = Math.min(duration, Math.round(elapsed * 10) / 10);
     setE((st) => ({
       ...st,
       revealed: true,
-      answers: [...st.answers.filter((a) => a.card !== st.current), { card: st.current, teamId: team.id, correct, seconds }],
+      answers: [...st.answers.filter((a) => a.card !== st.current), { card: st.current, teamId: team.id, correct }],
     }));
   };
 
@@ -76,27 +82,24 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
 
   const summary = teams.map((t) => {
     const mine = e.answers.filter((a) => a.teamId === t.id);
-    const correct = mine.filter((a) => a.correct).length;
-    const time = mine.filter((a) => a.correct).reduce((sum, a) => sum + a.seconds, 0);
-    return { team: t, correct, time };
+    return { team: t, correct: mine.filter((a) => a.correct).length, total: mine.length };
   });
 
   const finish = (): void => {
     audio.sfx('sting');
-    const sorted = [...summary].sort((a, b) => b.correct - a.correct || a.time - b.time);
+    const sorted = [...summary].sort((a, b) => b.correct - a.correct);
     const groups: TeamId[][] = [];
-    let prev: string | null = null;
+    let prev: number | null = null;
     for (const s of sorted) {
-      const key = `${s.correct}-${s.correct > 0 ? s.time : 0}`;
-      if (prev !== null && key === prev) groups[groups.length - 1].push(s.team.id);
+      if (prev !== null && s.correct === prev) groups[groups.length - 1].push(s.team.id);
       else groups.push([s.team.id]);
-      prev = key;
+      prev = s.correct;
     }
     update((s) => ({
       ...s,
       pending: {
         placements: placementsFromGroups(groups),
-        note: `Riktige svar (tid brukt): ${sorted.map((s) => `${s.team.emoji} ${s.team.name} ${s.correct} (${Math.round(s.time)}s)`).join(' · ')}. Juster om nødvendig.`,
+        note: `Riktige svar: ${sorted.map((s) => `${s.team.emoji} ${s.team.name} ${s.correct}`).join(' · ')}. Likt antall deler plassen. Juster om nødvendig.`,
       },
     }));
     go({ name: 'event-rank', index });
@@ -112,8 +115,16 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
               <span>
                 {s.team.emoji} {s.team.name}
               </span>
-              <strong>{s.correct} riktige</strong>
-              <span className="muted">{Math.round(s.time)} s</span>
+              <strong>
+                {s.correct} av {s.total} riktige
+              </strong>
+              <span className="emoji-dots">
+                {e.answers
+                  .filter((a) => a.teamId === s.team.id)
+                  .map((a) => (
+                    <span key={a.card}>{a.correct ? '✅' : '❌'}</span>
+                  ))}
+              </span>
             </div>
           ))}
         </div>
@@ -138,6 +149,7 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
           <div className="emoji-card emoji-card-hidden">
             <span>🎬</span>
           </div>
+          <p className="play-sub">10 sekunder fra filmen vises. Bare riktig eller feil teller.</p>
           <button
             className="btn btn-primary btn-xl"
             data-primary
@@ -151,8 +163,8 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
         </>
       ) : (
         <>
-          <div className={`countdown countdown-small ${timeUp ? 'countdown-over' : timeLeft < 10 ? 'countdown-warn' : ''}`}>
-            {answered ? '✔' : timeUp ? 'Tiden er ute' : formatClock(timeLeft)}
+          <div className={`countdown countdown-small ${timeUp ? 'countdown-over' : secondsLeft <= 3 ? 'countdown-warn' : ''}`}>
+            {answered ? (e.answers.find((a) => a.card === e.current)?.correct ? '✅' : '❌') : timeUp ? 'Tiden er ute' : secondsLeft}
           </div>
           <div className="emoji-card">{card.emojis}</div>
           {e.revealed && (

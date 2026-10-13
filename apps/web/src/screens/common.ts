@@ -11,6 +11,8 @@ export const KIND_EMOJI: Record<GameEvent['kind'], string> = {
   horse: '🐎',
   mafia: '🕵️',
   emoji: '🎬',
+  wheel: '🎡',
+  deal: '💼',
   custom: '🎯',
 };
 
@@ -26,8 +28,25 @@ export const RULE_BULLETS: Partial<Record<GameEvent['kind'], string[]>> = {
   ],
   emoji: [
     'Hvert lag får 2 filmer, forklart kun med emojis. Lagene bytter på.',
-    '15 sekunder per film. Si tittelen høyt – spill-lederen trykker riktig eller feil.',
-    'Flest riktige vinner. Ved likt antall vinner laget som brukte minst tid.',
+    '10 sekunder per film. Si tittelen høyt – spill-lederen trykker riktig eller feil.',
+    'Bare riktig eller feil teller, ikke tiden. Flest riktige vinner, likt antall deler plassen.',
+  ],
+  horse: [
+    'Hvert lag velger sin egen hest: spar, hjerter, ruter eller kløver. Bare ett lag per hest.',
+    'Kort fra bunken bestemmer hvilken hest som rykker fram.',
+    'Når alle hestene har passert et sidekort, snus det, og den fargen må rygge ett steg.',
+    'Første hest over målstreken vinner.',
+  ],
+  wheel: [
+    'Hjulet har 25 felt. Lagene velger ett felt hver, i rekkefølge. Ett lag per felt.',
+    'Hjulet snurres én gang. Stopper det på feltet ditt, får laget 5 poeng.',
+    'Bare én runde, så går vi videre.',
+  ],
+  deal: [
+    '20 kofferter med verdier fra 10 til 2500. Hvert lag velger én koffert som sin egen.',
+    'Fire runder: hvert lag åpner én koffert per runde. Lav verdi = del ut slurker. Høy verdi = laget drikker.',
+    'Etter hver runde ringer Banken med et tilbud til hvert lag: DEAL eller NO DEAL.',
+    'Til slutt åpnes alle lagenes egne kofferter. Lagene rangeres etter hvor mye de sitter igjen med.',
   ],
 };
 

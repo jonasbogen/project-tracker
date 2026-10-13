@@ -4,7 +4,9 @@ import { totals } from './game/scoring';
 import { useGameStore } from './game/store';
 import type { Phase } from './game/types';
 import { CustomScreen } from './screens/CustomScreen';
+import { DealScreen } from './screens/DealScreen';
 import { EmojiScreen } from './screens/EmojiScreen';
+import { WheelScreen } from './screens/WheelScreen';
 import { EventIntroScreen } from './screens/EventIntroScreen';
 import { HorseScreen } from './screens/HorseScreen';
 import { IntroScreen } from './screens/IntroScreen';
@@ -122,6 +124,12 @@ export default function App() {
         case 'emoji':
           screen = <EmojiScreen {...props} index={phase.index} />;
           break;
+        case 'wheel':
+          screen = <WheelScreen {...props} index={phase.index} />;
+          break;
+        case 'deal':
+          screen = <DealScreen {...props} index={phase.index} />;
+          break;
         default:
           screen = <CustomScreen {...props} index={phase.index} />;
       }
@@ -145,7 +153,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app phase-${phase.name} ${!ready ? 'app-loading' : ''}`}>
+    <div className={`app phase-${phase.name} kind-${event?.kind ?? 'none'} ${!ready ? 'app-loading' : ''}`}>
       <header className="topbar">
         <div className="topbar-left">
           <span className="topbar-brand">🏆 Spillkveld</span>

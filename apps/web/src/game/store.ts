@@ -40,7 +40,7 @@ export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> =
     kind: 'horse',
     title: 'Hesteveddeløpet',
     rules:
-      'Hvert lag trekker en hest. Kort fra bunken bestemmer hvem som rykker fram. Passerer alle hestene et sidekort, snus det, og den hesten må rygge. Første hest i mål vinner.',
+      'Hvert lag velger sin hest (én hest per lag). Kort fra bunken bestemmer hvem som rykker fram. Passerer alle hestene et sidekort, snus det, og den hesten må rygge. Første hest i mål vinner.',
     points: [6, 4, 2, 1],
     penalty: 0,
     durationSec: 0,
@@ -58,10 +58,28 @@ export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> =
     kind: 'emoji',
     title: 'Emoji Movie',
     rules:
-      'Filmer forklart kun med emojis. Hvert lag får to filmer og 15 sekunder på hver. Flest riktige vinner, raskeste tid avgjør ved likt.',
+      'Filmer forklart kun med emojis. Hvert lag får to filmer og 10 sekunder på hver. Bare riktig eller feil teller. Flest riktige vinner.',
     points: [10, 7, 5, 3],
     penalty: 0,
-    durationSec: 15,
+    durationSec: 10,
+  },
+  wheel: {
+    kind: 'wheel',
+    title: 'Wheel of Fortune',
+    rules:
+      'Hjulet har 25 felt. Hvert lag velger sitt felt (ett lag per felt). Hjulet snurres én gang. Treffer hjulet feltet ditt, får laget 5 poeng.',
+    points: [5, 0, 0, 0],
+    penalty: 0,
+    durationSec: 0,
+  },
+  deal: {
+    kind: 'deal',
+    title: 'Deal or Drink',
+    rules:
+      'Ta pengene. Behold kofferten. Eller ta en slurk. 20 kofferter, fire lag, og en bank som ringer etter hver runde. Lagene rangeres etter hvor mye de sitter igjen med.',
+    points: [10, 7, 5, 3],
+    penalty: 0,
+    durationSec: 0,
   },
   custom: {
     kind: 'custom',
@@ -81,7 +99,7 @@ export function initialState(): GameState {
   return {
     version: 1,
     teams: defaultTeams(),
-    events: [newEvent('six'), newEvent('horse'), newEvent('mafia'), newEvent('emoji')],
+    events: [newEvent('six'), newEvent('horse'), newEvent('mafia'), newEvent('emoji'), newEvent('wheel'), newEvent('deal')],
     results: [],
     phase: { name: 'setup' },
     settings: { muted: false, volume: 0.7, discussSec: 180 },
@@ -89,12 +107,29 @@ export function initialState(): GameState {
   };
 }
 
+/**
+ * Older saved games only know the first four events. As long as nothing has
+ * been played yet, add the newer events so the night has the full programme.
+ */
+function migrate(s: GameState): GameState {
+  if (s.results.length > 0) return s;
+  const events = [...s.events];
+  for (const kind of ['wheel', 'deal'] as const) {
+    if (!events.some((e) => e.kind === kind)) events.push(newEvent(kind));
+  }
+  const emoji = events.find((e) => e.kind === 'emoji');
+  if (emoji && emoji.durationSec === 15) {
+    Object.assign(emoji, { durationSec: 10, rules: EVENT_TEMPLATES.emoji.rules });
+  }
+  return events.length === s.events.length ? s : { ...s, events };
+}
+
 function loadLocal(): GameState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as GameState;
-    return parsed.version === 1 ? parsed : null;
+    return parsed.version === 1 ? migrate(parsed) : null;
   } catch {
     return null;
   }
@@ -105,7 +140,7 @@ async function loadRemote(): Promise<GameState | null> {
     const res = await fetch('/api/state');
     if (!res.ok) return null;
     const body = (await res.json()) as { data: GameState | null };
-    return body.data && body.data.version === 1 ? body.data : null;
+    return body.data && body.data.version === 1 ? migrate(body.data) : null;
   } catch {
     return null;
   }

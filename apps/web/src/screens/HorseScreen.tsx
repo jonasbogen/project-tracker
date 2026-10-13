@@ -7,6 +7,7 @@ import type { ScreenProps } from './common';
 
 type Suit = '♠' | '♥' | '♦' | '♣';
 const SUITS: Suit[] = ['♠', '♥', '♦', '♣'];
+const SUIT_NAME: Record<Suit, string> = { '♠': 'Spar', '♥': 'Hjerter', '♦': 'Ruter', '♣': 'Kløver' };
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const TRACK = 8;
 const SIDE_CARDS = 7;
@@ -17,9 +18,9 @@ interface Card {
 }
 
 interface Race {
-  stage: 'draw' | 'drawing' | 'ready' | 'running' | 'paused' | 'finished';
-  drawOrder: Suit[];
-  revealed: number;
+  stage: 'pick' | 'ready' | 'running' | 'paused' | 'finished';
+  /** Suit chosen by each team (index = team index). */
+  picks: (Suit | undefined)[];
   positions: Record<Suit, number>;
   deck: Card[];
   side: Card[];
@@ -45,13 +46,12 @@ function freshDeck(): Card[] {
   return shuffle(cards);
 }
 
-function newRace(): Race {
+function newRace(teamCount: number): Race {
   const deck = freshDeck();
   const side = deck.splice(0, SIDE_CARDS);
   return {
-    stage: 'draw',
-    drawOrder: shuffle(SUITS),
-    revealed: 0,
+    stage: 'pick',
+    picks: Array(teamCount).fill(undefined),
     positions: { '♠': 0, '♥': 0, '♦': 0, '♣': 0 },
     deck,
     side,
@@ -107,28 +107,18 @@ function PlayingCard({ card, faceUp, big = false, flipKey }: { card?: Card; face
 
 export function HorseScreen({ state, update, go, index }: ScreenProps & { index: number }) {
   const teams = state.teams;
-  const [race, setRace] = useState<Race>(newRace);
+  const [race, setRace] = useState<Race>(() => newRace(teams.length));
   const [fast, setFast] = useState(false);
   const finishedRef = useRef(false);
 
-  const suitOfTeam = (i: number): Suit => race.drawOrder[i % 4];
-  const teamOfSuit = (s: Suit): TeamId | undefined => teams[race.drawOrder.indexOf(s)]?.id;
+  const suitOfTeam = (i: number): Suit | undefined => race.picks[i];
+  const teamOfSuit = (s: Suit): TeamId | undefined => teams[race.picks.indexOf(s)]?.id;
+  const pickingIndex = race.picks.findIndex((p) => !p);
+  const pickingTeam = pickingIndex >= 0 ? teams[pickingIndex] : undefined;
 
   useEffect(() => {
     audio.playMusic('gallop');
   }, []);
-
-  useEffect(() => {
-    if (race.stage !== 'drawing') return;
-    const id = window.setInterval(() => {
-      audio.sfx('flip');
-      setRace((r) => {
-        const revealed = r.revealed + 1;
-        return { ...r, revealed, stage: revealed >= 4 ? 'ready' : 'drawing' };
-      });
-    }, 900);
-    return () => window.clearInterval(id);
-  }, [race.stage]);
 
   useEffect(() => {
     if (race.stage !== 'running') return;
@@ -176,54 +166,93 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [race.stage]);
 
+  const pickSuit = (suit: Suit): void => {
+    setRace((r) => {
+      const picks = [...r.picks];
+      const owner = picks.indexOf(suit);
+      if (owner !== -1) {
+        // Clicking a taken horse frees it again (that team picks anew).
+        audio.sfx('back');
+        picks[owner] = undefined;
+        return { ...r, picks, stage: 'pick' };
+      }
+      const next = picks.findIndex((p) => !p);
+      if (next === -1) return r;
+      audio.sfx('flip');
+      picks[next] = suit;
+      const allPicked = picks.every(Boolean);
+      return { ...r, picks, stage: allPicked ? 'ready' : 'pick' };
+    });
+  };
+
+  const randomRest = (): void => {
+    audio.sfx('whoosh');
+    setRace((r) => {
+      const picks = [...r.picks];
+      const free = shuffle(SUITS.filter((s) => !picks.includes(s)));
+      for (let i = 0; i < picks.length; i++) if (!picks[i]) picks[i] = free.pop();
+      return { ...r, picks, stage: picks.every(Boolean) ? 'ready' : 'pick' };
+    });
+  };
+
   const winnerTeam = race.winner ? teams.find((t) => t.id === teamOfSuit(race.winner!)) : undefined;
 
   return (
     <div className="screen horse">
       <Confetti active={race.stage === 'finished'} burst colors={winnerTeam ? [winnerTeam.color, '#fff', '#ffc53d'] : undefined} />
 
-      {(race.stage === 'draw' || race.stage === 'drawing' || race.stage === 'ready') && (
+      {(race.stage === 'pick' || race.stage === 'ready') && (
         <div className="horse-draw">
-          <h1 className="play-title">🐎 Trekning av hester</h1>
-          <p className="play-sub">Hvert lag får en hest – kortfargen bestemmer hvem som er hvem.</p>
-          <div className="horse-draw-row">
-            {teams.map((t, i) => {
-              const up = i < race.revealed;
-              const suit = suitOfTeam(i);
+          <h1 className="play-title">🐎 Velg hest</h1>
+          {pickingTeam ? (
+            <p className="play-sub big" style={{ ['--team' as string]: pickingTeam.color }}>
+              <span className="team-badge">
+                {pickingTeam.emoji} {pickingTeam.name}
+              </span>{' '}
+              velger hest. Trykk på hesten laget vil ha.
+            </p>
+          ) : (
+            <p className="play-sub">Alle lagene har valgt. Trykk på en hest for å bytte.</p>
+          )}
+          <div className="horse-pick-row">
+            {SUITS.map((suit) => {
+              const ownerIndex = race.picks.indexOf(suit);
+              const owner = ownerIndex >= 0 ? teams[ownerIndex] : undefined;
+              const red = suit === '♥' || suit === '♦';
               return (
-                <div key={t.id} className="horse-draw-card" style={{ ['--team' as string]: t.color }}>
-                  <div className="horse-draw-team">
-                    {t.emoji} {t.name}
-                  </div>
-                  <PlayingCard card={{ suit, rank: 'A' }} faceUp={up} big flipKey={up ? 1 : 0} />
-                </div>
+                <button
+                  key={suit}
+                  className={`horse-pick ${owner ? 'horse-pick-taken' : ''}`}
+                  style={{ ['--team' as string]: owner?.color ?? 'rgba(255,255,255,0.2)' }}
+                  onClick={() => pickSuit(suit)}
+                >
+                  <span className="horse-pick-horse">🐎</span>
+                  <span className={`horse-pick-suit ${red ? 'red' : ''}`}>{suit}</span>
+                  <span className="horse-pick-name">{SUIT_NAME[suit]}</span>
+                  <span className="horse-pick-owner">{owner ? `${owner.emoji} ${owner.name}` : 'Ledig'}</span>
+                </button>
               );
             })}
           </div>
-          {race.stage === 'draw' && (
-            <button
-              className="btn btn-primary btn-xl"
-              data-primary
-              onClick={() => {
-                audio.sfx('click');
-                setRace((r) => ({ ...r, stage: 'drawing' }));
-              }}
-            >
-              Trekk hester
-            </button>
-          )}
-          {race.stage === 'ready' && (
-            <button
-              className="btn btn-primary btn-xl btn-start"
-              data-primary
-              onClick={() => {
-                audio.sfx('rocket');
-                setRace((r) => ({ ...r, stage: 'running' }));
-              }}
-            >
-              START LØPET!
-            </button>
-          )}
+          <div className="rank-actions">
+            {race.stage === 'pick' && (
+              <button className="btn btn-ghost" onClick={randomRest}>
+                🎲 Trekk tilfeldig for resten
+              </button>
+            )}
+            {race.stage === 'ready' && (
+              <button
+                className="btn btn-primary btn-xl btn-start"
+                data-primary
+                onClick={() => {
+                  audio.sfx('rocket');
+                  setRace((r) => ({ ...r, stage: 'running' }));
+                }}
+              >
+                START LØPET!
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -241,31 +270,41 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
           </div>
 
           <div className="race-track">
-            {teams.map((t, i) => {
-              const suit = suitOfTeam(i);
-              const pos = race.positions[suit];
-              const red = suit === '♥' || suit === '♦';
-              const isWinner = race.winner === suit;
-              return (
-                <div key={t.id} className={`lane ${isWinner ? 'lane-winner' : ''}`} style={{ ['--team' as string]: t.color }}>
-                  <div className="lane-label">
-                    <span className={`lane-suit ${red ? 'red' : ''}`}>{suit}</span>
-                    <span>
-                      {t.emoji} {t.name}
-                    </span>
-                  </div>
-                  <div className="lane-path">
-                    {Array.from({ length: TRACK + 1 }).map((_, k) => (
-                      <span key={k} className={`lane-mark ${k === TRACK ? 'lane-finish' : ''}`} style={{ ['--col' as string]: k }} />
-                    ))}
-                    <div className={`horse-runner ${race.stage === 'running' ? 'galloping' : ''}`} style={{ ['--pos' as string]: pos / TRACK }}>
-                      <span className="horse-emoji">🐎</span>
-                      <span className="horse-tag">{t.emoji}</span>
+            <div className="race-stand" aria-hidden="true">
+              <span className="race-stand-sign">🏟 TRAVBANEN</span>
+            </div>
+            <div className="race-lanes">
+              {teams.map((t, i) => {
+                const suit = suitOfTeam(i);
+                if (!suit) return null;
+                const pos = race.positions[suit];
+                const red = suit === '♥' || suit === '♦';
+                const isWinner = race.winner === suit;
+                return (
+                  <div key={t.id} className={`lane ${isWinner ? 'lane-winner' : ''}`} style={{ ['--team' as string]: t.color }}>
+                    <div className="lane-label">
+                      <span className={`lane-suit ${red ? 'red' : ''}`}>{suit}</span>
+                      <span>
+                        {t.emoji} {t.name}
+                      </span>
+                    </div>
+                    <div className="lane-path">
+                      {Array.from({ length: TRACK + 1 }).map((_, k) => (
+                        <span key={k} className={`lane-mark ${k === TRACK ? 'lane-finish' : ''}`} style={{ ['--col' as string]: k }}>
+                          {k > 0 && k < TRACK && <i className="lane-post">{k}</i>}
+                        </span>
+                      ))}
+                      <div className={`horse-runner ${race.stage === 'running' ? 'galloping' : ''}`} style={{ ['--pos' as string]: pos / TRACK }}>
+                        <span className="horse-dust" />
+                        <span className="horse-emoji">🐎</span>
+                        <span className="horse-tag">{t.emoji}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <div className="race-rail" aria-hidden="true" />
           </div>
 
           <div className="race-deck">

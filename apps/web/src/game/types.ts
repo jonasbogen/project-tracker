@@ -8,7 +8,7 @@ export interface Team {
   players: string[];
 }
 
-export type EventKind = 'six' | 'horse' | 'mafia' | 'emoji' | 'custom';
+export type EventKind = 'six' | 'horse' | 'mafia' | 'emoji' | 'wheel' | 'deal' | 'custom';
 
 export interface GameEvent {
   id: string;
@@ -30,6 +30,8 @@ export interface EventResult {
   eventId: string;
   placements?: Placements;
   loser?: TeamId;
+  /** Teams that hit on the wheel (flat points, no ranking). */
+  hits?: TeamId[];
   points: Record<TeamId, number>;
   note?: string;
 }
@@ -83,7 +85,66 @@ export interface EmojiAnswer {
   card: number;
   teamId: TeamId;
   correct: boolean;
-  seconds: number;
+}
+
+export interface WheelState {
+  /** Slot number (1..25) chosen per team. */
+  picks: Record<TeamId, number>;
+  /** Winning slot once spun. */
+  result?: number;
+  /** Total rotation in degrees for the spin animation. */
+  rotation: number;
+  spinning: boolean;
+  spunAt?: number;
+}
+
+/* ---------- Deal or Drink ---------- */
+
+export interface DealCase {
+  n: number;
+  value: number;
+  opened: boolean;
+  owner?: TeamId;
+}
+
+export interface DealOffer {
+  round: number;
+  points: number;
+  sips: number;
+  bonus?: string;
+  answer?: 'deal' | 'nodeal';
+}
+
+export interface DealTeam {
+  caseNo?: number;
+  status: 'playing' | 'dealt';
+  dealPoints?: number;
+  dealSips?: number;
+  dealRound?: number;
+  offers: DealOffer[];
+  /** Sips the team may hand out, accumulated from openings. */
+  sipsOut: number;
+  /** Sips each team member has had to take. */
+  sipsIn: number;
+  revealed: boolean;
+}
+
+export type DealStage =
+  | { name: 'setup' }
+  | { name: 'pick'; teamIndex: number }
+  | { name: 'round'; sub: 'spotlight' | 'choose' | 'suspense' | 'reveal'; teamIndex: number; caseNo?: number }
+  | { name: 'bank'; sub: 'ringing' | 'thinking' | 'comment' | 'offer' | 'answered'; teamIndex: number; final: boolean; comment?: string }
+  | { name: 'reveal'; sub: 'intro' | 'open' | 'shown'; teamIndex: number }
+  | { name: 'results' };
+
+export interface DealState {
+  values: number[];
+  cases: DealCase[];
+  teams: Record<TeamId, DealTeam>;
+  round: number;
+  stage: DealStage;
+  alcoholFree: boolean;
+  pauseUntil?: number;
 }
 
 export interface EmojiState {
@@ -109,6 +170,10 @@ export interface GameState {
   six?: SixState;
   mafia?: MafiaState;
   emoji?: EmojiState;
+  wheel?: WheelState;
+  deal?: DealState;
+  /** Undo stack for Deal or Drink (newest last). */
+  dealHistory?: DealState[];
   settings: { muted: boolean; volume: number; discussSec: number };
   updatedAt: number;
 }

@@ -22,7 +22,7 @@ export function pointsForPlacements(placements: Placements, points: number[]): R
 export function buildResult(
   event: GameEvent,
   teams: Team[],
-  input: { placements?: Placements; loser?: TeamId; note?: string },
+  input: { placements?: Placements; loser?: TeamId; hits?: TeamId[]; note?: string },
 ): EventResult {
   const points: Record<TeamId, number> = {};
   for (const t of teams) points[t.id] = 0;
@@ -30,6 +30,12 @@ export function buildResult(
   if (event.kind === 'six') {
     if (input.loser) points[input.loser] = -Math.abs(event.penalty);
     return { eventId: event.id, loser: input.loser, points, note: input.note };
+  }
+
+  if (event.kind === 'wheel') {
+    const hits = input.hits ?? [];
+    for (const id of hits) points[id] = event.points[0] ?? 0;
+    return { eventId: event.id, hits, points, note: input.note };
   }
 
   const placements = input.placements ?? {};

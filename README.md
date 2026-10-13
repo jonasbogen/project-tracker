@@ -10,8 +10,11 @@ Audio, så appen trenger ingen eksterne filer.
 | Øvelse | Hva appen gjør | Poeng (standard) |
 | --- | --- | --- |
 | **6 minutter** | Skjult nedtelling. Trykk START, klokken vises ikke, alarm når tiden er ute. | Taperen får −5 |
-| **Hesteveddeløpet** | Hvert lag trekker en hest (kortfarge). Kort flippes automatisk, hestene galopperer, sidekort sender hester tilbake. Rekkefølgen fylles inn fra målgangen. | 6 / 4 / 2 / 1 |
+| **Hesteveddeløpet** | Hvert lag velger sin hest (kortfarge, ett lag per hest). Kort flippes automatisk på en travbane, sidekort sender hester tilbake. Rekkefølgen fylles inn fra målgangen. | 6 / 4 / 2 / 1 |
 | **Mafia og politi** | Appen er forteller: natt (mafia, politi), dag (diskusjon med nedtelling, avstemning), rolleavsløring, vinnersjekk og automatisk poengforslag per lag. Roller deles ut med fysiske kort (ess = mafia, konge = politi). | 10 / 7 / 5 / 3 |
+| **Emoji Movie** | Åtte filmer forklart med emojis, to per lag. 10 sekunder per film, bare riktig/feil teller. Likt antall riktige deler plassen. | 10 / 7 / 5 / 3 |
+| **Wheel of Fortune** | 25 felt på et hjul. Lagene velger ett felt hver (ett lag per felt), hjulet snurres én gang. Treff gir flate poeng. | +5 ved treff |
+| **Deal or Drink** | Koffert-gameshow for fire lag: 20 kofferter, fire runder, Banken ringer etter hver runde med tilbud (host skriver inn i host-panelet, tast **H**), DEAL/NO DEAL, finale, avsløring og resultatskjerm med beste/verste deal. Drikkekonsekvens per åpning, alkoholfri variant. Lagene rangeres etter hva de sitter igjen med. | 10 / 7 / 5 / 3 |
 | **Egen øvelse** | Stoppeklokke og manuell rangering. | 10 / 7 / 5 / 3 |
 
 Poengene per øvelse kan endres i oppsettet. Delte plasser deler poengene.
@@ -21,6 +24,7 @@ Poengene per øvelse kan endres i oppsettet. Delte plasser deler poengene.
 - Mellomrom / Enter / → : neste (den gule knappen)
 - M : lyd av/på
 - F : fullskjerm
+- H : host-panel i Deal or Drink (koffertverdier, banktilbud, angre, dramatisk pause)
 
 ## Kjøre lokalt
 

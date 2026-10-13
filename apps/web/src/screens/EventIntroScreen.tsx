@@ -7,6 +7,8 @@ const INTRO_MUSIC: Record<string, MusicName> = {
   horse: 'gallop',
   mafia: 'noir',
   emoji: 'arena',
+  wheel: 'arena',
+  deal: 'casino',
   custom: 'arena',
 };
 
@@ -20,7 +22,7 @@ export function EventIntroScreen({ state, update, go, index }: ScreenProps & { i
 
   const start = (): void => {
     audio.sfx('click');
-    update((s) => ({ ...s, pending: undefined, six: undefined, mafia: undefined, emoji: undefined }));
+    update((s) => ({ ...s, pending: undefined, six: undefined, mafia: undefined, emoji: undefined, wheel: undefined, deal: undefined, dealHistory: undefined }));
     go({ name: 'event-play', index });
   };
 
@@ -31,6 +33,7 @@ export function EventIntroScreen({ state, update, go, index }: ScreenProps & { i
       </div>
       <div className="event-intro-emoji">{KIND_EMOJI[event.kind]}</div>
       <h1 className="event-intro-title">{event.title}</h1>
+      {event.kind === 'deal' && <p className="event-intro-tagline">Ta pengene. Behold kofferten. Eller ta en slurk.</p>}
       {RULE_BULLETS[event.kind] ? (
         <ul className="event-intro-bullets">
           {RULE_BULLETS[event.kind]!.map((line, i) => (
@@ -46,6 +49,8 @@ export function EventIntroScreen({ state, update, go, index }: ScreenProps & { i
       <div className="points-chips">
         {event.kind === 'six' ? (
           <span className="chip chip-neg">Taperen: −{Math.abs(event.penalty)} poeng</span>
+        ) : event.kind === 'wheel' ? (
+          <span className="chip chip-place-1">Treff: +{event.points[0]} poeng</span>
         ) : (
           event.points.map((p, i) => (
             <span key={i} className={`chip chip-place-${i + 1}`}>
