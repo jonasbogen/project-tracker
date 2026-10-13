@@ -105,6 +105,9 @@ export interface DealCase {
   value: number;
   opened: boolean;
   owner?: TeamId;
+  /** Team that opened it during a round (not set for own-case reveals). */
+  openedBy?: TeamId;
+  openedRound?: number;
 }
 
 export interface DealOffer {
@@ -112,6 +115,8 @@ export interface DealOffer {
   points: number;
   sips: number;
   bonus?: string;
+  /** The bank's short justification, shown on the TV. */
+  reason?: string;
   answer?: 'deal' | 'nodeal';
 }
 

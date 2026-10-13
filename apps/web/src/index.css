@@ -49,10 +49,43 @@ p {
   color: var(--muted);
 }
 
+/* Game screens never scroll: the stage is exactly the viewport minus the top
+   bar, and FitScreen scales a screen down if it would not fit. Only the setup
+   page is allowed to scroll. */
+
 .app {
-  min-height: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.app.phase-setup {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+
+.fit-outer {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fit-inner {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  transform-origin: center center;
+}
+
+.fit-inner > .screen {
+  flex: 1;
 }
 
 .app-loading {
@@ -206,6 +239,7 @@ p {
 
 .stage {
   flex: 1;
+  min-height: 0;
   display: flex;
 }
 

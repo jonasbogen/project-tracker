@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Portal } from './Portal';
 
 interface Piece {
   x: number;
@@ -95,5 +96,9 @@ export function Confetti({ active, colors = COLORS, burst = false }: { active: b
   }, [active, colors, burst]);
 
   if (!active) return null;
-  return <canvas ref={ref} className="confetti" aria-hidden="true" />;
+  return (
+    <Portal>
+      <canvas ref={ref} className="confetti" aria-hidden="true" />
+    </Portal>
+  );
 }

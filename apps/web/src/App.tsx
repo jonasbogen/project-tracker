@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { audio } from './audio/engine';
+import { FitScreen } from './components/FitScreen';
 import { totals } from './game/scoring';
 import { useGameStore } from './game/store';
 import type { Phase } from './game/types';
@@ -201,7 +202,9 @@ export default function App() {
           </button>
         </div>
       </header>
-      <main className="stage">{screen}</main>
+      <main className="stage">
+        {phase.name === 'setup' ? screen : <FitScreen fitKey={`${phase.name}-${eventIndex}-${event?.kind ?? ''}`}>{screen}</FitScreen>}
+      </main>
     </div>
   );
 }

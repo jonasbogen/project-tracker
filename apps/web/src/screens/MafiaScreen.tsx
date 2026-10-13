@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { audio } from '../audio/engine';
+import { Portal } from '../components/Portal';
 import { placementsFromGroups } from '../game/scoring';
 import type { MafiaPlayer, MafiaRole, MafiaState, Team, TeamId } from '../game/types';
 import { formatClock, type ScreenProps } from './common';
@@ -231,16 +232,18 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
   );
 
   const revealOverlay = revealAnim && (
-    <div className={`reveal-overlay reveal-${revealAnim.role} reveal-v${revealAnim.variant}`} onClick={() => setRevealAnim(null)}>
-      <div className="reveal-flash" />
-      <div className="reveal-card-big">
-        <div className="reveal-by">{revealAnim.by === 'mafia' ? '🌙 Drept i natt' : '🗳️ Stemt ut av byen'}</div>
-        <div className="reveal-name-big">{revealAnim.name}</div>
-        <div className="reveal-role-emoji">{ROLE_EMOJI[revealAnim.role]}</div>
-        <div className="reveal-role-text">{revealAnim.role === 'mafia' ? 'VAR MAFIA!' : revealAnim.role === 'politi' ? 'VAR POLITI' : 'VAR SIVIL'}</div>
-        <div className="reveal-drink">🍻 5 slurker</div>
+    <Portal>
+      <div className={`reveal-overlay reveal-${revealAnim.role} reveal-v${revealAnim.variant}`} onClick={() => setRevealAnim(null)}>
+        <div className="reveal-flash" />
+        <div className="reveal-card-big">
+          <div className="reveal-by">{revealAnim.by === 'mafia' ? '🌙 Drept i natt' : '🗳️ Stemt ut av byen'}</div>
+          <div className="reveal-name-big">{revealAnim.name}</div>
+          <div className="reveal-role-emoji">{ROLE_EMOJI[revealAnim.role]}</div>
+          <div className="reveal-role-text">{revealAnim.role === 'mafia' ? 'VAR MAFIA!' : revealAnim.role === 'politi' ? 'VAR POLITI' : 'VAR SIVIL'}</div>
+          <div className="reveal-drink">🍻 5 slurker</div>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 
   if (m.pendingReveal) {

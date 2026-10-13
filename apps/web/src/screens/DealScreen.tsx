@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
+import { Portal } from '../components/Portal';
 import { placementsFromGroups } from '../game/scoring';
 import type { DealCase, DealState, DealStage, DealTeam, Team, TeamId } from '../game/types';
 import type { ScreenProps } from './common';
 import './deal.css';
 
 export const DEFAULT_VALUES = [10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 600, 750, 900, 1000, 1250, 1500, 1750, 2000, 2500];
-const ROUNDS = 4;
 const HISTORY_MAX = 25;
+/** The bank calls every round once this few cases (own ones included) are still closed. */
+const BANK_EVERY_ROUND_AT = 5;
+const BANKER = 'Esko';
 
 /* ---------- rules ---------- */
 
@@ -111,12 +114,60 @@ function remainingValues(d: DealState): number[] {
   return d.cases.filter((c) => !c.opened).map((c) => c.value).sort((a, b) => a - b);
 }
 
+function unopenedLeft(d: DealState): number {
+  return d.cases.filter((c) => !c.opened).length;
+}
+
+/** Closed cases nobody owns, i.e. what the teams can still open in a round. */
+function nonOwnedLeft(d: DealState): number {
+  return d.cases.filter((c) => !c.opened && !c.owner).length;
+}
+
+/** Every other round, but every round once few cases remain. */
+function bankCallsAfter(d: DealState): boolean {
+  return unopenedLeft(d) <= BANK_EVERY_ROUND_AT || d.round % 2 === 0;
+}
+
 export function suggestOffer(d: DealState, final: boolean): { points: number; sips: number } {
   const rem = remainingValues(d);
   const ev = rem.length ? rem.reduce((a, b) => a + b, 0) / rem.length : 0;
-  const factor = final ? 0.9 : [0.3, 0.45, 0.6, 0.75][Math.min(ROUNDS, Math.max(1, d.round)) - 1];
+  const factor = final ? 0.9 : Math.min(0.8, 0.28 + 0.12 * (d.round - 1));
   const points = Math.max(10, Math.round((ev * factor) / 25) * 25);
-  return { points, sips: final ? 6 : d.round + 2 };
+  return { points, sips: final ? 6 : Math.min(6, d.round + 2) };
+}
+
+/** The bank's own version, with a little randomness so it never feels like a formula. */
+function bankOffer(d: DealState, final: boolean): { points: number; sips: number } {
+  const s = suggestOffer(d, final);
+  const wobble = 1 + (Math.random() - 0.5) * 0.16;
+  return { points: Math.max(10, Math.round((s.points * wobble) / 25) * 25), sips: s.sips };
+}
+
+/** A short, slightly mean justification for the offer, based on the actual state. */
+function bankReason(d: DealState, team: Team, final: boolean, points: number): string {
+  const rem = remainingValues(d);
+  const ev = rem.length ? rem.reduce((a, b) => a + b, 0) / rem.length : 0;
+  const high = rem.filter((v) => v >= 1000).length;
+  const opened = d.cases.filter((c) => c.openedBy === team.id && c.openedRound === d.round).map((c) => c.value);
+  const last = opened[opened.length - 1];
+  const pct = Math.round((points / Math.max(1, ev)) * 100);
+  const parts: string[] = [];
+  if (final) {
+    parts.push(`Det står mellom koffert ${d.teams[team.id].caseNo} og dette tilbudet.`);
+    parts.push(high > 0 ? `${high} av de ${rem.length} koffertene som er igjen er over 1000. ${BANKER} tror ikke det er deres.` : `Ingen av koffertene som er igjen er over 1000. ${BANKER} er rolig.`);
+    return parts.join(' ');
+  }
+  if (last !== undefined) {
+    if (last >= 1500) parts.push(`Dere fjernet nettopp ${fmt(last)}. ${BANKER} er lettet, og lettelse er billig.`);
+    else if (last <= 100) parts.push(`Dere fjernet ${fmt(last)}. De store verdiene lever fortsatt, og det koster ${BANKER} nattesøvn.`);
+    else parts.push(`Dere fjernet ${fmt(last)}. Verken bra eller dårlig. ${BANKER} liker middelmådighet.`);
+  }
+  if (high >= 4) parts.push(`${high} kofferter over 1000 er fortsatt i spill. ${BANKER} betaler for å slippe den risikoen.`);
+  else if (high >= 2) parts.push(`${high} kofferter over 1000 igjen. ${BANKER} tilbyr ${pct} % av snittet, og mener det er raust.`);
+  else if (high === 1) parts.push(`Bare én koffert over 1000 igjen. ${BANKER} tviler på at den er deres.`);
+  else parts.push(`Ingen store verdier igjen. ${BANKER} byr ${pct} % av snittet, mest for syns skyld.`);
+  if (parts.length < 2) parts.push(`Snittet av det som er igjen er ${fmt(Math.round(ev))}. ${BANKER} byr ${pct} % av det. Fordi ${BANKER} kan.`);
+  return parts.slice(0, 2).join(' ');
 }
 
 function finalPoints(d: DealState, team: Team): number {
@@ -305,7 +356,12 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             ...x.teams,
             [team.id]: { ...dt, sipsOut: dt.sipsOut + (q.kind === 'out' ? q.sips : 0), sipsIn: dt.sipsIn + (q.kind === 'in' ? q.sips : 0) },
           };
-          return { ...x, cases: x.cases.map((k) => (k.n === caseNo ? { ...k, opened: true } : k)), teams: teamsNext, stage: { ...x.stage, sub: 'reveal' } };
+          return {
+            ...x,
+            cases: x.cases.map((k) => (k.n === caseNo ? { ...k, opened: true, openedBy: team.id, openedRound: x.round } : k)),
+            teams: teamsNext,
+            stage: { ...x.stage, sub: 'reveal' },
+          };
         });
       });
     }
@@ -333,13 +389,28 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       });
     }
     if (stage.name === 'bank' && stage.sub === 'thinking') {
-      setPanel(true);
-      const s = suggestOffer(d, stage.final);
-      setDraft({ points: String(s.points), sips: String(s.sips), bonus: '' });
+      // The bank makes its own offer. The host can still open the panel and
+      // override it before it goes out.
+      const team = teams[stage.teamIndex];
+      const o = bankOffer(d, stage.final);
+      const reason = bankReason(d, team, stage.final, o.points);
+      setDraft({ points: String(o.points), sips: String(o.sips), bonus: '' });
+      later(3200, () => {
+        const comment = pickRandom(BANK_COMMENTS).replace('{lag}', team.name);
+        tick((x) => {
+          if (x.stage.name !== 'bank' || x.stage.sub !== 'thinking') return x;
+          const dt = x.teams[team.id];
+          return {
+            ...x,
+            teams: { ...x.teams, [team.id]: { ...dt, offers: [...dt.offers, { round: x.round, points: o.points, sips: o.sips, reason }] } },
+            stage: { name: 'bank', sub: 'comment', teamIndex: x.stage.teamIndex, final: x.stage.final, comment },
+          };
+        });
+      });
     }
     if (stage.name === 'bank' && stage.sub === 'comment') {
       audio.sfx('sting');
-      later(3200, () => tick((x) => (x.stage.name === 'bank' && x.stage.sub === 'comment' ? { ...x, stage: { ...x.stage, sub: 'offer' } } : x)));
+      later(4200, () => tick((x) => (x.stage.name === 'bank' && x.stage.sub === 'comment' ? { ...x, stage: { ...x.stage, sub: 'offer' } } : x)));
     }
     if (stage.name === 'bank' && stage.sub === 'offer') {
       setOfferCounted(false);
@@ -421,10 +492,12 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
     setRevealFlash(null);
     act((x) => {
       const next = nextPlayingAfter(x, teams, stage.teamIndex);
-      if (next !== undefined) return { ...x, stage: { name: 'round', sub: 'spotlight', teamIndex: next } };
+      if (next !== undefined && nonOwnedLeft(x) > 0) return { ...x, stage: { name: 'round', sub: 'spotlight', teamIndex: next } };
       const playing = playingIndices(x, teams);
       if (!playing.length) return { ...x, stage: { name: 'reveal', sub: 'intro', teamIndex: 0 } };
-      return { ...x, stage: { name: 'bank', sub: 'ringing', teamIndex: playing[0], final: x.round >= ROUNDS } };
+      if (nonOwnedLeft(x) === 0) return { ...x, stage: { name: 'bank', sub: 'ringing', teamIndex: playing[0], final: true } };
+      if (bankCallsAfter(x)) return { ...x, stage: { name: 'bank', sub: 'ringing', teamIndex: playing[0], final: false } };
+      return { ...x, round: x.round + 1, stage: { name: 'round', sub: 'spotlight', teamIndex: playing[0] } };
     });
   };
 
@@ -435,10 +508,11 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
     const bonus = draft.bonus.trim() || undefined;
     const team = teams[stage.teamIndex];
     const comment = pickRandom(BANK_COMMENTS).replace('{lag}', team.name);
+    const reason = bankReason(d, team, stage.final, points);
     setPanel(false);
     act((x) => ({
       ...x,
-      teams: { ...x.teams, [team.id]: { ...x.teams[team.id], offers: [...x.teams[team.id].offers, { round: x.round, points, sips, bonus }] } },
+      teams: { ...x.teams, [team.id]: { ...x.teams[team.id], offers: [...x.teams[team.id].offers, { round: x.round, points, sips, bonus, reason }] } },
       stage: { name: 'bank', sub: 'comment', teamIndex: stage.teamIndex, final: stage.final, comment },
     }));
   };
@@ -473,7 +547,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       const next = nextPlayingAfter(x, teams, stage.teamIndex);
       if (next !== undefined) return { ...x, stage: { name: 'bank', sub: 'thinking', teamIndex: next, final: stage.final } };
       const playing = playingIndices(x, teams);
-      if (stage.final || !playing.length) return { ...x, stage: { name: 'reveal', sub: 'intro', teamIndex: 0 } };
+      if (stage.final || !playing.length || nonOwnedLeft(x) === 0) return { ...x, stage: { name: 'reveal', sub: 'intro', teamIndex: 0 } };
       return { ...x, round: x.round + 1, stage: { name: 'round', sub: 'spotlight', teamIndex: playing[0] } };
     });
   };
@@ -542,9 +616,9 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       case 'pick':
         return `${activeTeam?.emoji ?? ''} ${activeTeam?.name ?? ''}: VELG DIN KOFFERT`;
       case 'round':
-        return stage.sub === 'choose' ? `${activeTeam?.emoji ?? ''} ${activeTeam?.name ?? ''}: ÅPNE EN KOFFERT` : `RUNDE ${d.round} AV ${ROUNDS}`;
+        return stage.sub === 'choose' ? `${activeTeam?.emoji ?? ''} ${activeTeam?.name ?? ''}: ÅPNE EN KOFFERT` : `RUNDE ${d.round}`;
       case 'bank':
-        return stage.final ? 'FINALEN' : `BANKEN · RUNDE ${d.round}`;
+        return stage.final ? 'FINALEN' : `${BANKER.toUpperCase()} RINGER · RUNDE ${d.round}`;
       case 'reveal':
         return 'AVSLØRINGEN';
       case 'results':
@@ -600,7 +674,10 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             </button>
           </section>
         </div>
-        <p className="play-sub">Host-panelet åpnes med tasten H eller knappen nede til venstre. Der ligger koffertverdiene, banktilbud og angre.</p>
+        <p className="play-sub">
+          {BANKER} i Banken ringer selv og legger tilbudene på bordet. Host-panelet (tasten H, eller knappen nede til venstre) viser koffertverdiene og lar deg angre eller
+          overstyre et tilbud.
+        </p>
         <button className="btn btn-primary btn-xl btn-start" data-primary onClick={startGame}>
           START SPILLET
         </button>
@@ -668,11 +745,20 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
     const dt = d.teams[activeTeam.id];
     const offer = dt.offers[dt.offers.length - 1];
     const ownCase = caseOf(dt.caseNo);
+    const esko = (ringing: boolean) => (
+      <div className={`esko ${ringing ? 'esko-ringing' : ''}`}>
+        <img className="esko-img" src="/esko.png" alt={`${BANKER}, bankmannen`} />
+        {ringing && <span className="esko-phone">📞</span>}
+        <span className="esko-plate">
+          {BANKER.toUpperCase()} · BANKEN
+        </span>
+      </div>
+    );
     if (stage.sub === 'ringing') {
       overlay = (
         <div className="deal-overlay deal-overlay-bank">
           <div className="deal-bank-lamp" />
-          <div className="deal-phone">📞</div>
+          {esko(true)}
           <span className="deal-huge deal-bank-title">BANKEN RINGER …</span>
         </div>
       );
@@ -680,10 +766,10 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       overlay = (
         <div className="deal-overlay deal-overlay-bank">
           <div className="deal-bank-lamp" />
-          <div className="deal-phone deal-phone-still">🏦</div>
-          <span className="deal-huge deal-bank-title">{stage.final ? 'BANKENS SISTE TILBUD' : 'BANKEN HAR LAGT PÅ'}</span>
+          {esko(false)}
+          <span className="deal-huge deal-bank-title">{stage.final ? `${BANKER.toUpperCase()} HAR ETT SISTE TILBUD` : `${BANKER.toUpperCase()} REGNER …`}</span>
           <span className="deal-kicker">
-            Banken vurderer {activeTeam.emoji} {activeTeam.name} …
+            {BANKER} ser på {activeTeam.emoji} {activeTeam.name} …
           </span>
           {stage.final && ownCase && (
             <div className="deal-finale-vs">
@@ -700,19 +786,24 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       overlay = (
         <div className="deal-overlay deal-overlay-bank">
           <div className="deal-bank-lamp" />
-          <div className="deal-phone deal-phone-still">🏦</div>
+          {esko(false)}
           <span className="deal-bank-comment">«{stage.comment}»</span>
-          <span className="deal-kicker deal-blink">BANKEN HAR KOMMET MED ET TILBUD</span>
+          {offer?.reason && <span className="deal-bank-reason">{offer.reason}</span>}
+          <span className="deal-kicker deal-blink">{BANKER.toUpperCase()} HAR KOMMET MED ET TILBUD TIL {activeTeam.name.toUpperCase()}</span>
         </div>
       );
     } else if (stage.sub === 'offer' && offer) {
       overlay = (
         <div className={`deal-overlay deal-overlay-bank ${stage.final ? 'deal-finale' : ''}`} style={{ ['--team' as string]: activeTeam.color }}>
           <div className="deal-bank-lamp" />
-          <span className="deal-kicker">
-            {stage.final ? 'FINALEN · ' : ''}
-            {activeTeam.emoji} {activeTeam.name}
-          </span>
+          <div className="deal-offer-head">
+            <img className="esko-img esko-img-small" src="/esko.png" alt="" />
+            <span className="deal-kicker">
+              {stage.final ? 'FINALEN · ' : ''}
+              {activeTeam.emoji} {activeTeam.name}
+            </span>
+          </div>
+          {offer.reason && <span className="deal-bank-reason deal-bank-reason-small">{offer.reason}</span>}
           {stage.final && ownCase && (
             <div className="deal-finale-vs">
               <div className="deal-finale-side" style={{ ['--team' as string]: activeTeam.color }}>
@@ -922,7 +1013,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       <div className="deal-host-head">
         <strong>🎛 Host</strong>
         <span className="muted">
-          Runde {d.round}/{ROUNDS} · {stage.name}
+          Runde {d.round} · {unopenedLeft(d)} igjen · {stage.name}
           {'sub' in stage ? `/${stage.sub}` : ''}
         </span>
         <button className="btn btn-icon" onClick={() => setPanel(false)} title="Lukk (H)">
@@ -939,7 +1030,9 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
           <div className="muted deal-host-ev">
             Igjen i spill: {remainingValues(d).map(fmt).join(' · ')}
             <br />
-            Forslag: {fmt(suggestOffer(d, stage.final).points)} poeng
+            {stage.sub === 'thinking'
+              ? `${BANKER} sender dette selv om noen sekunder. Endre og trykk send for å overstyre.`
+              : `Sendt: ${fmt(d.teams[activeTeam.id].offers.at(-1)?.points ?? 0)} poeng`}
           </div>
           <label>
             Poeng
@@ -1004,7 +1097,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             onClick={() =>
               act((x) => {
                 const playing = playingIndices(x, teams);
-                return playing.length ? { ...x, stage: { name: 'bank', sub: 'ringing', teamIndex: playing[0], final: x.round >= ROUNDS } } : x;
+                return playing.length ? { ...x, stage: { name: 'bank', sub: 'ringing', teamIndex: playing[0], final: nonOwnedLeft(x) === 0 } } : x;
               })
             }
           >
@@ -1045,9 +1138,8 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
         </div>
         <div className="deal-top-headline">{headline()}</div>
         <div className="deal-top-round">
-          {Array.from({ length: ROUNDS }).map((_, i) => (
-            <span key={i} className={`deal-round-dot ${i + 1 < d.round ? 'done' : i + 1 === d.round ? 'now' : ''}`} />
-          ))}
+          <span className="deal-top-left">{unopenedLeft(d)} kofferter igjen</span>
+          <span className={`deal-round-dot ${bankCallsAfter(d) || nonOwnedLeft(d) === 0 ? 'now' : ''}`} title="Rød = Banken ringer etter denne runden" />
         </div>
       </header>
 
@@ -1061,9 +1153,11 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
         </div>
 
         <div className="deal-board">
-          {d.cases.map((c) => (
-            <Suitcase key={c.n} c={c} team={ownerOf(c)} clickable={boardClickable(c)} onClick={() => onBoardClick(c)} />
-          ))}
+          {d.cases
+            .filter((c) => !c.owner)
+            .map((c) => (
+              <Suitcase key={c.n} c={c} clickable={boardClickable(c)} onClick={() => onBoardClick(c)} />
+            ))}
         </div>
 
         <div className="deal-values deal-values-high">
@@ -1079,35 +1173,44 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
         {teams.map((t) => {
           const dt = d.teams[t.id];
           const isActive = activeTeam?.id === t.id;
+          const own = caseOf(dt.caseNo);
           return (
             <div key={t.id} className={`deal-team ${isActive ? 'deal-team-active' : ''} ${dt.status === 'dealt' ? 'deal-team-dealt' : ''}`} style={{ ['--team' as string]: t.color }}>
-              <div className="deal-team-name">
-                {t.emoji} {t.name}
+              <div className="deal-team-suitcase">
+                {own ? (
+                  <Suitcase c={{ ...own, opened: own.opened && dt.revealed }} team={t} />
+                ) : (
+                  <div className="deal-team-nocase">{isActive ? 'velger …' : '?'}</div>
+                )}
               </div>
-              <div className="deal-team-case">{dt.caseNo ? `Koffert ${dt.caseNo}` : isActive ? 'velger koffert …' : '–'}</div>
-              <div className="deal-team-status">{dt.status === 'dealt' ? `DEAL · ${fmt(dt.dealPoints ?? 0)} p` : 'SPILLER'}</div>
-              <div className="deal-team-sips">
-                <span title="Slurker laget kan dele ut">🍻 {dt.sipsOut}</span>
-                <span title="Slurker hver på laget har tatt">🥴 {dt.sipsIn}</span>
+              <div className="deal-team-info">
+                <div className="deal-team-name">
+                  {t.emoji} {t.name}
+                </div>
+                <div className="deal-team-status">{dt.status === 'dealt' ? `DEAL · ${fmt(dt.dealPoints ?? 0)} p` : 'SPILLER'}</div>
+                <div className="deal-team-sips">
+                  <span title="Slurker laget kan dele ut">🍻 {dt.sipsOut}</span>
+                  <span title="Slurker hver på laget har tatt">🥴 {dt.sipsIn}</span>
+                </div>
               </div>
             </div>
           );
         })}
       </footer>
 
-      {overlay}
-
-      {paused && (
-        <div className="deal-overlay deal-overlay-pause">
-          <div className="deal-spot-beam" />
-          <span className="deal-huge deal-blink">…</span>
-        </div>
-      )}
-
-      <button className="btn btn-icon deal-host-toggle" title="Host-panel (H)" onClick={() => setPanel((p) => !p)}>
-        🎛
-      </button>
-      {hostPanel}
+      <Portal>
+        {overlay}
+        {paused && (
+          <div className="deal-overlay deal-overlay-pause">
+            <div className="deal-spot-beam" />
+            <span className="deal-huge deal-blink">…</span>
+          </div>
+        )}
+        <button className="btn btn-icon deal-host-toggle" title="Host-panel (H)" onClick={() => setPanel((p) => !p)}>
+          🎛
+        </button>
+        {hostPanel}
+      </Portal>
     </div>
   );
 }
