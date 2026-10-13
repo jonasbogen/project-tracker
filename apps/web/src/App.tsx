@@ -20,12 +20,16 @@ import { RankScreen } from './screens/RankScreen';
 import { SetupScreen } from './screens/SetupScreen';
 import { SixScreen } from './screens/SixScreen';
 import { StartVideoScreen } from './screens/StartVideoScreen';
+import { FinaleScreen } from './screens/FinaleScreen';
+import { PasswordGate } from './screens/PasswordGate';
 
 const FILM_SEEN_KEY = 'spillkveld-film-seen';
+const UNLOCKED_KEY = 'spillkveld-unlocked';
 
 export default function App() {
   const { state, update, reset, ready } = useGameStore();
   const [fullscreen, setFullscreen] = useState(false);
+  const [unlocked, setUnlocked] = useState(() => !!sessionStorage.getItem(UNLOCKED_KEY));
   const [showFilm, setShowFilm] = useState(() => !sessionStorage.getItem(FILM_SEEN_KEY));
 
   const go = useCallback((phase: Phase) => update((s) => ({ ...s, phase })), [update]);
@@ -36,6 +40,9 @@ export default function App() {
   }, [state.settings.muted, state.settings.volume]);
 
   useEffect(() => {
+    // Nothing is audible behind the password gate; the first click after it
+    // unlocks the audio (and starts the backing track).
+    if (!unlocked) return;
     const unlock = (): void => {
       audio.ensure();
     };
@@ -45,7 +52,7 @@ export default function App() {
       document.removeEventListener('pointerdown', unlock);
       document.removeEventListener('keydown', unlock);
     };
-  }, []);
+  }, [unlocked]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -89,6 +96,17 @@ export default function App() {
     return null;
   }
 
+  if (!unlocked) {
+    return (
+      <PasswordGate
+        onUnlock={() => {
+          sessionStorage.setItem(UNLOCKED_KEY, '1');
+          setUnlocked(true);
+        }}
+      />
+    );
+  }
+
   if (showFilm) {
     return (
       <Cinematic
@@ -110,6 +128,15 @@ export default function App() {
   switch (phase.name) {
     case 'setup':
       screen = <SetupScreen {...props} onReset={() => reset(false)} />;
+      break;
+    case 'finale':
+      // Back on the main page, with the results and the photo cavalcade laid over it.
+      screen = (
+        <>
+          <SetupScreen {...props} onReset={() => reset(false)} />
+          <FinaleScreen {...props} />
+        </>
+      );
       break;
     case 'start-video':
       screen = <StartVideoScreen {...props} />;
@@ -163,7 +190,9 @@ export default function App() {
   }
 
   return (
-    <div className={`app phase-${phase.name} kind-${event?.kind ?? 'none'} ${!ready ? 'app-loading' : ''}`}>
+    <div
+      className={`app phase-${phase.name} ${phase.name === 'finale' ? 'phase-setup' : ''} kind-${event?.kind ?? 'none'} ${!ready ? 'app-loading' : ''}`}
+    >
       <header className="topbar">
         <div className="topbar-left">
           <span className="topbar-brand">Sosial Grunnmur</span>
@@ -212,7 +241,7 @@ export default function App() {
         </div>
       </header>
       <main className="stage">
-        {phase.name === 'setup' ? screen : <FitScreen fitKey={`${phase.name}-${eventIndex}-${event?.kind ?? ''}`}>{screen}</FitScreen>}
+        {phase.name === 'setup' || phase.name === 'finale' ? screen : <FitScreen fitKey={`${phase.name}-${eventIndex}-${event?.kind ?? ''}`}>{screen}</FitScreen>}
       </main>
     </div>
   );

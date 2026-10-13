@@ -21,6 +21,38 @@ function hoodLines(events: number, teams: number): string[] {
 
 const LINE_MS = 620;
 
+type Rows = ReturnType<typeof standings>;
+
+/** The three podium stands with their teams; shared by the podium and the finale. */
+export function PodiumRow({ rows }: { rows: Rows }) {
+  const byRank = (rank: number) => rows.filter((r) => r.rank === rank);
+  const block = (items: Rows, place: number) => (
+    <div className={`podium-block podium-${place}`} key={place}>
+      <div className="podium-teams">
+        {items.map((r) => (
+          <div key={r.team.id} className="podium-team" style={{ ['--team' as string]: r.team.color }}>
+            <span className="podium-emoji">
+              <TeamMark team={r.team} />
+            </span>
+            <span className="podium-name">{r.team.name}</span>
+            <span className="podium-points">{r.total} p</span>
+          </div>
+        ))}
+      </div>
+      <div className="podium-stand">
+        <span>{place}</span>
+      </div>
+    </div>
+  );
+  return (
+    <div className="podium-row">
+      {block(byRank(2), 2)}
+      {block(byRank(1), 1)}
+      {block(byRank(3), 3)}
+    </div>
+  );
+}
+
 export function PodiumScreen({ state, go, onPlayAgain }: ScreenProps & { onPlayAgain: () => void }) {
   const rows = standings(state.teams, state.results);
   const lines = hoodLines(state.events.length, state.teams.length);
@@ -78,40 +110,14 @@ export function PodiumScreen({ state, go, onPlayAgain }: ScreenProps & { onPlayA
     );
   }
 
-  const byRank = (rank: number) => rows.filter((r) => r.rank === rank);
-  const first = byRank(1);
-  const second = byRank(2);
-  const third = byRank(3);
+  const first = rows.filter((r) => r.rank === 1);
   const rest = rows.filter((r) => r.rank > 3);
-
-  const block = (items: typeof rows, place: number) => (
-    <div className={`podium-block podium-${place}`} key={place}>
-      <div className="podium-teams">
-        {items.map((r) => (
-          <div key={r.team.id} className="podium-team" style={{ ['--team' as string]: r.team.color }}>
-            <span className="podium-emoji">
-              <TeamMark team={r.team} />
-            </span>
-            <span className="podium-name">{r.team.name}</span>
-            <span className="podium-points">{r.total} p</span>
-          </div>
-        ))}
-      </div>
-      <div className="podium-stand">
-        <span>{place}</span>
-      </div>
-    </div>
-  );
 
   return (
     <div className="screen podium">
       <Confetti active colors={rows.map((r) => r.team.color)} />
       <h1 className="podium-title">🏆 Vinner: {first.map((r) => r.team.name).join(' og ')}</h1>
-      <div className="podium-row">
-        {block(second, 2)}
-        {block(first, 1)}
-        {block(third, 3)}
-      </div>
+      <PodiumRow rows={rows} />
       {rest.length > 0 && <p className="podium-rest">{rest.map((r) => `${r.rank}. ${r.team.name} (${r.total} p)`).join(' · ')}</p>}
       <div className="podium-board">
         <Scoreboard teams={state.teams} results={state.results} compact />
@@ -120,8 +126,11 @@ export function PodiumScreen({ state, go, onPlayAgain }: ScreenProps & { onPlayA
         <button className="btn btn-ghost" onClick={() => go({ name: 'setup' })}>
           Til oppsett
         </button>
-        <button className="btn btn-primary" onClick={onPlayAgain}>
+        <button className="btn btn-ghost" onClick={onPlayAgain}>
           Spill igjen med samme lag
+        </button>
+        <button className="btn btn-primary" data-primary onClick={() => go({ name: 'finale' })}>
+          Videre →
         </button>
       </div>
     </div>

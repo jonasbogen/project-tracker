@@ -48,7 +48,9 @@ export type Phase =
   | { name: 'event-play'; index: number }
   | { name: 'event-rank'; index: number }
   | { name: 'event-points'; index: number }
-  | { name: 'podium' };
+  | { name: 'podium' }
+  /** After the podium: the setup page with the results and a photo cavalcade on top, to the finale song. */
+  | { name: 'finale' };
 
 export type MafiaRole = 'mafia' | 'politi' | 'sivil';
 

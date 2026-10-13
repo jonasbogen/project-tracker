@@ -111,6 +111,8 @@ class AudioEngine {
   private noiseBuffer: AudioBuffer | null = null;
   private playing: Playing | null = null;
   private background: HTMLAudioElement | null = null;
+  /** A one-off track (the finale song) that takes over from the backing track while it plays. */
+  private track: HTMLAudioElement | null = null;
   private volume = 0.7;
   private muted = false;
 
@@ -165,19 +167,54 @@ class AudioEngine {
   }
 
   resumeBackground(): void {
+    if (this.track) return; // a track is in charge; it resumes the backing track when it stops
     if (this.background?.paused) void this.background.play().catch(() => undefined);
+  }
+
+  /**
+   * Play a track from the start instead of the backing track (which pauses and
+   * keeps its position). Follows the mute button and volume slider like
+   * everything else. stopTrack() hands the sound back to the backing track.
+   */
+  playTrack(src: string, loop = true): void {
+    if (typeof document === 'undefined') return;
+    this.stopTrack(false);
+    this.background?.pause();
+    const el = document.createElement('audio');
+    el.src = src;
+    el.loop = loop;
+    el.preload = 'auto';
+    el.setAttribute('aria-hidden', 'true');
+    el.style.display = 'none';
+    el.volume = Math.max(0, Math.min(1, this.volume));
+    el.muted = this.muted;
+    document.body.appendChild(el);
+    this.track = el;
+    void el.play().catch(() => undefined);
+  }
+
+  stopTrack(resume = true): void {
+    const el = this.track;
+    if (el) {
+      el.pause();
+      el.remove();
+      this.track = null;
+    }
+    if (resume) this.resumeBackground();
   }
 
   setVolume(v: number): void {
     this.volume = v;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : v, this.ctx.currentTime, 0.05);
     if (this.background) this.background.volume = Math.max(0, Math.min(1, v * BACKGROUND_LEVEL));
+    if (this.track) this.track.volume = Math.max(0, Math.min(1, v));
   }
 
   setMuted(m: boolean): void {
     this.muted = m;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(m ? 0 : this.volume, this.ctx.currentTime, 0.05);
     if (this.background) this.background.muted = m;
+    if (this.track) this.track.muted = m;
   }
 
   // ---------- instruments ----------
