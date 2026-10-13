@@ -92,8 +92,12 @@ export default function App() {
     return (
       <Cinematic
         onDone={() => {
+          // The opening film always lands on the setup page, whatever phase
+          // was saved last time; "Fortsett spillet" picks the night up again.
+          const firstOpen = !sessionStorage.getItem(FILM_SEEN_KEY);
           sessionStorage.setItem(FILM_SEEN_KEY, '1');
           setShowFilm(false);
+          if (firstOpen) go({ name: 'setup' });
         }}
       />
     );
