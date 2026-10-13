@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
 import { Scoreboard } from '../components/Scoreboard';
@@ -26,7 +27,7 @@ export function PodiumScreen({ state, go, onPlayAgain }: ScreenProps & { onPlayA
       <div className="podium-teams">
         {items.map((r) => (
           <div key={r.team.id} className="podium-team" style={{ ['--team' as string]: r.team.color }}>
-            <span className="podium-emoji">{r.team.emoji}</span>
+            <span className="podium-emoji"><TeamMark team={r.team} /></span>
             <span className="podium-name">{r.team.name}</span>
             <span className="podium-points">{r.total} p</span>
           </div>
@@ -49,7 +50,7 @@ export function PodiumScreen({ state, go, onPlayAgain }: ScreenProps & { onPlayA
       </div>
       {rest.length > 0 && (
         <p className="podium-rest">
-          {rest.map((r) => `${r.rank}. ${r.team.emoji} ${r.team.name} (${r.total} p)`).join(' · ')}
+          {rest.map((r) => `${r.rank}. ${r.team.name} (${r.total} p)`).join(' · ')}
         </p>
       )}
       <div className="podium-board">

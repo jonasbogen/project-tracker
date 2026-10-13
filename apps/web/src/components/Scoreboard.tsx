@@ -1,4 +1,5 @@
 import { standings } from '../game/scoring';
+import { TeamMark } from './TeamMark';
 import type { EventResult, Team, TeamId } from '../game/types';
 
 export function Scoreboard({
@@ -26,7 +27,7 @@ export function Scoreboard({
           <div key={r.team.id} className="score-row" style={{ ['--team' as string]: r.team.color }}>
             <div className="score-rank">{r.rank}</div>
             <div className="score-team">
-              <span className="score-emoji">{r.team.emoji}</span>
+              <span className="score-emoji"><TeamMark team={r.team} /></span>
               <span className="score-name">{r.team.name}</span>
             </div>
             <div className="score-bar-wrap">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { placementsFromGroups } from '../game/scoring';
 import type { EmojiState, TeamId } from '../game/types';
@@ -99,7 +100,7 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
       ...s,
       pending: {
         placements: placementsFromGroups(groups),
-        note: `Riktige svar: ${sorted.map((s) => `${s.team.emoji} ${s.team.name} ${s.correct}`).join(' · ')}. Likt antall deler plassen. Juster om nødvendig.`,
+        note: `Riktige svar: ${sorted.map((s) => `${s.team.name} ${s.correct}`).join(' · ')}. Likt antall deler plassen. Juster om nødvendig.`,
       },
     }));
     go({ name: 'event-rank', index });
@@ -113,7 +114,7 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
           {summary.map((s) => (
             <div key={s.team.id} className="emoji-summary-row" style={{ ['--team' as string]: s.team.color }}>
               <span>
-                {s.team.emoji} {s.team.name}
+                <TeamMark team={s.team} /> {s.team.name}
               </span>
               <strong>
                 {s.correct} av {s.total} riktige
@@ -141,7 +142,7 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
         Film {e.current + 1} av {CARDS.length}
       </div>
       <h1 className="play-title">
-        {team.emoji} {team.name} sin tur
+        <TeamMark team={team} /> {team.name} sin tur
       </h1>
 
       {!e.startedAt ? (

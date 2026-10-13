@@ -4,7 +4,10 @@ export interface Team {
   id: TeamId;
   name: string;
   color: string;
+  /** Kept for older saves; new teams use an icon instead. */
   emoji: string;
+  /** Icon key, see TEAM_ICONS in components/TeamMark. */
+  icon?: string;
   players: string[];
 }
 

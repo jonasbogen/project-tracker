@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
 import { Portal } from '../components/Portal';
@@ -312,7 +313,7 @@ function Suitcase({
       </span>
       {team && (
         <span className="case-owner">
-          {team.emoji} {team.name}
+          <TeamMark team={team} /> {team.name}
         </span>
       )}
     </button>
@@ -635,7 +636,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       ...s,
       pending: {
         placements: placementsFromGroups(groups),
-        note: `Deal or Drink: ${sorted.map((t) => `${t.emoji} ${t.name} ${fmt(finalPoints(d, t))} kr`).join(' · ')}. Juster om nødvendig.`,
+        note: `Deal or Drink: ${sorted.map((t) => `${t.name} ${fmt(finalPoints(d, t))} kr`).join(' · ')}. Juster om nødvendig.`,
       },
     }));
     go({ name: 'event-rank', index });
@@ -666,9 +667,9 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
   const headline = (): string => {
     switch (stage.name) {
       case 'pick':
-        return `${activeTeam?.emoji ?? ''} ${activeTeam?.name ?? ''}: VELG DIN KOFFERT`;
+        return `${activeTeam?.name ?? ''}: VELG DIN KOFFERT`;
       case 'round':
-        return stage.sub === 'choose' ? `${activeTeam?.emoji ?? ''} ${activeTeam?.name ?? ''}: ÅPNE EN KOFFERT` : `RUNDE ${d.round}`;
+        return stage.sub === 'choose' ? `${activeTeam?.name ?? ''}: ÅPNE EN KOFFERT` : `RUNDE ${d.round}`;
       case 'bank':
         return stage.final ? 'FINALEN' : `${BANKER.toUpperCase()} RINGER · RUNDE ${d.round}`;
       case 'reveal':
@@ -695,7 +696,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             <h2>Lagnavn</h2>
             {teams.map((t) => (
               <label key={t.id} className="deal-setup-team" style={{ ['--team' as string]: t.color }}>
-                <span>{t.emoji}</span>
+                <span><TeamMark team={t} /></span>
                 <input
                   value={t.name}
                   onChange={(e) => update((s) => ({ ...s, teams: s.teams.map((x) => (x.id === t.id ? { ...x, name: e.target.value } : x)) }))}
@@ -748,7 +749,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
         <div className="deal-spot-text">
           <span className="deal-kicker">NESTE</span>
           <span className="deal-huge">
-            {activeTeam.emoji} {activeTeam.name}
+            <TeamMark team={activeTeam} /> {activeTeam.name}
           </span>
           <span className="deal-kicker">Runde {d.round} · koffert {caseOf(d.teams[activeTeam.id].caseNo)?.n ?? '?'}</span>
         </div>
@@ -821,7 +822,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
           {esko(false)}
           <span className="deal-huge deal-bank-title">{stage.final ? `${BANKER.toUpperCase()} HAR ETT SISTE TILBUD` : `${BANKER.toUpperCase()} REGNER …`}</span>
           <span className="deal-kicker">
-            {BANKER} ser på {activeTeam.emoji} {activeTeam.name} …
+            {BANKER} ser på <TeamMark team={activeTeam} /> {activeTeam.name} …
           </span>
           {stage.final && ownCase && (
             <div className="deal-finale-vs">
@@ -857,7 +858,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
                 const o = ownerOf(c);
                 return (
                   <span key={c.n} className={`deal-remaining-case ${o ? 'deal-remaining-owned' : ''}`} style={o ? { ['--team' as string]: o.color } : undefined}>
-                    {o ? `${o.emoji} ` : ''}
+                    {o && <TeamMark team={o} />}
                     {c.n}
                   </span>
                 );
@@ -883,7 +884,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             <img className="esko-img esko-img-small" src="/esko.png" alt="" />
             <span className="deal-kicker">
               {stage.final ? 'FINALEN · ' : ''}
-              {activeTeam.emoji} {activeTeam.name}
+              <TeamMark team={activeTeam} /> {activeTeam.name}
             </span>
           </div>
           {offer.reason && <span className="deal-bank-reason deal-bank-reason-small">{offer.reason}</span>}
@@ -949,7 +950,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
           {dealt ? (
             <div className="deal-answer-text">
               <span className="deal-huge">
-                {activeTeam.emoji} {activeTeam.name.toUpperCase()} HAR SIKRET {fmt(offer.points)} KR
+                <TeamMark team={activeTeam} /> {activeTeam.name.toUpperCase()} HAR SIKRET {fmt(offer.points)} KR
               </span>
               {offer.sips > 0 && (
                 <span className="deal-offer-sips">
@@ -962,7 +963,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
           ) : (
             <div className="deal-answer-text">
               <span className="deal-huge">
-                {activeTeam.emoji} {activeTeam.name.toUpperCase()} GAMBLER VIDERE
+                <TeamMark team={activeTeam} /> {activeTeam.name.toUpperCase()} GAMBLER VIDERE
               </span>
               <span className="deal-kicker">Kofferten forblir låst.</span>
             </div>
@@ -1004,7 +1005,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
         <div className="deal-reveal-stage">
           <span className="deal-kicker">{stage.teamIndex === order.length - 1 ? 'KVELDENS SISTE KOFFERT' : 'AVSLØRINGEN'}</span>
           <span className="deal-huge">
-            {team.emoji} {team.name}
+            <TeamMark team={team} /> {team.name}
           </span>
           <span className="deal-kicker">
             {dt.status === 'dealt' ? `TOK DEAL I RUNDE ${dt.dealRound}: ${fmt(dt.dealPoints ?? 0)} KR` : 'BEHOLDT KOFFERTEN'} · KOFFERT {c?.n ?? '?'}
@@ -1052,7 +1053,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             <li key={t.id} className={`deal-results-row place-${i + 1}`} style={{ ['--team' as string]: t.color }}>
               <span className="deal-results-rank">{i + 1}.</span>
               <span className="deal-results-team">
-                {t.emoji} {t.name}
+                <TeamMark team={t} /> {t.name}
               </span>
               <span className="deal-results-how">
                 {d.teams[t.id].status === 'dealt' ? `DEAL i runde ${d.teams[t.id].dealRound}` : `Koffert ${d.teams[t.id].caseNo}`}
@@ -1064,23 +1065,23 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
         <div className="deal-stats">
           <div className="deal-stat">
             <span className="deal-kicker">BESTE DEAL</span>
-            <strong>{best ? `${best.emoji} ${best.name}` : '–'}</strong>
+            <strong>{best ? `${best.name}` : '–'}</strong>
             <small>{best ? `tok ${fmt(d.teams[best.id].dealPoints ?? 0)} kr, kofferten hadde ${fmt(caseOf(d.teams[best.id].caseNo)?.value ?? 0)} kr` : 'ingen gode deals'}</small>
           </div>
           <div className="deal-stat">
             <span className="deal-kicker">VERSTE DEAL</span>
-            <strong>{worst ? `${worst.emoji} ${worst.name}` : '–'}</strong>
+            <strong>{worst ? `${worst.name}` : '–'}</strong>
             <small>{worst ? `tok ${fmt(d.teams[worst.id].dealPoints ?? 0)} kr, kofferten hadde ${fmt(caseOf(d.teams[worst.id].caseNo)?.value ?? 0)} kr` : 'ingen dårlige deals'}</small>
           </div>
           <div className="deal-stat">
             <span className="deal-kicker">STØRSTE GAMBLER</span>
-            <strong>{gambler && noDeals(gambler) > 0 ? `${gambler.emoji} ${gambler.name}` : '–'}</strong>
+            <strong>{gambler && noDeals(gambler) > 0 ? `${gambler.name}` : '–'}</strong>
             <small>{gambler && noDeals(gambler) > 0 ? `${noDeals(gambler)} × NO DEAL` : 'ingen sa NO DEAL'}</small>
           </div>
           <div className="deal-stat">
             <span className="deal-kicker">KVELDENS KOFFERT</span>
             <strong>{topCase ? `Koffert ${topCase.n} – ${fmt(topCase.value)} kr` : '–'}</strong>
-            <small>{topOwner ? `${topOwner.emoji} ${topOwner.name} sin koffert` : topCase?.opened ? 'åpnet underveis' : 'ble aldri åpnet'}</small>
+            <small>{topOwner ? `${topOwner.name} sin koffert` : topCase?.opened ? 'åpnet underveis' : 'ble aldri åpnet'}</small>
           </div>
         </div>
         <button className="btn btn-primary btn-xl" data-primary onClick={addToTotals}>
@@ -1108,7 +1109,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       {stage.name === 'bank' && activeTeam && (stage.sub === 'thinking' || stage.sub === 'comment' || stage.sub === 'offer') && (
         <div className="deal-host-offer" style={{ ['--team' as string]: activeTeam.color }}>
           <div className="deal-host-offer-title">
-            Tilbud til {activeTeam.emoji} {activeTeam.name}
+            Tilbud til <TeamMark team={activeTeam} /> {activeTeam.name}
             {stage.final ? ' (siste)' : ''}
           </div>
           <div className="muted deal-host-ev">
@@ -1143,7 +1144,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             <div key={c.n} className={`deal-host-case ${c.opened ? 'gone' : ''}`} style={owner ? { ['--team' as string]: owner.color } : undefined}>
               <span className="deal-host-case-n">{c.n}</span>
               <span className="deal-host-case-v">{fmt(c.value)}</span>
-              {owner && <span className="deal-host-case-o">{owner.emoji}</span>}
+              {owner && <span className="deal-host-case-o"><TeamMark team={owner} /></span>}
             </div>
           );
         })}
@@ -1155,7 +1156,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
           return (
             <div key={t.id} className="deal-host-team" style={{ ['--team' as string]: t.color }}>
               <span>
-                {t.emoji} {t.name}
+                <TeamMark team={t} /> {t.name}
               </span>
               <span className="muted">
                 K{dt.caseNo ?? '?'} · {dt.status === 'dealt' ? `DEAL ${fmt(dt.dealPoints ?? 0)} kr` : 'spiller'} · ut {dt.sipsOut} · inn {dt.sipsIn}
@@ -1269,7 +1270,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
               </div>
               <div className="deal-team-info">
                 <div className="deal-team-name">
-                  {t.emoji} {t.name}
+                  <TeamMark team={t} /> {t.name}
                 </div>
                 <div className="deal-team-status">{dt.status === 'dealt' ? `DEAL · ${fmt(dt.dealPoints ?? 0)} kr` : 'SPILLER'}</div>
                 <div className="deal-team-sips">

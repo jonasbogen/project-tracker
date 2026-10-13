@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Portal } from '../components/Portal';
 import { placementsFromGroups } from '../game/scoring';
@@ -170,7 +171,7 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
       else groups.push([t.id]);
       prev = key;
     }
-    const summary = sorted.map((t) => `${t.emoji} ${t.name} ${avg(t.id).toFixed(1)}`).join(' · ');
+    const summary = sorted.map((t) => `${t.name} ${avg(t.id).toFixed(1)}`).join(' · ');
     update((s) => ({
       ...s,
       mafia: s.mafia ? { ...s.mafia, step: 'end' } : s.mafia,
@@ -187,7 +188,7 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
       {teams.map((t) => (
         <div key={t.id} className="mafia-team" style={{ ['--team' as string]: t.color }}>
           <div className="mafia-team-name">
-            {t.emoji} {t.name}
+            <TeamMark team={t} /> {t.name}
           </div>
           <div className="mafia-players">
             {pool
@@ -428,7 +429,7 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
             {teams.map((t) => (
               <div key={t.id} className="mafia-team" style={{ ['--team' as string]: t.color }}>
                 <div className="mafia-team-name">
-                  {t.emoji} {t.name}
+                  <TeamMark team={t} /> {t.name}
                 </div>
                 <div className="mafia-players">
                   {alive

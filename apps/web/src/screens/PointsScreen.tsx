@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
 import { Scoreboard } from '../components/Scoreboard';
@@ -65,7 +66,7 @@ export function PointsScreen({ state, go, index }: ScreenProps & { index: number
             ) : (
               hitTeams.map((t) => (
                 <div key={t.id} className="six-loser-card" style={{ ['--team' as string]: t.color }}>
-                  <span className="six-loser-emoji">{t.emoji}</span>
+                  <span className="six-loser-emoji"><TeamMark team={t} /></span>
                   <span className="six-loser-name">{t.name}</span>
                   <span className="reveal-points">+{result?.points[t.id] ?? 0}</span>
                 </div>
@@ -76,7 +77,7 @@ export function PointsScreen({ state, go, index }: ScreenProps & { index: number
         <div className="six-loser">
           {revealed > 0 && loserTeam && (
             <div className="six-loser-card" style={{ ['--team' as string]: loserTeam.color }}>
-              <span className="six-loser-emoji">{loserTeam.emoji}</span>
+              <span className="six-loser-emoji"><TeamMark team={loserTeam} /></span>
               <span className="six-loser-name">{loserTeam.name}</span>
               <span className="six-loser-points">−{Math.abs(event.penalty)}</span>
             </div>
@@ -94,7 +95,7 @@ export function PointsScreen({ state, go, index }: ScreenProps & { index: number
                 style={{ ['--team' as string]: t.color }}
               >
                 <span className="reveal-place">{shown ? `${place}.` : '?'}</span>
-                <span className="reveal-emoji">{shown ? t.emoji : '❔'}</span>
+                <span className="reveal-emoji">{shown ? <TeamMark team={t} /> : '❔'}</span>
                 <span className="reveal-name">{shown ? t.name : '…'}</span>
                 <span className="reveal-points">{shown ? `+${result?.points[t.id] ?? 0}` : ''}</span>
               </div>

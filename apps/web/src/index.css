@@ -49,6 +49,23 @@ p {
   color: var(--muted);
 }
 
+/* Team mark: an Intility product icon sized like the text around it. */
+.team-mark {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: -0.28em;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+}
+
+.team-mark-emoji {
+  width: auto;
+  height: auto;
+  vertical-align: baseline;
+  filter: none;
+}
+
 /* Game screens never scroll: the stage is exactly the viewport minus the top
    bar, and FitScreen scales a screen down if it would not fit. Only the setup
    page is allowed to scroll. */
@@ -334,14 +351,6 @@ p {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-.emoji-select {
-  font-size: 1.5rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: none;
-  border-radius: 10px;
-  padding: 4px;
 }
 
 .team-name-input {
@@ -712,7 +721,53 @@ input[type='color'] {
   border-top: 6px solid var(--team);
 }
 
-.setup .team-card .emoji-select,
+.team-card-mark {
+  font-size: 1.9rem;
+  line-height: 1;
+  display: inline-flex;
+}
+
+.icon-pick {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-pick-btn {
+  width: 48px;
+  height: 48px;
+  padding: 7px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.icon-pick-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.icon-pick-btn:hover {
+  transform: translateY(-1px);
+}
+
+.icon-pick-on {
+  border-color: var(--team);
+  background: color-mix(in srgb, var(--team) 18%, transparent);
+}
+
+.setup .icon-pick-btn {
+  background: var(--paper-2);
+  border-color: var(--line);
+}
+
+.setup .icon-pick-on {
+  border-color: var(--team);
+  background: color-mix(in srgb, var(--team) 14%, #fff);
+}
+
 .setup .team-name-input,
 .setup .players-input,
 .setup .event-rules-input,
@@ -721,10 +776,6 @@ input[type='color'] {
   border: 1px solid var(--line);
   color: var(--ink);
   border-radius: 14px;
-}
-
-.setup .team-card .emoji-select {
-  border-radius: 12px;
 }
 
 .setup .team-name-input {

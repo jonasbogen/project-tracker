@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
 import { buildResult } from '../game/scoring';
@@ -144,7 +145,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
           {!w.spunAt && pickingTeam && (
             <p className="play-sub big">
               <span className="team-badge" style={{ ['--team' as string]: pickingTeam.color }}>
-                {pickingTeam.emoji} {pickingTeam.name}
+                <TeamMark team={pickingTeam} /> {pickingTeam.name}
               </span>{' '}
               velger felt
             </p>
@@ -157,7 +158,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
               {hitTeams.length ? (
                 hitTeams.map((t) => (
                   <div key={t.id} className="wheel-result-hit" style={{ ['--team' as string]: t.color }}>
-                    {t.emoji} {t.name} traff! +{event.points[0]} poeng
+                    <TeamMark team={t} /> {t.name} traff! +{event.points[0]} poeng
                   </div>
                 ))
               ) : (
@@ -169,7 +170,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
             {teams.map((t) => (
               <div key={t.id} className={`wheel-pick-row ${landed && w.picks[t.id] === w.result ? 'wheel-pick-hit' : ''}`} style={{ ['--team' as string]: t.color }}>
                 <span>
-                  {t.emoji} {t.name}
+                  <TeamMark team={t} /> {t.name}
                 </span>
                 <strong>{w.picks[t.id] ?? '–'}</strong>
               </div>
@@ -213,7 +214,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
                     dominantBaseline="central"
                     transform={`rotate(${i * SLOT_DEG + SLOT_DEG / 2} ${tx} ${ty})`}
                   >
-                    {owner ? `${owner.emoji}${n}` : n}
+                    {n}
                   </text>
                 </g>
               );

@@ -3,8 +3,7 @@ import { audio } from '../audio/engine';
 import { newEvent, TEAM_PALETTE } from '../game/store';
 import type { GameEvent } from '../game/types';
 import { KIND_EMOJI, type ScreenProps } from './common';
-
-const EMOJIS = ['🦁', '🐬', '🐸', '🐯', '🦊', '🐼', '🦄', '🐙', '🦅', '🐺', '🦈', '🐲'];
+import { iconSrc, TEAM_ICONS, TeamMark } from '../components/TeamMark';
 
 export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onReset: () => void }) {
   useEffect(() => {
@@ -74,18 +73,9 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
           {state.teams.map((team, i) => (
             <div key={team.id} className="team-card" style={{ ['--team' as string]: team.color }}>
               <div className="team-card-top">
-                <select
-                  className="emoji-select"
-                  value={team.emoji}
-                  onChange={(e) => setTeam(team.id, { emoji: e.target.value })}
-                  aria-label="Maskot"
-                >
-                  {[...new Set([team.emoji, ...EMOJIS])].map((em) => (
-                    <option key={em} value={em}>
-                      {em}
-                    </option>
-                  ))}
-                </select>
+                <span className="team-card-mark">
+                  <TeamMark team={team} />
+                </span>
                 <input
                   className="team-name-input"
                   value={team.name}
@@ -105,6 +95,20 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
                     <option key={p.color} value={p.color} />
                   ))}
                 </datalist>
+              </div>
+              <div className="icon-pick" role="radiogroup" aria-label="Ikon">
+                {TEAM_ICONS.map((ic) => (
+                  <button
+                    key={ic}
+                    type="button"
+                    role="radio"
+                    aria-checked={team.icon === ic}
+                    className={`icon-pick-btn ${team.icon === ic ? 'icon-pick-on' : ''}`}
+                    onClick={() => setTeam(team.id, { icon: ic })}
+                  >
+                    <img src={iconSrc(ic)} alt="" draggable={false} />
+                  </button>
+                ))}
               </div>
               <textarea
                 className="players-input"

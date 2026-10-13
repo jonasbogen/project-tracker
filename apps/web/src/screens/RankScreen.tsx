@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { buildResult, pointsForPlacements } from '../game/scoring';
 import type { Placements, TeamId } from '../game/types';
@@ -71,7 +72,7 @@ export function RankScreen({ state, update, go, index }: ScreenProps & { index: 
               style={{ ['--team' as string]: t.color }}
               onClick={() => pick(t.id)}
             >
-              <span className="rank-card-emoji">{t.emoji}</span>
+              <span className="rank-card-emoji"><TeamMark team={t} /></span>
               <span className="rank-card-name">{t.name}</span>
               {place && (
                 <span className={`rank-card-place place-${place}`}>

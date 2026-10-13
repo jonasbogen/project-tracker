@@ -4,10 +4,10 @@ import type { GameEvent, GameState, Team } from './types';
 const STORAGE_KEY = 'spillkveld-state-v1';
 
 export const TEAM_PALETTE = [
-  { color: '#ff4d6d', emoji: '🦁' },
-  { color: '#4da3ff', emoji: '🐬' },
-  { color: '#3ddc84', emoji: '🐸' },
-  { color: '#ffc53d', emoji: '🐯' },
+  { color: '#e0207a', emoji: '🦁', icon: 'build' },
+  { color: '#7c3aed', emoji: '🐬', icon: 'finans' },
+  { color: '#22c55e', emoji: '🐸', icon: 'roadmap' },
+  { color: '#ffc53d', emoji: '🐯', icon: 'handel' },
 ];
 
 let idCounter = 0;
@@ -22,6 +22,7 @@ export function defaultTeams(): Team[] {
     name: `Lag ${i + 1}`,
     color: p.color,
     emoji: p.emoji,
+    icon: p.icon,
     players: [],
   }));
 }
@@ -112,6 +113,10 @@ export function initialState(): GameState {
  * been played yet, add the newer events so the night has the full programme.
  */
 function migrate(s: GameState): GameState {
+  // Teams from before the Intility icons get one each, in palette order.
+  if (s.teams.some((t) => !t.icon)) {
+    s = { ...s, teams: s.teams.map((t, i) => (t.icon ? t : { ...t, icon: TEAM_PALETTE[i % TEAM_PALETTE.length].icon })) };
+  }
   if (s.results.length > 0) return s;
   const events = [...s.events];
   for (const kind of ['wheel', 'deal'] as const) {

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import type { ScreenProps } from './common';
 
@@ -28,7 +29,7 @@ export function IntroScreen({ state, go }: ScreenProps) {
       <div className="intro-teams">
         {state.teams.map((t, i) => (
           <div key={t.id} className="intro-team" style={{ ['--team' as string]: t.color, ['--i' as string]: i }}>
-            <span className="intro-team-emoji">{t.emoji}</span>
+            <span className="intro-team-emoji"><TeamMark team={t} /></span>
             <span className="intro-team-name">{t.name}</span>
             {t.players.length > 0 && <span className="intro-team-players">{t.players.join(' · ')}</span>}
           </div>

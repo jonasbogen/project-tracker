@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { TeamMark } from './components/TeamMark';
 import { audio } from './audio/engine';
 import { FitScreen } from './components/FitScreen';
 import { totals } from './game/scoring';
@@ -167,7 +168,7 @@ export default function App() {
         <div className="topbar-scores">
           {state.teams.map((t) => (
             <span key={t.id} className="topbar-chip" style={{ ['--team' as string]: t.color }}>
-              {t.emoji} {sums[t.id]}
+              <TeamMark team={t} /> {sums[t.id]}
             </span>
           ))}
         </div>

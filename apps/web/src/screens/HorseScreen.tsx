@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
 import { placementsFromGroups } from '../game/scoring';
@@ -207,7 +208,7 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
           {pickingTeam ? (
             <p className="play-sub big" style={{ ['--team' as string]: pickingTeam.color }}>
               <span className="team-badge">
-                {pickingTeam.emoji} {pickingTeam.name}
+                <TeamMark team={pickingTeam} /> {pickingTeam.name}
               </span>{' '}
               velger hest. Trykk på hesten laget vil ha.
             </p>
@@ -229,7 +230,7 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                   <span className="horse-pick-horse">🐎</span>
                   <span className={`horse-pick-suit ${red ? 'red' : ''}`}>{suit}</span>
                   <span className="horse-pick-name">{SUIT_NAME[suit]}</span>
-                  <span className="horse-pick-owner">{owner ? `${owner.emoji} ${owner.name}` : 'Ledig'}</span>
+                  <span className="horse-pick-owner">{owner ? `${owner.name}` : 'Ledig'}</span>
                 </button>
               );
             })}
@@ -285,7 +286,7 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                     <div className="lane-label">
                       <span className={`lane-suit ${red ? 'red' : ''}`}>{suit}</span>
                       <span>
-                        {t.emoji} {t.name}
+                        <TeamMark team={t} /> {t.name}
                       </span>
                     </div>
                     <div className="lane-path">
@@ -297,7 +298,7 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                       <div className={`horse-runner ${race.stage === 'running' ? 'galloping' : ''}`} style={{ ['--pos' as string]: pos / TRACK }}>
                         <span className="horse-dust" />
                         <span className="horse-emoji">🐎</span>
-                        <span className="horse-tag">{t.emoji}</span>
+                        <span className="horse-tag"><TeamMark team={t} /></span>
                       </div>
                     </div>
                   </div>
@@ -332,7 +333,7 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
           {race.stage === 'finished' && winnerTeam && (
             <div className="race-winner" style={{ ['--team' as string]: winnerTeam.color }}>
               <div className="race-winner-text">
-                🏁 {winnerTeam.emoji} {winnerTeam.name} vant løpet!
+                🏁 <TeamMark team={winnerTeam} /> {winnerTeam.name} vant løpet!
               </div>
               <button
                 className="btn btn-primary btn-xl"
