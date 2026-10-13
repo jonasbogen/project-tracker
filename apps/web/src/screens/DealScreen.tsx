@@ -136,38 +136,90 @@ export function suggestOffer(d: DealState, final: boolean): { points: number; si
   return { points, sips: final ? 6 : Math.min(6, d.round + 2) };
 }
 
-/** The bank's own version, with a little randomness so it never feels like a formula. */
-function bankOffer(d: DealState, final: boolean): { points: number; sips: number } {
-  const s = suggestOffer(d, final);
-  const wobble = 1 + (Math.random() - 0.5) * 0.16;
-  return { points: Math.max(10, Math.round((s.points * wobble) / 25) * 25), sips: s.sips };
+/** Extras the bank sometimes throws in to make an offer harder to refuse. */
+const BANK_BONUSES = [
+  'Motstanderne tar 2 slurker hver',
+  'Laget velger hvem som drikker neste gang noen må drikke',
+  'Én shot til et valgfritt lag',
+  'Laget slipper sin neste drikkestraff',
+  `${BANKER} spanderer: alle andre lag tar 1 slurk`,
+  'Laget får bestemme rekkefølgen i neste runde',
+];
+
+interface BankDeal {
+  points: number;
+  sips: number;
+  bonus?: string;
+  /** What shaped the offer, used in the justification. */
+  twists: string[];
+}
+
+/**
+ * The bank's own offer. It starts from the expected value, then reads the
+ * team: what they just opened, how stubborn they have been, how much they
+ * have had to drink, and Esko's mood of the moment. No two teams get the same.
+ */
+function bankOffer(d: DealState, team: Team, final: boolean): BankDeal {
+  const base = suggestOffer(d, final);
+  const dt = d.teams[team.id];
+  const twists: string[] = [];
+  let f = 1 + (Math.random() - 0.5) * 0.3;
+  const opened = d.cases.filter((c) => c.openedBy === team.id && c.openedRound === d.round).map((c) => c.value);
+  const last = opened[opened.length - 1];
+  if (last !== undefined && last >= 1500) {
+    f *= 1.12;
+    twists.push('relieved');
+  } else if (last !== undefined && last <= 100) {
+    f *= 0.88;
+    twists.push('nervous');
+  }
+  const noDeals = dt.offers.filter((o) => o.answer === 'nodeal').length;
+  if (noDeals > 0) {
+    f *= 1 + Math.min(0.24, noDeals * 0.08);
+    twists.push('stubborn');
+  }
+  if (dt.sipsIn >= 4) {
+    f *= 0.92;
+    twists.push('tipsy');
+  }
+  if (f > 1.08) twists.push('generous');
+  else if (f < 0.92) twists.push('stingy');
+  const points = Math.max(10, Math.round((base.points * f) / 25) * 25);
+  const sips = Math.max(1, Math.min(8, base.sips + Math.floor(Math.random() * 4) - 1));
+  const bonus = Math.random() < (final ? 0.45 : 0.28) ? pickRandom(BANK_BONUSES) : undefined;
+  return { points, sips, bonus, twists };
 }
 
 /** A short, slightly mean justification for the offer, based on the actual state. */
-function bankReason(d: DealState, team: Team, final: boolean, points: number): string {
+function bankReason(d: DealState, team: Team, final: boolean, points: number, twists: string[] = []): string {
   const rem = remainingValues(d);
   const ev = rem.length ? rem.reduce((a, b) => a + b, 0) / rem.length : 0;
   const high = rem.filter((v) => v >= 1000).length;
   const opened = d.cases.filter((c) => c.openedBy === team.id && c.openedRound === d.round).map((c) => c.value);
   const last = opened[opened.length - 1];
   const pct = Math.round((points / Math.max(1, ev)) * 100);
+  const noDeals = d.teams[team.id].offers.filter((o) => o.answer === 'nodeal').length;
   const parts: string[] = [];
   if (final) {
-    parts.push(`Det står mellom koffert ${d.teams[team.id].caseNo} og dette tilbudet.`);
-    parts.push(high > 0 ? `${high} av de ${rem.length} koffertene som er igjen er over 1000. ${BANKER} tror ikke det er deres.` : `Ingen av koffertene som er igjen er over 1000. ${BANKER} er rolig.`);
-    return parts.join(' ');
+    parts.push(`Det står mellom koffert ${d.teams[team.id].caseNo} og ${fmt(points)} kr.`);
+    parts.push(high > 0 ? `${high} av de ${rem.length} koffertene som er igjen er over 1000 kr. ${BANKER} tror ikke det er deres.` : `Ingen av koffertene som er igjen er over 1000 kr. ${BANKER} er rolig.`);
+  } else {
+    if (last !== undefined) {
+      if (last >= 1500) parts.push(`Dere fjernet nettopp ${fmt(last)} kr. ${BANKER} er lettet, og lettelse er billig.`);
+      else if (last <= 100) parts.push(`Dere fjernet ${fmt(last)} kr. De store verdiene lever fortsatt, og det koster ${BANKER} nattesøvn.`);
+      else parts.push(`Dere fjernet ${fmt(last)} kr. Verken bra eller dårlig. ${BANKER} liker middelmådighet.`);
+    }
+    if (high >= 4) parts.push(`${high} kofferter over 1000 kr er fortsatt i spill. ${BANKER} betaler for å slippe den risikoen.`);
+    else if (high >= 2) parts.push(`${high} kofferter over 1000 kr igjen. ${BANKER} tilbyr ${pct} % av snittet, og mener det er raust.`);
+    else if (high === 1) parts.push(`Bare én koffert over 1000 kr igjen. ${BANKER} tviler på at den er deres.`);
+    else parts.push(`Ingen store verdier igjen. ${BANKER} byr ${pct} % av snittet, mest for syns skyld.`);
   }
-  if (last !== undefined) {
-    if (last >= 1500) parts.push(`Dere fjernet nettopp ${fmt(last)}. ${BANKER} er lettet, og lettelse er billig.`);
-    else if (last <= 100) parts.push(`Dere fjernet ${fmt(last)}. De store verdiene lever fortsatt, og det koster ${BANKER} nattesøvn.`);
-    else parts.push(`Dere fjernet ${fmt(last)}. Verken bra eller dårlig. ${BANKER} liker middelmådighet.`);
-  }
-  if (high >= 4) parts.push(`${high} kofferter over 1000 er fortsatt i spill. ${BANKER} betaler for å slippe den risikoen.`);
-  else if (high >= 2) parts.push(`${high} kofferter over 1000 igjen. ${BANKER} tilbyr ${pct} % av snittet, og mener det er raust.`);
-  else if (high === 1) parts.push(`Bare én koffert over 1000 igjen. ${BANKER} tviler på at den er deres.`);
-  else parts.push(`Ingen store verdier igjen. ${BANKER} byr ${pct} % av snittet, mest for syns skyld.`);
-  if (parts.length < 2) parts.push(`Snittet av det som er igjen er ${fmt(Math.round(ev))}. ${BANKER} byr ${pct} % av det. Fordi ${BANKER} kan.`);
-  return parts.slice(0, 2).join(' ');
+  if (twists.includes('stubborn')) parts.push(`${team.name} har sagt NO DEAL ${noDeals} ${noDeals === 1 ? 'gang' : 'ganger'}. ${BANKER} legger på litt. Motvillig.`);
+  else if (twists.includes('tipsy')) parts.push(`${BANKER} ser at dere har drukket. ${BANKER} utnytter det.`);
+  else if (twists.includes('stingy')) parts.push(`${BANKER} er i dårlig humør i dag. Det merkes på tallet.`);
+  else if (twists.includes('generous')) parts.push(`${BANKER} er i uvanlig godt humør. Det varer ikke.`);
+  if (parts.length < 2) parts.push(`Snittet av det som er igjen er ${fmt(Math.round(ev))} kr. ${BANKER} byr ${pct} % av det. Fordi ${BANKER} kan.`);
+  return parts.slice(0, 3).join(' ');
 }
 
 function finalPoints(d: DealState, team: Team): number {
@@ -392,9 +444,9 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       // The bank makes its own offer. The host can still open the panel and
       // override it before it goes out.
       const team = teams[stage.teamIndex];
-      const o = bankOffer(d, stage.final);
-      const reason = bankReason(d, team, stage.final, o.points);
-      setDraft({ points: String(o.points), sips: String(o.sips), bonus: '' });
+      const o = bankOffer(d, team, stage.final);
+      const reason = bankReason(d, team, stage.final, o.points, o.twists);
+      setDraft({ points: String(o.points), sips: String(o.sips), bonus: o.bonus ?? '' });
       later(3200, () => {
         const comment = pickRandom(BANK_COMMENTS).replace('{lag}', team.name);
         tick((x) => {
@@ -402,7 +454,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
           const dt = x.teams[team.id];
           return {
             ...x,
-            teams: { ...x.teams, [team.id]: { ...dt, offers: [...dt.offers, { round: x.round, points: o.points, sips: o.sips, reason }] } },
+            teams: { ...x.teams, [team.id]: { ...dt, offers: [...dt.offers, { round: x.round, points: o.points, sips: o.sips, bonus: o.bonus, reason }] } },
             stage: { name: 'bank', sub: 'comment', teamIndex: x.stage.teamIndex, final: x.stage.final, comment },
           };
         });
@@ -583,7 +635,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
       ...s,
       pending: {
         placements: placementsFromGroups(groups),
-        note: `Deal or Drink: ${sorted.map((t) => `${t.emoji} ${t.name} ${fmt(finalPoints(d, t))}`).join(' · ')}. Juster om nødvendig.`,
+        note: `Deal or Drink: ${sorted.map((t) => `${t.emoji} ${t.name} ${fmt(finalPoints(d, t))} kr`).join(' · ')}. Juster om nødvendig.`,
       },
     }));
     go({ name: 'event-rank', index });
@@ -656,7 +708,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             </label>
           </section>
           <section className="deal-setup-box">
-            <h2>Koffertverdier (20)</h2>
+            <h2>Koffertverdier i kroner (20)</h2>
             <div className="deal-values-edit">
               {d.values.map((v, i) => (
                 <input
@@ -815,7 +867,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
               <div className="deal-finale-side deal-finale-bank">
                 <span className="deal-kicker">BANKENS SISTE TILBUD</span>
                 <span className="deal-offer-points">
-                  <CountUp to={offer.points} onDone={() => setOfferCounted(true)} /> POENG
+                  <CountUp to={offer.points} onDone={() => setOfferCounted(true)} /> KR
                 </span>
                 {offer.sips > 0 && (
                   <span className="deal-offer-sips">
@@ -830,7 +882,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             <div className="deal-offer-box">
               <span className="deal-kicker">BANKENS TILBUD</span>
               <span className="deal-offer-points">
-                <CountUp to={offer.points} onDone={() => setOfferCounted(true)} /> POENG
+                <CountUp to={offer.points} onDone={() => setOfferCounted(true)} /> KR
               </span>
               {offer.sips > 0 && (
                 <>
@@ -865,7 +917,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
           {dealt ? (
             <div className="deal-answer-text">
               <span className="deal-huge">
-                {activeTeam.emoji} {activeTeam.name.toUpperCase()} HAR SIKRET {fmt(offer.points)} POENG
+                {activeTeam.emoji} {activeTeam.name.toUpperCase()} HAR SIKRET {fmt(offer.points)} KR
               </span>
               {offer.sips > 0 && (
                 <span className="deal-offer-sips">
@@ -903,16 +955,16 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
     if (dt.status === 'dealt') {
       good = (dt.dealPoints ?? 0) >= value;
       verdict = good
-        ? `GOD DEAL! Dere tok ${fmt(dt.dealPoints ?? 0)}, kofferten hadde bare ${fmt(value)}.`
-        : `AU. Dere tok ${fmt(dt.dealPoints ?? 0)}, kofferten hadde ${fmt(value)}.`;
+        ? `GOD DEAL! Dere tok ${fmt(dt.dealPoints ?? 0)} kr, kofferten hadde bare ${fmt(value)} kr.`
+        : `AU. Dere tok ${fmt(dt.dealPoints ?? 0)} kr, kofferten hadde ${fmt(value)} kr.`;
     } else if (lastOffer) {
       good = value >= lastOffer.points;
       verdict = good
-        ? `RIKTIG Å GAMBLE! Banken bød ${fmt(lastOffer.points)}, kofferten hadde ${fmt(value)}.`
-        : `AU. Banken bød ${fmt(lastOffer.points)}, kofferten hadde ${fmt(value)}.`;
+        ? `RIKTIG Å GAMBLE! ${BANKER} bød ${fmt(lastOffer.points)} kr, kofferten hadde ${fmt(value)} kr.`
+        : `AU. ${BANKER} bød ${fmt(lastOffer.points)} kr, kofferten hadde ${fmt(value)} kr.`;
     } else {
       good = value >= 900;
-      verdict = `Kofferten hadde ${fmt(value)}.`;
+      verdict = `Kofferten hadde ${fmt(value)} kr.`;
     }
     overlay = (
       <div className={`deal-overlay deal-overlay-reveal ${stage.sub === 'shown' ? (good ? 'mood-great' : 'mood-worse') : ''}`} style={{ ['--team' as string]: team.color }}>
@@ -923,7 +975,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             {team.emoji} {team.name}
           </span>
           <span className="deal-kicker">
-            {dt.status === 'dealt' ? `TOK DEAL I RUNDE ${dt.dealRound}: ${fmt(dt.dealPoints ?? 0)} POENG` : 'BEHOLDT KOFFERTEN'} · KOFFERT {c?.n ?? '?'}
+            {dt.status === 'dealt' ? `TOK DEAL I RUNDE ${dt.dealRound}: ${fmt(dt.dealPoints ?? 0)} KR` : 'BEHOLDT KOFFERTEN'} · KOFFERT {c?.n ?? '?'}
           </span>
           {c && (
             <div className={`deal-reveal-case ${stage.sub === 'open' ? 'deal-reveal-opening' : ''}`}>
@@ -935,7 +987,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
               <span className="deal-value-big">{fmt(value)}</span>
               <span className="deal-conseq-sips">{verdict}</span>
               <span className="deal-kicker">
-                {dt.status === 'dealt' ? `${team.name} ender på ${fmt(dt.dealPoints ?? 0)} poeng` : `${team.name} ender på ${fmt(value)} poeng`}
+                {dt.status === 'dealt' ? `${team.name} ender på ${fmt(dt.dealPoints ?? 0)} kr` : `${team.name} ender på ${fmt(value)} kr`}
               </span>
               <button className="btn btn-primary btn-xl" data-primary onClick={afterShown}>
                 {stage.teamIndex + 1 < order.length ? 'Neste koffert →' : 'Vis resultatene →'}
@@ -973,7 +1025,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
               <span className="deal-results-how">
                 {d.teams[t.id].status === 'dealt' ? `DEAL i runde ${d.teams[t.id].dealRound}` : `Koffert ${d.teams[t.id].caseNo}`}
               </span>
-              <span className="deal-results-points">{fmt(finalPoints(d, t))}</span>
+              <span className="deal-results-points">{fmt(finalPoints(d, t))} kr</span>
             </li>
           ))}
         </ol>
@@ -981,12 +1033,12 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
           <div className="deal-stat">
             <span className="deal-kicker">BESTE DEAL</span>
             <strong>{best ? `${best.emoji} ${best.name}` : '–'}</strong>
-            <small>{best ? `tok ${fmt(d.teams[best.id].dealPoints ?? 0)}, kofferten hadde ${fmt(caseOf(d.teams[best.id].caseNo)?.value ?? 0)}` : 'ingen gode deals'}</small>
+            <small>{best ? `tok ${fmt(d.teams[best.id].dealPoints ?? 0)} kr, kofferten hadde ${fmt(caseOf(d.teams[best.id].caseNo)?.value ?? 0)} kr` : 'ingen gode deals'}</small>
           </div>
           <div className="deal-stat">
             <span className="deal-kicker">VERSTE DEAL</span>
             <strong>{worst ? `${worst.emoji} ${worst.name}` : '–'}</strong>
-            <small>{worst ? `tok ${fmt(d.teams[worst.id].dealPoints ?? 0)}, kofferten hadde ${fmt(caseOf(d.teams[worst.id].caseNo)?.value ?? 0)}` : 'ingen dårlige deals'}</small>
+            <small>{worst ? `tok ${fmt(d.teams[worst.id].dealPoints ?? 0)} kr, kofferten hadde ${fmt(caseOf(d.teams[worst.id].caseNo)?.value ?? 0)} kr` : 'ingen dårlige deals'}</small>
           </div>
           <div className="deal-stat">
             <span className="deal-kicker">STØRSTE GAMBLER</span>
@@ -995,7 +1047,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
           </div>
           <div className="deal-stat">
             <span className="deal-kicker">KVELDENS KOFFERT</span>
-            <strong>{topCase ? `Koffert ${topCase.n} – ${fmt(topCase.value)}` : '–'}</strong>
+            <strong>{topCase ? `Koffert ${topCase.n} – ${fmt(topCase.value)} kr` : '–'}</strong>
             <small>{topOwner ? `${topOwner.emoji} ${topOwner.name} sin koffert` : topCase?.opened ? 'åpnet underveis' : 'ble aldri åpnet'}</small>
           </div>
         </div>
@@ -1032,10 +1084,10 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
             <br />
             {stage.sub === 'thinking'
               ? `${BANKER} sender dette selv om noen sekunder. Endre og trykk send for å overstyre.`
-              : `Sendt: ${fmt(d.teams[activeTeam.id].offers.at(-1)?.points ?? 0)} poeng`}
+              : `Sendt: ${fmt(d.teams[activeTeam.id].offers.at(-1)?.points ?? 0)} kr`}
           </div>
           <label>
-            Poeng
+            Kroner
             <input type="number" value={draft.points} onChange={(e) => setDraft({ ...draft, points: e.target.value })} />
           </label>
           <label>
@@ -1074,7 +1126,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
                 {t.emoji} {t.name}
               </span>
               <span className="muted">
-                K{dt.caseNo ?? '?'} · {dt.status === 'dealt' ? `DEAL ${fmt(dt.dealPoints ?? 0)}` : 'spiller'} · ut {dt.sipsOut} · inn {dt.sipsIn}
+                K{dt.caseNo ?? '?'} · {dt.status === 'dealt' ? `DEAL ${fmt(dt.dealPoints ?? 0)} kr` : 'spiller'} · ut {dt.sipsOut} · inn {dt.sipsIn}
               </span>
             </div>
           );
@@ -1187,7 +1239,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
                 <div className="deal-team-name">
                   {t.emoji} {t.name}
                 </div>
-                <div className="deal-team-status">{dt.status === 'dealt' ? `DEAL · ${fmt(dt.dealPoints ?? 0)} p` : 'SPILLER'}</div>
+                <div className="deal-team-status">{dt.status === 'dealt' ? `DEAL · ${fmt(dt.dealPoints ?? 0)} kr` : 'SPILLER'}</div>
                 <div className="deal-team-sips">
                   <span title="Slurker laget kan dele ut">🍻 {dt.sipsOut}</span>
                   <span title="Slurker hver på laget har tatt">🥴 {dt.sipsIn}</span>

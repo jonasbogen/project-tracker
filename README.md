@@ -14,7 +14,7 @@ Audio, så appen trenger ingen eksterne filer.
 | **Mafia og politi** | Appen er forteller: natt (mafia, politi), dag (diskusjon med nedtelling, avstemning), rolleavsløring, vinnersjekk og automatisk poengforslag per lag. Roller deles ut med fysiske kort (ess = mafia, konge = politi). | 10 / 7 / 5 / 3 |
 | **Emoji Movie** | Åtte filmer forklart med emojis, to per lag. 10 sekunder per film, bare riktig/feil teller. Likt antall riktige deler plassen. | 10 / 7 / 5 / 3 |
 | **Wheel of Fortune** | 25 felt på et hjul. Lagene velger ett felt hver (ett lag per felt), hjulet snurres én gang. Treff gir flate poeng. | +5 ved treff |
-| **Deal or Drink** | Koffert-gameshow for fire lag: 20 kofferter, fire runder, Banken ringer etter hver runde med tilbud (host skriver inn i host-panelet, tast **H**), DEAL/NO DEAL, finale, avsløring og resultatskjerm med beste/verste deal. Drikkekonsekvens per åpning, alkoholfri variant. Lagene rangeres etter hva de sitter igjen med. | 10 / 7 / 5 / 3 |
+| **Deal or Drink** | Koffert-gameshow for fire lag: 20 kofferter med verdier i kroner, Esko i Banken ringer selv (annenhver runde, hver runde når få kofferter er igjen) med et eget tilbud og begrunnelse til hvert lag, DEAL/NO DEAL, finale, avsløring og resultatskjerm med beste/verste deal. Host-panelet (tast **H**) viser verdiene og lar deg overstyre eller angre. Drikkekonsekvens per åpning, alkoholfri variant. Lagene rangeres etter hva de sitter igjen med. | 10 / 7 / 5 / 3 |
 | **Egen øvelse** | Stoppeklokke og manuell rangering. | 10 / 7 / 5 / 3 |
 
 Poengene per øvelse kan endres i oppsettet. Delte plasser deler poengene.

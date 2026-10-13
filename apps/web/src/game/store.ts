@@ -76,7 +76,7 @@ export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> =
     kind: 'deal',
     title: 'Deal or Drink',
     rules:
-      'Ta pengene. Behold kofferten. Eller ta en slurk. 20 kofferter, fire lag, og en bank som ringer etter hver runde. Lagene rangeres etter hvor mye de sitter igjen med.',
+      'Ta pengene. Behold kofferten. Eller ta en slurk. 20 kofferter, fire lag, og Esko i Banken som ringer med tilbud i kroner. Lagene rangeres etter hvor mye de sitter igjen med.',
     points: [10, 7, 5, 3],
     penalty: 0,
     durationSec: 0,

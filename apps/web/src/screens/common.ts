@@ -43,10 +43,10 @@ export const RULE_BULLETS: Partial<Record<GameEvent['kind'], string[]>> = {
     'Bare én runde, så går vi videre.',
   ],
   deal: [
-    '20 kofferter med verdier fra 10 til 2500. Hvert lag velger én koffert som sin egen.',
-    'Fire runder: hvert lag åpner én koffert per runde. Lav verdi = del ut slurker. Høy verdi = laget drikker.',
-    'Etter hver runde ringer Banken med et tilbud til hvert lag: DEAL eller NO DEAL.',
-    'Til slutt åpnes alle lagenes egne kofferter. Lagene rangeres etter hvor mye de sitter igjen med.',
+    '20 kofferter med verdier fra 10 til 2500 kroner. Hvert lag velger én koffert som sin egen.',
+    'Hvert lag åpner én koffert per runde. Lav verdi = del ut slurker. Høy verdi = laget drikker.',
+    'Esko i Banken ringer underveis med et eget tilbud til hvert lag: DEAL eller NO DEAL.',
+    'Til slutt åpnes alle lagenes egne kofferter. Lagene rangeres etter hvor mange kroner de sitter igjen med.',
   ],
 };
 
