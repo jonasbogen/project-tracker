@@ -845,8 +845,39 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
         </div>
       );
     } else if (stage.sub === 'offer' && offer) {
+      // The board is hidden behind the overlay, so show what is still closed
+      // and which amounts are still in play before the team decides.
+      const closed = d.cases.filter((c) => !c.opened);
+      const remaining = (
+        <div className="deal-remaining">
+          <div className="deal-remaining-row">
+            <span className="deal-remaining-label">{closed.length} KOFFERTER IGJEN</span>
+            <div className="deal-remaining-cases">
+              {closed.map((c) => {
+                const o = ownerOf(c);
+                return (
+                  <span key={c.n} className={`deal-remaining-case ${o ? 'deal-remaining-owned' : ''}`} style={o ? { ['--team' as string]: o.color } : undefined}>
+                    {o ? `${o.emoji} ` : ''}
+                    {c.n}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          <div className="deal-remaining-row">
+            <span className="deal-remaining-label">KRONER I SPILL</span>
+            <div className="deal-remaining-values">
+              {remainingValues(d).map((v, i) => (
+                <span key={i} className={`deal-remaining-val ${v >= 1000 ? 'deal-remaining-high' : ''}`}>
+                  {fmt(v)}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
       overlay = (
-        <div className={`deal-overlay deal-overlay-bank ${stage.final ? 'deal-finale' : ''}`} style={{ ['--team' as string]: activeTeam.color }}>
+        <div className={`deal-overlay deal-overlay-bank deal-overlay-offer ${stage.final ? 'deal-finale' : ''}`} style={{ ['--team' as string]: activeTeam.color }}>
           <div className="deal-bank-lamp" />
           <div className="deal-offer-head">
             <img className="esko-img esko-img-small" src="/esko.png" alt="" />
@@ -895,6 +926,7 @@ export function DealScreen({ state, update, go, index }: ScreenProps & { index: 
               {offer.bonus && <span className="deal-offer-bonus">+ {offer.bonus}</span>}
             </div>
           )}
+          {remaining}
           <div className={`deal-answer ${offerCounted ? 'deal-answer-ready' : ''}`}>
             <span className="deal-huge">DEAL OR NO DEAL?</span>
             <div className="deal-answer-buttons">

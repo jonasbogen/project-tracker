@@ -94,12 +94,23 @@ interface Playing {
   timer: number;
 }
 
+/**
+ * The synthesized Web Audio tracks are kept in the code but switched off: the
+ * night runs on one continuous backing track (the audio from the user's video,
+ * stored as /bakgrunn.m4a) that loops behind every screen. Sound effects stay.
+ */
+const MUSIC_ENABLED = false;
+const BACKGROUND_SRC = '/bakgrunn.m4a';
+/** Backing track sits a little under the effects so cheers and gunshots cut through. */
+const BACKGROUND_LEVEL = 0.85;
+
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private playing: Playing | null = null;
+  private background: HTMLAudioElement | null = null;
   private volume = 0.7;
   private muted = false;
 
@@ -107,9 +118,28 @@ class AudioEngine {
     return this.playing?.name ?? null;
   }
 
+  /** Hidden looping <audio> element; only the sound is ever used. */
+  private ensureBackground(): void {
+    if (typeof document === 'undefined') return;
+    if (!this.background) {
+      const el = document.createElement('audio');
+      el.src = BACKGROUND_SRC;
+      el.loop = true;
+      el.preload = 'auto';
+      el.setAttribute('aria-hidden', 'true');
+      el.style.display = 'none';
+      el.volume = this.volume * BACKGROUND_LEVEL;
+      el.muted = this.muted;
+      document.body.appendChild(el);
+      this.background = el;
+    }
+    if (this.background.paused) void this.background.play().catch(() => undefined);
+  }
+
   /** Must be called from a user gesture at least once before anything is audible. */
   ensure(): AudioContext | null {
     if (typeof window === 'undefined') return null;
+    this.ensureBackground();
     if (!this.ctx) {
       const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!Ctor) return null;
@@ -132,11 +162,13 @@ class AudioEngine {
   setVolume(v: number): void {
     this.volume = v;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : v, this.ctx.currentTime, 0.05);
+    if (this.background) this.background.volume = Math.max(0, Math.min(1, v * BACKGROUND_LEVEL));
   }
 
   setMuted(m: boolean): void {
     this.muted = m;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(m ? 0 : this.volume, this.ctx.currentTime, 0.05);
+    if (this.background) this.background.muted = m;
   }
 
   // ---------- instruments ----------
@@ -559,7 +591,7 @@ class AudioEngine {
 
   playMusic(name: MusicName): void {
     const ctx = this.ensure();
-    if (!ctx) return;
+    if (!ctx || !MUSIC_ENABLED) return;
     if (this.playing?.name === name) return;
     this.stopMusic(0.6);
 
