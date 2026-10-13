@@ -593,7 +593,6 @@ input[type='color'] {
   background: linear-gradient(180deg, rgba(10, 18, 32, 0.15) 0%, rgba(10, 18, 32, 0.35) 45%, rgba(10, 18, 32, 0.92) 100%);
 }
 
-.setup-hero-title,
 .setup-hero-lead {
   text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
 }
@@ -635,20 +634,10 @@ input[type='color'] {
 }
 
 /* Text sits above the photo and the fade; the two backdrop layers stay absolute. */
-.setup-hero-title,
 .setup-hero-lead,
 .setup-hero-actions {
   position: relative;
   z-index: 1;
-}
-
-.setup-hero-title {
-  font-size: clamp(2.8rem, 7vw, 6rem);
-  font-weight: 500;
-  line-height: 1.02;
-  letter-spacing: -0.025em;
-  color: #fff;
-  text-align: left;
 }
 
 .setup-hero-lead {

@@ -48,11 +48,6 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
       <section className="setup-hero">
         <div className="setup-hero-bg" aria-hidden="true" />
         <div className="setup-hero-fade" aria-hidden="true" />
-        <h1 className="setup-hero-title">
-          Spillkveld begynner
-          <br />
-          med gode lag
-        </h1>
         <p className="setup-hero-lead">
           Den virkelige utfordringen er ikke de enkelte øvelsene, men å få laget til å fungere sammen. Fyll inn lagene, juster rekkefølgen på
           øvelsene og trykk start. Alt lagres automatisk.
