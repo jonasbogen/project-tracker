@@ -99,6 +99,11 @@ export interface WheelState {
   rotation: number;
   spinning: boolean;
   spunAt?: number;
+  /**
+   * The staged "network error" in the middle of the spin: a fake 404 page,
+   * then a link that plays the Teams video, then back to the wheel. Runs once.
+   */
+  prank?: 'error' | 'video' | 'done';
 }
 
 /* ---------- Deal or Drink ---------- */

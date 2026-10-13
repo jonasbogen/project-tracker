@@ -159,6 +159,15 @@ class AudioEngine {
     return this.ctx;
   }
 
+  /** Silence the backing track without losing its position (used by the staged network error). */
+  pauseBackground(): void {
+    this.background?.pause();
+  }
+
+  resumeBackground(): void {
+    if (this.background?.paused) void this.background.play().catch(() => undefined);
+  }
+
   setVolume(v: number): void {
     this.volume = v;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : v, this.ctx.currentTime, 0.05);

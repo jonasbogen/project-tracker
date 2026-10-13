@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
+import { Portal } from '../components/Portal';
 import { buildResult } from '../game/scoring';
 import type { WheelState } from '../game/types';
 import type { ScreenProps } from './common';
@@ -10,6 +11,22 @@ const SLOTS = 12;
 const SLOT_DEG = 360 / SLOTS;
 const SPIN_MS = 6500;
 const R = 240;
+/** How far into the first spin the "network error" strikes. */
+const PRANK_AT_MS = 2300;
+/** How long the fake error page sits there before the fix link shows up. */
+const PRANK_LINK_AFTER_MS = 4500;
+const PRANK_VIDEO = '/teams-video.mp4';
+
+/** Current visual rotation of an element mid-transition, in degrees 0..360. */
+function currentAngle(el: Element | null): number | null {
+  if (!el) return null;
+  const t = getComputedStyle(el).transform;
+  const m = /matrix\(([^)]+)\)/.exec(t);
+  if (!m) return null;
+  const [a, b] = m[1].split(',').map(Number);
+  const deg = (Math.atan2(b, a) * 180) / Math.PI;
+  return ((deg % 360) + 360) % 360;
+}
 
 function initWheel(): WheelState {
   return { picks: {}, rotation: 0, spinning: false };
@@ -36,6 +53,9 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
   const w = state.wheel;
   const [now, setNow] = useState(Date.now());
   const tickTimer = useRef<number | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [fixLink, setFixLink] = useState(false);
+  const [reloading, setReloading] = useState(false);
 
   const setW = (fn: (w: WheelState) => WheelState): void => update((s) => ({ ...s, wheel: s.wheel ? fn(s.wheel) : s.wheel }));
 
@@ -74,6 +94,28 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
     };
   }, [w?.spinning, w?.spunAt]);
 
+  // The staged network error: a bit into the first spin the whole screen
+  // "crashes". The wheel is frozen at its current angle under the overlay so
+  // it can pick the spin up again afterwards.
+  useEffect(() => {
+    if (!w?.spinning || !w.spunAt || w.prank) return;
+    const id = window.setTimeout(() => {
+      const angle = currentAngle(svgRef.current);
+      audio.pauseBackground();
+      setFixLink(false);
+      setReloading(false);
+      setW((st) => ({ ...st, rotation: angle ?? st.rotation, spinning: false, spunAt: undefined, prank: 'error' }));
+    }, PRANK_AT_MS);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [w?.spinning, w?.spunAt, w?.prank]);
+
+  useEffect(() => {
+    if (w?.prank !== 'error') return;
+    const id = window.setTimeout(() => setFixLink(true), PRANK_LINK_AFTER_MS);
+    return () => window.clearTimeout(id);
+  }, [w?.prank]);
+
   const hitTeams = landed ? teams.filter((t) => w!.picks[t.id] === w!.result) : [];
 
   useEffect(() => {
@@ -111,9 +153,8 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
     setW((st) => ({ ...st, picks: { ...st.picks, [pickingTeam.id]: n } }));
   };
 
-  const spin = (): void => {
+  const startSpin = (result: number): void => {
     audio.sfx('rocket');
-    const result = 1 + Math.floor(Math.random() * SLOTS);
     const center = (result - 1) * SLOT_DEG + SLOT_DEG / 2;
     const jitter = (Math.random() - 0.5) * SLOT_DEG * 0.6;
     const target = (360 - center + jitter + 360) % 360;
@@ -122,6 +163,27 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
       const delta = (target - current + 360) % 360;
       return { ...st, result, spinning: true, spunAt: Date.now(), rotation: st.rotation + 360 * 6 + delta };
     });
+  };
+
+  const spin = (): void => startSpin(1 + Math.floor(Math.random() * SLOTS));
+
+  const fakeReload = (): void => {
+    setReloading(true);
+    window.setTimeout(() => {
+      setReloading(false);
+      setFixLink(true);
+    }, 1800);
+  };
+
+  const playFix = (): void => {
+    setW((st) => ({ ...st, prank: 'video' }));
+  };
+
+  /** Video done: back to the wheel, music on, and the spin carries on to the same result. */
+  const endPrank = (): void => {
+    audio.resumeBackground();
+    setW((st) => ({ ...st, prank: 'done' }));
+    startSpin(w?.result ?? 1 + Math.floor(Math.random() * SLOTS));
   };
 
   const finish = (): void => {
@@ -136,8 +198,56 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
 
   const winnerColors = hitTeams.length ? [hitTeams[0].color, '#fff', '#ffc53d'] : undefined;
 
+  const host = window.location.host || 'project-tracker.intility.minato.intilitest.no';
+
   return (
     <div className="screen wheel">
+      {w.prank === 'error' && (
+        <Portal>
+          <div className="netfail" role="alert">
+            {reloading ? (
+              <div className="netfail-reloading">
+                <div className="netfail-spinner" />
+              </div>
+            ) : (
+              <div className="netfail-body">
+                <div className="netfail-icon" aria-hidden="true">
+                  <span className="netfail-icon-eye" />
+                  <span className="netfail-icon-eye" />
+                  <span className="netfail-icon-mouth" />
+                </div>
+                <h1 className="netfail-title">Denne siden fungerer ikke</h1>
+                <p className="netfail-text">
+                  <strong>{host}</strong> sendte ingen data i tide, eller tilkoblingen til nettverket ble endret under lasting.
+                </p>
+                <ul className="netfail-list">
+                  <li>Kontroller nettverkskablene, modemet og ruteren</li>
+                  <li>Koble til Wi‑Fi på nytt</li>
+                  <li>Kjør Windows Nettverksdiagnostikk</li>
+                </ul>
+                <p className="netfail-code">HTTP ERROR 404 · ERR_NETWORK_CHANGED</p>
+                <div className="netfail-actions">
+                  <button type="button" className="netfail-btn" onClick={fakeReload}>
+                    Last inn på nytt
+                  </button>
+                  {fixLink && (
+                    <button type="button" className="netfail-link" data-primary onClick={playFix}>
+                      Trykk her for å løse problemet (ikke phishing)
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </Portal>
+      )}
+      {w.prank === 'video' && (
+        <Portal>
+          <div className="netfail netfail-video">
+            <video src={PRANK_VIDEO} autoPlay playsInline onEnded={endPrank} onError={endPrank} />
+          </div>
+        </Portal>
+      )}
       <Confetti active={landed && hitTeams.length > 0} burst colors={winnerColors} />
       <div className="wheel-layout">
         <div className="wheel-side">
@@ -191,6 +301,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
         <div className="wheel-stage">
           <div className="wheel-pointer" />
           <svg
+            ref={svgRef}
             className={`wheel-svg ${w.spinning ? 'wheel-spinning' : ''}`}
             viewBox={`${-R - 20} ${-R - 20} ${2 * R + 40} ${2 * R + 40}`}
             style={{ transform: `rotate(${w.rotation}deg)`, transition: w.spunAt ? `transform ${SPIN_MS}ms cubic-bezier(0.1, 0.75, 0.08, 1)` : 'none' }}
