@@ -508,7 +508,7 @@ input[type='color'] {
   font-family: 'DM Sans', 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, system-ui, sans-serif;
 }
 
-.phase-setup .topbar {
+:is(.phase-setup, .phase-results) .topbar {
   position: sticky;
   top: 14px;
   margin: 14px 20px 0;
@@ -520,22 +520,22 @@ input[type='color'] {
   backdrop-filter: none;
 }
 
-.phase-setup .topbar-brand {
+:is(.phase-setup, .phase-results) .topbar-brand {
   font-size: 1.35rem;
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 
-.phase-setup .topbar-chip {
+:is(.phase-setup, .phase-results) .topbar-chip {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.14);
 }
 
-.phase-setup .topbar-right {
+:is(.phase-setup, .phase-results) .topbar-right {
   gap: 10px;
 }
 
-.phase-setup .topbar .btn-icon {
+:is(.phase-setup, .phase-results) .topbar .btn-icon {
   width: 44px;
   height: 44px;
   padding: 0;
@@ -548,11 +548,11 @@ input[type='color'] {
   font-size: 1.1rem;
 }
 
-.phase-setup .topbar .btn-icon:hover:not(:disabled) {
+:is(.phase-setup, .phase-results) .topbar .btn-icon:hover:not(:disabled) {
   background: #e6ebf2;
 }
 
-.phase-setup .volume {
+:is(.phase-setup, .phase-results) .volume {
   accent-color: #fff;
 }
 
@@ -4068,4 +4068,243 @@ input[type='color'] {
   .finale-board {
     display: none;
   }
+}
+
+/* ---------- results after each event: the Intility look ----------
+   The page behind the results is the navy canvas from intility.com with one
+   of the Intility photos washed dark behind it, the pill top bar, white
+   rounded cards and light-weight headlines. Scoped to .phase-results so the
+   game screens keep their show look. */
+
+.app.phase-results {
+  --navy: #0e1726;
+  --navy-2: #132033;
+  --ink: #0e1726;
+  --ink-soft: #4b5668;
+  --paper: #ffffff;
+  --paper-2: #f1f4f8;
+  --line: #dfe5ee;
+  --accent-green: #19d27a;
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, #0b1424 0%, #101c2e 100%);
+  font-family: 'DM Sans', 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, system-ui, sans-serif;
+}
+
+.app.phase-results::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background: var(--results-img) center 35% / cover no-repeat;
+  filter: saturate(0.85);
+  animation: results-drift 22s ease-in-out both;
+}
+
+.app.phase-results::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(10, 18, 32, 0.55) 0%, rgba(10, 18, 32, 0.62) 45%, rgba(10, 18, 32, 0.9) 100%),
+    radial-gradient(ellipse at center, rgba(10, 18, 32, 0.05) 0%, rgba(10, 18, 32, 0.45) 100%);
+}
+
+@keyframes results-drift {
+  from {
+    transform: scale(1) translate(0, 0);
+  }
+  to {
+    transform: scale(1.08) translate(-1.5%, 1%);
+  }
+}
+
+.phase-results .topbar {
+  z-index: 20;
+}
+
+.phase-results .points {
+  gap: clamp(14px, 2.4vh, 26px);
+  padding: 18px 32px 40px;
+}
+
+.phase-results .points-kicker {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-green);
+}
+
+.phase-results .points .play-title {
+  font-size: clamp(2rem, 4.6vw, 3.4rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
+  margin: -8px 0 0;
+}
+
+.phase-results .points-lead {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.15rem;
+  max-width: 900px;
+  margin: -6px 0 0;
+}
+
+/* Placement cards: white, rounded, with the team colour as a top band. */
+.phase-results .reveal-card {
+  width: 220px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  padding: 22px 14px 18px;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  opacity: 0.7;
+}
+
+.phase-results .reveal-card-shown {
+  opacity: 1;
+  border-color: transparent;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  border-top: 8px solid var(--team);
+}
+
+.phase-results .reveal-card-shown.place-1 {
+  background: var(--paper) !important;
+  transform: scale(1.08);
+  box-shadow: 0 0 0 3px var(--accent-green), 0 22px 60px rgba(0, 0, 0, 0.4);
+}
+
+.phase-results .reveal-place {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+}
+
+.phase-results .reveal-card-shown .reveal-place {
+  color: var(--team);
+}
+
+.phase-results .reveal-card-shown.place-1 .reveal-place {
+  color: var(--ink);
+}
+
+.phase-results .reveal-emoji {
+  font-size: 3.2rem;
+}
+
+.phase-results .reveal-name {
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.phase-results .reveal-points {
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* 6 minutter loser and wheel hit cards use the same white card. */
+.phase-results .six-loser-card {
+  border-radius: 22px;
+  border: none;
+  border-top: 8px solid var(--team);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 26px 56px 22px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+.phase-results .six-loser-card.wheel-miss {
+  border-top-color: var(--ink-soft);
+}
+
+.phase-results .six-loser-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.phase-results .six-loser-points {
+  font-weight: 500;
+  color: #d9304f;
+}
+
+.phase-results .six-loser-card .muted {
+  color: var(--ink-soft);
+}
+
+/* The standings sit in a white card like the ones on intility.com. */
+.phase-results .points-board {
+  width: min(960px, 100%);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 24px;
+  padding: 22px 28px 24px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  text-align: left;
+}
+
+.phase-results .points-board h2 {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 14px;
+}
+
+.phase-results .score-rank {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.phase-results .score-team {
+  font-weight: 600;
+}
+
+.phase-results .score-bar-wrap {
+  background: var(--paper-2);
+}
+
+.phase-results .score-bar {
+  box-shadow: none;
+}
+
+.phase-results .score-total {
+  font-weight: 500;
+}
+
+.phase-results .score-delta.pos {
+  color: #0f9d58;
+}
+
+.phase-results .score-delta.neg {
+  color: #d9304f;
+}
+
+/* Buttons: white pills like the setup page. */
+.phase-results .points .btn-primary {
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.phase-results .points .btn-primary:hover:not(:disabled) {
+  background: #e9eef5;
+}
+
+.phase-results .points .btn-primary:disabled {
+  opacity: 0.45;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { TeamMark } from './components/TeamMark';
 import { audio } from './audio/engine';
 import { FitScreen } from './components/FitScreen';
@@ -25,6 +25,8 @@ import { PasswordGate } from './screens/PasswordGate';
 
 const FILM_SEEN_KEY = 'spillkveld-film-seen';
 const UNLOCKED_KEY = 'spillkveld-unlocked';
+/** Intility photos behind the results after each event, one per event in turn. */
+const RESULT_PHOTOS = ['/resultat-1.jpg', '/resultat-2.jpg', '/resultat-3.jpg', '/resultat-4.jpg'];
 
 export default function App() {
   const { state, update, reset, ready } = useGameStore();
@@ -184,7 +186,8 @@ export default function App() {
 
   return (
     <div
-      className={`app phase-${phase.name} ${phase.name === 'finale' ? 'phase-setup' : ''} kind-${event?.kind ?? 'none'} ${!ready ? 'app-loading' : ''}`}
+      className={`app phase-${phase.name} ${phase.name === 'finale' ? 'phase-setup' : ''} ${phase.name === 'event-points' ? 'phase-results' : ''} kind-${event?.kind ?? 'none'} ${!ready ? 'app-loading' : ''}`}
+      style={phase.name === 'event-points' ? ({ '--results-img': `url(${RESULT_PHOTOS[Math.max(0, eventIndex) % RESULT_PHOTOS.length]})` } as CSSProperties) : undefined}
     >
       <header className="topbar">
         <div className="topbar-left">

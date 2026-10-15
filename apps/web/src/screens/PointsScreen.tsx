@@ -52,7 +52,17 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
   return (
     <div className="screen points">
       <Confetti active={done && !isSix && !(isWheel && hitTeams.length === 0)} burst />
+      <div className="points-kicker">
+        Sosial Grunnmur · Øvelse {index + 1} av {state.events.length}
+      </div>
       <h1 className="play-title">{event.title} – resultat</h1>
+      <p className="points-lead">
+        {isSix
+          ? 'Laget som brukte lengst tid får trekk. Resten går videre uten poeng.'
+          : isWheel
+            ? 'Lagene som traff feltet hjulet stoppet på, får poeng.'
+            : 'Plasseringene avsløres én etter én, fra sist til først.'}
+      </p>
 
       {isWheel ? (
         <div className="reveal-row">
