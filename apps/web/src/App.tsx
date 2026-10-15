@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { TeamMark } from './components/TeamMark';
 import { audio } from './audio/engine';
 import { FitScreen } from './components/FitScreen';
+import { LiveBackdrop } from './components/LiveBackdrop';
 import { totals } from './game/scoring';
 import { useGameStore } from './game/store';
 import type { Phase } from './game/types';
@@ -189,6 +190,7 @@ export default function App() {
       className={`app phase-${phase.name} ${phase.name === 'finale' ? 'phase-setup' : ''} ${phase.name === 'event-points' ? 'phase-results' : ''} kind-${event?.kind ?? 'none'} ${!ready ? 'app-loading' : ''}`}
       style={phase.name === 'event-points' ? ({ '--results-img': `url(${RESULT_PHOTOS[Math.max(0, eventIndex) % RESULT_PHOTOS.length]})` } as CSSProperties) : undefined}
     >
+      {phase.name === 'event-intro' && event && <LiveBackdrop key={event.kind} kind={event.kind} />}
       <header className="topbar">
         <div className="topbar-left">
           <span className="topbar-brand">Sosial Grunnmur</span>
