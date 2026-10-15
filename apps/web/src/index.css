@@ -4887,3 +4887,20 @@ input[type='color'] {
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
 }
+
+/* Countdown badge on a button that will press itself. */
+.auto-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7em;
+  height: 1.7em;
+  margin-left: 12px;
+  border-radius: 999px;
+  background: var(--navy, #0e1726);
+  color: #fff;
+  font-size: 0.85em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  animation: pop-in 0.3s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}

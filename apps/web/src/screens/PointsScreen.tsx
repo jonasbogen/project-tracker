@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
 import { Scoreboard } from '../components/Scoreboard';
+import { useAutoAdvance } from '../hooks/useAutoAdvance';
 import { nextAfterPoints, type ScreenProps } from './common';
+
+/** Seconds the finished results stay before the show moves on by itself. */
+const AUTO_SECONDS = 5;
 
 export function PointsScreen({ state, update, go, index }: ScreenProps & { index: number }) {
   const event = state.events[index];
   const result = state.results.find((r) => r.eventId === event.id);
   const teams = state.teams;
   const [revealed, setRevealed] = useState(0);
+  const advanced = useRef(false);
   const isSix = event.kind === 'six';
   const isWheel = event.kind === 'wheel';
   const hitTeams = isWheel ? teams.filter((t) => result?.hits?.includes(t.id)) : [];
@@ -48,6 +53,18 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
   const resultsForBoard = done && result ? [...previousResults, result] : previousResults;
 
   const loserTeam = isSix ? teams.find((t) => t.id === result?.loser) : undefined;
+
+  // Once everything is revealed the show moves on by itself after a few
+  // seconds; the button stays as a shortcut.
+  const advance = (): void => {
+    if (advanced.current) return;
+    advanced.current = true;
+    audio.sfx('whoosh');
+    const next = nextAfterPoints(state, index);
+    if (state.singleEvent) update((s) => ({ ...s, singleEvent: undefined }));
+    go(next);
+  };
+  const left = useAutoAdvance(done, AUTO_SECONDS, advance);
 
   return (
     <div className="screen points">
@@ -119,18 +136,9 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
         <Scoreboard teams={teams} results={resultsForBoard} delta={done ? result?.points : undefined} />
       </div>
 
-      <button
-        className="btn btn-primary btn-xl"
-        data-primary
-        disabled={!done}
-        onClick={() => {
-          audio.sfx('whoosh');
-          const next = nextAfterPoints(state, index);
-          if (state.singleEvent) update((s) => ({ ...s, singleEvent: undefined }));
-          go(next);
-        }}
-      >
+      <button className="btn btn-primary btn-xl" data-primary disabled={!done} onClick={advance}>
         {state.singleEvent ? 'Til oppsett →' : index + 1 < state.events.length ? 'Neste øvelse →' : 'Til premieutdeling →'}
+        {left !== null && left > 0 && <span className="auto-count">{left}</span>}
       </button>
     </div>
   );
