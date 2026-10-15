@@ -173,13 +173,13 @@ export default function App() {
   let screen: JSX.Element;
   switch (phase.name) {
     case 'setup':
-      screen = <SetupScreen {...props} onReset={() => reset(false)} />;
+      screen = <SetupScreen {...props} onReset={() => reset(false)} onResetKeepTeams={() => reset(true)} />;
       break;
     case 'finale':
       // Back on the main page, with the results and the photo cavalcade laid over it.
       screen = (
         <>
-          <SetupScreen {...props} onReset={() => reset(false)} />
+          <SetupScreen {...props} onReset={() => reset(false)} onResetKeepTeams={() => reset(true)} />
           <FinaleScreen {...props} onPlayAgain={() => reset(true)} />
         </>
       );

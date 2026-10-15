@@ -10,7 +10,13 @@ function enterFullscreen(): void {
   if (!document.fullscreenElement) void document.documentElement.requestFullscreen().catch(() => undefined);
 }
 
-export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onReset: () => void }) {
+export function SetupScreen({
+  state,
+  update,
+  go,
+  onReset,
+  onResetKeepTeams,
+}: ScreenProps & { onReset: () => void; onResetKeepTeams: () => void }) {
   useEffect(() => {
     audio.stopMusic();
   }, []);
@@ -251,14 +257,24 @@ export function SetupScreen({ state, update, go, onReset }: ScreenProps & { onRe
       </section>
 
       <footer className="setup-footer">
-        <button
-          className="btn btn-danger"
-          onClick={() => {
-            if (window.confirm('Nullstille alt? Lag, øvelser og poeng slettes.')) onReset();
-          }}
-        >
-          Nullstill alt
-        </button>
+        <div className="setup-footer-resets">
+          <button
+            className="btn btn-danger"
+            onClick={() => {
+              if (window.confirm('Nullstille alt? Lag, øvelser og poeng slettes.')) onReset();
+            }}
+          >
+            Nullstill alt
+          </button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => {
+              if (window.confirm('Nullstille poeng og fremdrift? Lagene og spillerne beholdes.')) onResetKeepTeams();
+            }}
+          >
+            Nullstill alt, men behold lagene
+          </button>
+        </div>
         <button className="btn btn-primary btn-xl" onClick={start} disabled={state.events.length === 0}>
           {hasProgress ? 'Fortsett spillet →' : 'Start spillet →'}
         </button>

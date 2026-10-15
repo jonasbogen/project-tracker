@@ -487,7 +487,16 @@ input[type='color'] {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
   margin-top: 10px;
+}
+
+.setup-footer-resets {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* ---------- setup, Intility look ----------
