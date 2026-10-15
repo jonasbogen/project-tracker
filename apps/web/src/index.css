@@ -4802,3 +4802,88 @@ input[type='color'] {
   opacity: 0;
   animation: spark linear infinite;
 }
+
+/* ---------- "who came 1st–4th / who lost": same Intility look as the results ----------
+   .phase-results is set on the app for the ranking page too; these rules
+   restyle the pick cards as white cards and soften small photos. */
+
+.app.phase-results-soft::before {
+  filter: saturate(0.85) blur(6px);
+  inset: -6%;
+}
+
+.phase-results .rank {
+  gap: clamp(14px, 2.4vh, 26px);
+}
+
+.phase-results .rank .play-title {
+  font-size: clamp(2rem, 4.6vw, 3.4rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
+}
+
+.phase-results .rank .play-sub {
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.4);
+}
+
+.phase-results .rank-card {
+  border: none;
+  border-top: 8px solid var(--team);
+  border-radius: 22px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3);
+  padding: 30px 12px 26px;
+}
+
+.phase-results .rank-card:hover {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.phase-results .rank-card-picked {
+  background: var(--paper-2);
+  box-shadow: 0 0 0 3px var(--accent-green), 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.phase-results .rank-card-loser {
+  background: #fff1f3;
+  border-top-color: #d9304f;
+  box-shadow: 0 0 0 3px #d9304f, 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.phase-results .rank-card-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.phase-results .rank-card-place {
+  background: var(--navy);
+  color: #fff;
+  font-weight: 600;
+}
+
+.phase-results .rank .btn-primary {
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.phase-results .rank .btn-primary:hover:not(:disabled) {
+  background: #e9eef5;
+}
+
+.phase-results .rank .btn-primary:disabled {
+  opacity: 0.45;
+}
+
+.phase-results .rank .btn-ghost {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}

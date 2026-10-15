@@ -27,7 +27,26 @@ import { PasswordGate } from './screens/PasswordGate';
 const FILM_SEEN_KEY = 'spillkveld-film-seen';
 const UNLOCKED_KEY = 'spillkveld-unlocked';
 /** Intility photos behind the results after each event, one per event in turn. */
-const RESULT_PHOTOS = ['/resultat-1.jpg', '/resultat-2.jpg', '/resultat-3.jpg', '/resultat-4.jpg'];
+const RESULT_PHOTOS = ['/resultat-1.jpg', '/resultat-2.jpg', '/resultat-3.jpg', '/resultat-4.jpg'].map((src) => ({ src, soft: false }));
+/**
+ * Photos behind the "who came 1st–4th / who lost" page, one per event in turn.
+ * The last two uploads are small, so they get a soft blur instead of showing pixels.
+ */
+const RANK_PHOTOS = [
+  { src: '/rangering-1.jpg', soft: false },
+  { src: '/rangering-3.jpg', soft: false },
+  { src: '/rangering-2.jpg', soft: false },
+  { src: '/rangering-4.jpg', soft: true },
+  { src: '/rangering-5.jpg', soft: true },
+];
+
+/** The Intility photo behind a results-style page, or undefined on other pages. */
+function resultsPhotoFor(phaseName: string, eventIndex: number): { src: string; soft: boolean } | undefined {
+  const i = Math.max(0, eventIndex);
+  if (phaseName === 'event-points') return RESULT_PHOTOS[i % RESULT_PHOTOS.length];
+  if (phaseName === 'event-rank') return RANK_PHOTOS[i % RANK_PHOTOS.length];
+  return undefined;
+}
 
 export default function App() {
   const { state, update, reset, ready } = useGameStore();
@@ -93,6 +112,7 @@ export default function App() {
   const eventIndex = 'index' in phase ? phase.index : -1;
   const event = eventIndex >= 0 ? state.events[eventIndex] : undefined;
   const sums = totals(state.teams, state.results);
+  const resultsPhoto = resultsPhotoFor(phase.name, eventIndex);
 
   if (phase.name !== 'setup' && eventIndex >= 0 && !event) {
     go({ name: 'setup' });
@@ -187,8 +207,8 @@ export default function App() {
 
   return (
     <div
-      className={`app phase-${phase.name} ${phase.name === 'finale' ? 'phase-setup' : ''} ${phase.name === 'event-points' ? 'phase-results' : ''} kind-${event?.kind ?? 'none'} ${!ready ? 'app-loading' : ''}`}
-      style={phase.name === 'event-points' ? ({ '--results-img': `url(${RESULT_PHOTOS[Math.max(0, eventIndex) % RESULT_PHOTOS.length]})` } as CSSProperties) : undefined}
+      className={`app phase-${phase.name} ${phase.name === 'finale' ? 'phase-setup' : ''} ${resultsPhoto ? 'phase-results' : ''} ${resultsPhoto?.soft ? 'phase-results-soft' : ''} kind-${event?.kind ?? 'none'} ${!ready ? 'app-loading' : ''}`}
+      style={resultsPhoto ? ({ '--results-img': `url(${resultsPhoto.src})` } as CSSProperties) : undefined}
     >
       {phase.name === 'event-intro' && event && <LiveBackdrop key={event.kind} kind={event.kind} />}
       <header className="topbar">
