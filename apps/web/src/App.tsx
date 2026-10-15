@@ -3,7 +3,7 @@ import { TeamMark } from './components/TeamMark';
 import { audio } from './audio/engine';
 import { FitScreen } from './components/FitScreen';
 import { LiveBackdrop } from './components/LiveBackdrop';
-import { totals } from './game/scoring';
+import { buildResult, totals } from './game/scoring';
 import { useGameStore } from './game/store';
 import type { Phase } from './game/types';
 import { CustomScreen } from './screens/CustomScreen';
@@ -114,6 +114,29 @@ export default function App() {
   const sums = totals(state.teams, state.results);
   const resultsPhoto = resultsPhotoFor(phase.name, eventIndex);
 
+  // Horse race, Emoji Movie, Mafia and Deal or Drink work out the order
+  // themselves, so their "who came 1st–4th" page is skipped: the order they
+  // hand over is committed straight away and the results page opens. Only
+  // 6 minutter (who lost) and custom events still ask the host.
+  const autoRanked =
+    phase.name === 'event-rank' && !!event && event.kind !== 'six' && event.kind !== 'custom' && !!state.pending?.placements;
+  useEffect(() => {
+    if (!autoRanked || !event || phase.name !== 'event-rank') return;
+    const index = phase.index;
+    update((s) => {
+      const placements = s.pending?.placements;
+      if (!placements) return s;
+      const result = buildResult(event, s.teams, { placements, note: s.pending?.note });
+      return {
+        ...s,
+        results: [...s.results.filter((r) => r.eventId !== event.id), result],
+        pending: undefined,
+        phase: { name: 'event-points', index },
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRanked, event?.id]);
+
   if (phase.name !== 'setup' && eventIndex >= 0 && !event) {
     go({ name: 'setup' });
     return null;
@@ -195,7 +218,8 @@ export default function App() {
       }
       break;
     case 'event-rank':
-      screen = <RankScreen key={event!.id} {...props} index={phase.index} />;
+      // Events that bring their own order skip the ranking page (see the effect above).
+      screen = autoRanked ? <div className="screen" /> : <RankScreen key={event!.id} {...props} index={phase.index} />;
       break;
     case 'event-points':
       screen = <PointsScreen key={event!.id} {...props} index={phase.index} />;

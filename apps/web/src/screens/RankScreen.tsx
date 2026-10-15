@@ -1,20 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { buildResult, pointsForPlacements } from '../game/scoring';
-import { useAutoAdvance } from '../hooks/useAutoAdvance';
 import type { Placements, TeamId } from '../game/types';
 import type { ScreenProps } from './common';
 
 const PLACE_LABEL = ['1.', '2.', '3.', '4.'];
-/** Seconds a complete pick stays on screen before it confirms itself. */
-const AUTO_SECONDS = 5;
 
 export function RankScreen({ state, update, go, index }: ScreenProps & { index: number }) {
   const event = state.events[index];
   const teams = state.teams;
   const isSix = event.kind === 'six';
-  const confirmed = useRef(false);
 
   const [placements, setPlacements] = useState<Placements>(() => state.pending?.placements ?? {});
   const [loser, setLoser] = useState<TeamId | undefined>(() => state.pending?.loser);
@@ -43,8 +39,7 @@ export function RankScreen({ state, update, go, index }: ScreenProps & { index: 
   };
 
   const confirm = (): void => {
-    if (!complete || confirmed.current) return;
-    confirmed.current = true;
+    if (!complete) return;
     audio.sfx('ding');
     const result = buildResult(event, teams, { placements, loser, note: state.pending?.note });
     update((s) => ({
@@ -54,10 +49,6 @@ export function RankScreen({ state, update, go, index }: ScreenProps & { index: 
     }));
     go({ name: 'event-points', index });
   };
-
-  // When every placement (or the loser) is picked, the page confirms itself
-  // after a few seconds. Undoing a pick cancels the countdown.
-  const left = useAutoAdvance(complete, AUTO_SECONDS, confirm);
 
   const preview = isSix ? null : pointsForPlacements(placements, event.points);
 
@@ -102,7 +93,7 @@ export function RankScreen({ state, update, go, index }: ScreenProps & { index: 
           </button>
         )}
         <button className="btn btn-primary btn-xl" data-primary disabled={!complete} onClick={confirm}>
-          Bekreft og vis poeng →{left !== null && left > 0 && <span className="auto-count">{left}</span>}
+          Bekreft og vis poeng →
         </button>
       </div>
     </div>
