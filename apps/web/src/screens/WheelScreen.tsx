@@ -116,6 +116,9 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
     return () => window.clearTimeout(id);
   }, [w?.prank]);
 
+  // Leaving the wheel mid-prank (host panel, reset) must not leave the music held.
+  useEffect(() => () => audio.resumeBackground(), []);
+
   const hitTeams = landed ? teams.filter((t) => w!.picks[t.id] === w!.result) : [];
 
   useEffect(() => {

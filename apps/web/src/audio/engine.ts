@@ -113,6 +113,12 @@ class AudioEngine {
   private background: HTMLAudioElement | null = null;
   /** A one-off track (the finale song) that takes over from the backing track while it plays. */
   private track: HTMLAudioElement | null = null;
+  /**
+   * True while the staged network error holds the backing track. ensure() runs
+   * on every click and keypress, so without this flag the first tap on the
+   * fake error page would start the music again.
+   */
+  private held = false;
   private volume = 0.7;
   private muted = false;
 
@@ -135,6 +141,7 @@ class AudioEngine {
       document.body.appendChild(el);
       this.background = el;
     }
+    if (this.held || this.track) return;
     if (this.background.paused) void this.background.play().catch(() => undefined);
   }
 
@@ -163,10 +170,12 @@ class AudioEngine {
 
   /** Silence the backing track without losing its position (used by the staged network error). */
   pauseBackground(): void {
+    this.held = true;
     this.background?.pause();
   }
 
   resumeBackground(): void {
+    this.held = false;
     if (this.track) return; // a track is in charge; it resumes the backing track when it stops
     if (this.background?.paused) void this.background.play().catch(() => undefined);
   }
