@@ -171,9 +171,26 @@ export interface EmojiState {
   revealed: boolean;
 }
 
+/** How a song in the quiz was resolved: the host pressed Tittel or Artist, or the 20 seconds ran out. */
+export type SixReveal = 'title' | 'artist' | 'timeout';
+
+export interface SixPlayed {
+  /** Index into SONGS. */
+  song: number;
+  by: SixReveal;
+}
+
 export interface SixState {
   startedAt?: number;
   finished: boolean;
+  /** Song indexes in the order they play this round; the opener is always first. */
+  order?: number[];
+  /** Position in `order` of the song playing now. */
+  pos?: number;
+  /** When the current song started, so the audio can be re-synced after a refresh. */
+  songStartedAt?: number;
+  /** Songs already played this round, newest last. */
+  played?: SixPlayed[];
 }
 
 export interface GameState {

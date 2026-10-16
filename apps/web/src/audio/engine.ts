@@ -165,6 +165,9 @@ class AudioEngine {
       for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
+    // A track started from an effect right after a page refresh may have been
+    // blocked by the autoplay policy; the first tap lets it through.
+    if (this.track && this.track.paused && !this.track.ended) void this.track.play().catch(() => undefined);
     return this.ctx;
   }
 
@@ -185,8 +188,8 @@ class AudioEngine {
    * keeps its position). Follows the mute button and volume slider like
    * everything else. stopTrack() hands the sound back to the backing track.
    */
-  playTrack(src: string, loop = true): void {
-    if (typeof document === 'undefined') return;
+  playTrack(src: string, loop = true, opts: { offset?: number; onEnded?: () => void } = {}): HTMLAudioElement | null {
+    if (typeof document === 'undefined') return null;
     this.stopTrack(false);
     this.background?.pause();
     const el = document.createElement('audio');
@@ -197,9 +200,29 @@ class AudioEngine {
     el.style.display = 'none';
     el.volume = Math.max(0, Math.min(1, this.volume));
     el.muted = this.muted;
+    if (opts.offset && opts.offset > 0) {
+      const offset = opts.offset;
+      const seek = (): void => {
+        try {
+          el.currentTime = Math.min(offset, Number.isFinite(el.duration) ? el.duration : offset);
+        } catch {
+          /* not seekable yet; the clip simply plays from the start */
+        }
+      };
+      if (el.readyState >= 1) seek();
+      else el.addEventListener('loadedmetadata', seek, { once: true });
+    }
+    if (opts.onEnded) {
+      const cb = opts.onEnded;
+      el.addEventListener('ended', () => {
+        // Only the track still in charge may move the game on.
+        if (this.track === el) cb();
+      });
+    }
     document.body.appendChild(el);
     this.track = el;
     void el.play().catch(() => undefined);
+    return el;
   }
 
   stopTrack(resume = true): void {

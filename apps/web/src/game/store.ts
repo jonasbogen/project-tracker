@@ -32,7 +32,7 @@ export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> =
     kind: 'six',
     title: '6 minutter',
     rules:
-      'Klokken går i skjul. Ingen får se hvor lenge det er igjen. Når alarmen går er det slutt, og laget som tapte får minuspoeng.',
+      'Klokken går i skjul mens sangene spilles, 20 sekunder hver. Rop ut tittel eller artist – spill-lederen trykker, svaret vises og neste sang starter. Når alarmen går er det slutt, og laget som tapte får minuspoeng.',
     points: [0, 0, 0, 0],
     penalty: 5,
     durationSec: 6 * 60,
@@ -129,6 +129,11 @@ function migrate(s: GameState): GameState {
   const wheel = events.find((e) => e.kind === 'wheel');
   if (wheel && wheel.rules.includes('25 felt')) {
     Object.assign(wheel, { rules: EVENT_TEMPLATES.wheel.rules });
+  }
+  // 6 minutter became a song quiz; saves from before still carry the plain hidden-clock text.
+  const six = events.find((e) => e.kind === 'six');
+  if (six && six.rules.startsWith('Klokken går i skjul. Ingen får se')) {
+    Object.assign(six, { rules: EVENT_TEMPLATES.six.rules });
   }
   // The night now opens with the horse race; older saves had 6 minutter first.
   let reordered = false;

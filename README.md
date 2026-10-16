@@ -9,7 +9,7 @@ Audio, så appen trenger ingen eksterne filer.
 
 | Øvelse | Hva appen gjør | Poeng (standard) |
 | --- | --- | --- |
-| **6 minutter** | Skjult nedtelling. Trykk START, klokken vises ikke, alarm når tiden er ute. | Taperen får −5 |
+| **6 minutter** | Skjult nedtelling med musikkquiz oppå: 27 sanger (20 sekunder lyd hver, fra `public/six/`, listen i `src/game/songs.ts`) i tilfeldig rekkefølge, Kygo Jo alltid først. To knapper, **Tittel** og **Artist** (taster T/A): trykk når noen tar den, svaret vises i «Forrige sang» og neste sang starter umiddelbart. Uten trykk går sangen videre etter 20 sekunder. Alarm når tiden er ute. | Taperen får −5 |
 | **Hesteveddeløpet** | Hvert lag velger sin hest (kortfarge, ett lag per hest). Kort flippes automatisk på en travbane, sidekort sender hester tilbake. Rekkefølgen fylles inn fra målgangen. | 6 / 4 / 2 / 1 |
 | **Mafia og politi** | Appen er forteller: natt (mafia, politi), dag (diskusjon med nedtelling, avstemning), rolleavsløring, vinnersjekk og automatisk poengforslag per lag. Roller deles ut med fysiske kort (ess = mafia, konge = politi). | 10 / 7 / 5 / 3 |
 | **Emoji Movie** | Åtte filmer forklart med emojis, to per lag. 10 sekunder per film, bare riktig/feil teller. Likt antall riktige deler plassen. | 10 / 7 / 5 / 3 |
@@ -25,6 +25,7 @@ Poengene per øvelse kan endres i oppsettet. Delte plasser deler poengene.
 - M : lyd av/på
 - F : fullskjerm
 - H : host-panel i Deal or Drink (koffertverdier, banktilbud, angre, dramatisk pause)
+- T / A / N : i 6 minutter – Tittel tatt, Artist tatt, hopp over sangen
 
 ## Kjøre lokalt
 

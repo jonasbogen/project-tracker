@@ -17,6 +17,12 @@ export const KIND_EMOJI: Record<GameEvent['kind'], string> = {
 };
 
 export const RULE_BULLETS: Partial<Record<GameEvent['kind'], string[]>> = {
+  six: [
+    'Klokken går i skjul. Ingen får se hvor lenge det er igjen.',
+    'Mens den går spilles sanger, 20 sekunder hver. Rop ut tittelen eller artisten!',
+    'Spill-lederen trykker Tittel eller Artist – svaret kommer opp, og neste sang starter med en gang.',
+    'Når alarmen går er det slutt. Laget som tapte får minuspoeng.',
+  ],
   mafia: [
     'Kort: ess = mafia, konge = politi, resten er sivile. Ingen viser kortet sitt.',
     'Første natt markerer spill-lederen hvem som er mafia og politi når de våkner.',
