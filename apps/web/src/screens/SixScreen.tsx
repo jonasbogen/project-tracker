@@ -5,6 +5,9 @@ import { GAP_SEC, ICE_AT_SEC, ICE_SONG, MOST_BONUS, SIPS, SONGS, SONG_SEC, shuff
 import type { SixState, Team, TeamId } from '../game/types';
 import type { ScreenProps } from './common';
 
+/** How long the alarm screen stays (song, team, loser, table) before the result opens by itself. */
+const RESULT_AFTER_MS = 10000;
+
 /**
  * 6 minutter: a hidden six-minute clock with a song quiz on top. Twenty
  * seconds of each song play (audio only, the recordings are never shown).
@@ -196,22 +199,38 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
   }, [running, inGap, !!ice, songStartedAt, songIndex]);
 
   // Time's up: the clip stops, the alarm wails, and the backing track fades slowly back in behind it.
+  // The alarm screen moves on to the result by itself; the host does not have to press anything.
   const alarmed = useRef(false);
+  const finishedAt = useRef<number | null>(null);
+  const toRankRef = useRef<() => void>(() => undefined);
   useEffect(() => {
     if (six.finished) {
       if (alarmed.current) return;
       alarmed.current = true;
+      finishedAt.current = Date.now();
       audio.stopTrack(false);
       // Hold the backing track: every click (and the alarm itself) runs ensure(), which would otherwise start it at once.
       audio.pauseBackground();
       audio.sfx('alarm');
       const id = window.setTimeout(() => audio.resumeBackground(8), 3500);
-      return () => window.clearTimeout(id);
+      const go = window.setTimeout(() => toRankRef.current(), RESULT_AFTER_MS);
+      return () => {
+        window.clearTimeout(id);
+        window.clearTimeout(go);
+      };
     }
     alarmed.current = false;
+    finishedAt.current = null;
     if (!six.startedAt) audio.stopTrack();
   }, [six.finished, six.startedAt]);
   useEffect(() => () => audio.stopTrack(), []);
+
+  // The clock keeps ticking on the alarm screen too, for the countdown to the result.
+  useEffect(() => {
+    if (!six.finished) return;
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, [six.finished]);
 
   // Warm up the next clip and portrait so they are ready the instant the pause is over.
   useEffect(() => {
@@ -292,14 +311,16 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     update((s) => ({ ...s, pending: { ...(s.pending ?? {}), loser: turnTeam?.id, bonus, note: `${loserNote} ${bonusNote}`.trim() } }));
     go({ name: 'event-rank', index });
   };
+  toRankRef.current = toRank;
 
   if (six.finished) {
+    const left = Math.max(0, Math.ceil((RESULT_AFTER_MS - (now - (finishedAt.current ?? now))) / 1000));
     return (
       <div className="screen six six-finished">
         <div className="six-alarm-text">TIDEN ER UTE!</div>
         <div className="six-alarm-sub">{Math.round(event.durationSec / 60)} minutter har gått</div>
         {song && (
-          <div className="six-last six-last-final">
+          <div className="six-last six-last-final" style={turnTeam ? { ['--team' as string]: turnTeam.color } : undefined}>
             <div className="six-last-kicker">Riktig sang var</div>
             <div className="six-last-row">
               <img className="six-last-img" src={song.image} alt="" />
@@ -308,6 +329,11 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
                 <div className="six-last-artist">{song.artist}</div>
               </div>
             </div>
+            {turnTeam && (
+              <div className="six-alarm-who">
+                Det var <TeamMark team={turnTeam} /> <strong>{turnTeam.name}</strong> som skulle gjette denne.
+              </div>
+            )}
           </div>
         )}
         {turnTeam && (
@@ -315,14 +341,14 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
             <span className="six-loser-emoji">
               <TeamMark team={turnTeam} />
             </span>
-            <span className="six-loser-name">{turnTeam.name} hadde tur – og tapte</span>
+            <span className="six-loser-name">{turnTeam.name} tapte 6 minutter</span>
             <span className="six-loser-points">−{Math.abs(event.penalty)}</span>
             <span className="six-alarm-sips">🍻 Alle på laget tar {SIPS} slurker selv</span>
           </div>
         )}
         <StatsTable stats={stats} compact={false} />
         <button className="btn btn-primary btn-xl" data-primary onClick={toRank}>
-          Stopp alarmen – vis resultatet →
+          Resultatet kommer om {left}… (trykk for å gå nå) →
         </button>
       </div>
     );

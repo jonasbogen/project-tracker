@@ -3460,6 +3460,20 @@ input[type='color'] {
   animation-delay: 0.3s;
 }
 
+.six-alarm-who {
+  margin-top: 12px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--team, #fff) 28%, rgba(0, 0, 0, 0.4));
+  border: 2px solid var(--team, rgba(255, 255, 255, 0.4));
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.six-alarm-who strong {
+  font-weight: 900;
+}
+
 .six-alarm-sips {
   margin-top: 4px;
   padding: 6px 16px;
