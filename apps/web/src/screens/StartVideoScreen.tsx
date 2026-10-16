@@ -7,16 +7,12 @@ const SRC = '/teams-video-2.mp4';
 
 /** The small print over the video: one clause at a time, straight-faced. */
 const LEGAL: string[] = [
-  'Claude fraskriver seg alt ansvar for innhold, poengsummer, og vennskap som går tapt i løpet av kvelden.',
-  'Alle forsøk på innsyn i applikasjonen vil bli ansett som forsøk på informasjonsinnhenting uten rettslig grunnlag, og kan straffes med inntil 1 chug.',
-  'Kildekoden er beskyttet av passord, god tro og en halvfull Smirnoff Ice. Passordet er ikke 2019.',
-  'Spill-lederens avgjørelser er endelige, vilkårlige og kan ikke ankes. Klager leveres skriftlig i bunnen av glasset.',
-  'Enhver likhet med faktiske ledere, management graduates eller kolleger er helt tilsiktet.',
-  'Hesten «Sponsen» er offisielt sponset av Intility. Ingen av de andre hestene er sponset av noe som helst.',
-  'Produktet er ikke testet på dyr. Kun på Lag 1 til 4.',
-  'Ved å se videre godtar du vilkårene, husreglene og at «6 minutter» kan vare i mer enn 6 minutter.',
+  'Claude fraskriver seg alt ansvar for innhold.',
+  'Alle forsøk på innsyn i applikasjonen vil bli ansett som informasjonsinnhenting uten rettslig grunnlag, og kan straffes med inntil 1 chug.',
+  'Spill-lederens avgjørelser er endelige og kan ikke ankes. Klager leveres i bunnen av glasset.',
+  'Enhver likhet med faktiske ledere eller kolleger er helt tilsiktet.',
 ];
-const LEGAL_MS = 3400;
+const LEGAL_MS = 5200;
 
 /**
  * Plays the second Teams video full screen between "Start spillet" and the
