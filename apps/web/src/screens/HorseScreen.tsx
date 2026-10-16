@@ -17,27 +17,42 @@ const SIDE_CARDS = 7;
 /**
  * The Smirnoff Ice steal: the first time a horse gets a bit past halfway the
  * race freezes, the teams in last place see an intro and the Teams video, and
- * may each chug a Smirnoff Ice to steal one point from the race winner.
+ * may each chug a Smirnoff Ice to take one field from the leader. The transfer
+ * is then played out on the track, one move at a time, before the race goes on.
  */
 const STEAL_AT = 5;
 const ICE_INTRO_MS = 5200;
 const ICE_VIDEO = '/ice-video.mp4';
+/** The transfer: a beat before the first move, a beat between moves, and a hold at the end. */
+const TRANSFER_FIRST_MS = 1600;
+const TRANSFER_STEP_MS = 1300;
+const TRANSFER_HOLD_MS = 2200;
 
 interface Card {
   suit: Suit;
   rank: string;
 }
 
+/** One move of the transfer: the leader backs a field (−1) or a chugger goes a field ahead (+1). */
+interface Move {
+  teamId: TeamId;
+  delta: 1 | -1;
+}
+
 interface Steal {
-  stage: 'intro' | 'video' | 'offer' | 'done';
+  stage: 'intro' | 'video' | 'offer' | 'transfer' | 'done';
   /** Team leading when the race was stopped. */
   leader: TeamId;
   /** Teams in last place when the race was stopped (one, or several on a tie). */
   thieves: TeamId[];
-  /** Thieves that took the deal: a Smirnoff Ice for one point. */
+  /** Thieves that took the deal: a Smirnoff Ice for one field. */
   accepted: TeamId[];
   /** Thieves that said no (kept so the host sees everyone has answered). */
   declined: TeamId[];
+  /** The moves of the transfer, played one by one on the track. */
+  moves: Move[];
+  /** How many of `moves` have been played. */
+  played: number;
 }
 
 interface Race {
@@ -65,7 +80,7 @@ function buildSteal(r: Race, teams: Team[]): Steal | undefined {
   if (top === bottom) return undefined;
   const leader = owned.find((o) => o.pos === top)!.id;
   const thieves = owned.filter((o) => o.pos === bottom).map((o) => o.id);
-  return { stage: 'intro', leader, thieves, accepted: [], declined: [] };
+  return { stage: 'intro', leader, thieves, accepted: [], declined: [], moves: [], played: 0 };
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -217,10 +232,58 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
     });
   };
 
+  /**
+   * "Fortsett løpet": with no chuggers the horses just run on. Otherwise the
+   * transfer is played on the track first: for every chugger the leader backs
+   * one field and the chugger goes one field ahead.
+   */
   const resumeRace = (): void => {
-    audio.sfx('rocket');
-    setRace((r) => (r.steal ? { ...r, stage: 'running', steal: { ...r.steal, stage: 'done' } } : r));
+    setRace((r) => {
+      if (!r.steal) return r;
+      const chuggers = r.steal.accepted.filter((id) => id !== r.steal!.leader);
+      if (!chuggers.length) {
+        audio.sfx('rocket');
+        return { ...r, stage: 'running', steal: { ...r.steal, stage: 'done' } };
+      }
+      audio.sfx('sting');
+      const moves: Move[] = [];
+      for (const id of chuggers) moves.push({ teamId: r.steal.leader, delta: -1 }, { teamId: id, delta: 1 });
+      return { ...r, steal: { ...r.steal, stage: 'transfer', moves, played: 0 } };
+    });
   };
+
+  // The transfer itself: one move per beat, then a short hold, then the race runs on.
+  useEffect(() => {
+    if (race.stage !== 'steal' || race.steal?.stage !== 'transfer') return;
+    const { moves, played } = race.steal;
+    if (played >= moves.length) {
+      const t = window.setTimeout(() => {
+        audio.sfx('rocket');
+        setRace((r) => (r.steal?.stage === 'transfer' ? { ...r, stage: 'running', steal: { ...r.steal, stage: 'done' } } : r));
+      }, TRANSFER_HOLD_MS);
+      return () => window.clearTimeout(t);
+    }
+    const move = moves[played];
+    const t = window.setTimeout(() => {
+      if (move.delta < 0) {
+        audio.sfx('fail');
+        window.setTimeout(() => audio.sfx('boo'), 150);
+      } else {
+        audio.sfx('coin');
+        window.setTimeout(() => audio.sfx('hoof'), 150);
+      }
+      setRace((r) => {
+        if (r.steal?.stage !== 'transfer' || r.steal.played !== played) return r;
+        const suit = r.picks[teams.findIndex((t) => t.id === move.teamId)];
+        const positions = suit
+          ? { ...r.positions, [suit]: Math.max(0, Math.min(TRACK - 1, r.positions[suit] + move.delta)) }
+          : r.positions;
+        return { ...r, positions, steal: { ...r.steal, played: played + 1 } };
+      });
+    }, played === 0 ? TRANSFER_FIRST_MS : TRANSFER_STEP_MS);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [race.stage, race.steal?.stage, race.steal?.played]);
 
   useEffect(() => {
     if (!race.lastEvent) return;
@@ -252,22 +315,16 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
     }
     const winnerTeam = teams.find((t) => t.id === teamOfSuit(race.winner!));
     const tie = groups.some((g) => g.length > 1);
-    // The Smirnoff Ice steal: each thief that chugged takes one point from the race winner.
-    const thieves = (race.steal?.accepted ?? []).filter((id) => id !== winnerTeam?.id);
-    let adjust: Record<TeamId, number> | undefined;
-    if (winnerTeam && thieves.length) {
-      adjust = {};
-      for (const id of thieves) adjust[id] = (adjust[id] ?? 0) + 1;
-      adjust[winnerTeam.id] = (adjust[winnerTeam.id] ?? 0) - thieves.length;
-    }
-    const stealNote = thieves.length
-      ? ` ${thieves.map((id) => teams.find((t) => t.id === id)?.name ?? '?').join(' og ')} chugget en Smirnoff Ice og stjal 1 poeng fra ${winnerTeam?.name ?? '?'}.`
+    // The Smirnoff Ice steal was played out on the track; the placements already include it.
+    const chugged = (race.steal?.accepted ?? []).filter((id) => id !== race.steal?.leader);
+    const leaderName = teams.find((t) => t.id === race.steal?.leader)?.name ?? '?';
+    const stealNote = chugged.length
+      ? ` ${chugged.map((id) => teams.find((t) => t.id === id)?.name ?? '?').join(' og ')} chugget en Smirnoff Ice underveis og tok ${chugged.length === 1 ? 'ett felt' : `${chugged.length} felt`} fra ${leaderName}.`
       : '';
     update((s) => ({
       ...s,
       pending: {
         placements: placementsFromGroups(groups),
-        adjust,
         note: `Rekkefølgen er hentet fra løpet${tie ? ' (delte plasser deler poengene)' : ''}. Vinner: ${winnerTeam?.name ?? '?'}.${stealNote} Juster om nødvendig.`,
       },
     }));
@@ -308,10 +365,13 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
   const steal = race.steal;
   const leaderTeam = steal ? teamById(steal.leader) : undefined;
   const thiefTeams = steal ? steal.thieves.map(teamById).filter((t): t is Team => !!t) : [];
-  const chuggers = steal ? steal.accepted.map(teamById).filter((t): t is Team => !!t) : [];
+  const chuggers = steal ? steal.accepted.map(teamById).filter((t): t is Team => !!t && t.id !== steal.leader) : [];
   const allAnswered = !!steal && steal.thieves.every((id) => steal.accepted.includes(id) || steal.declined.includes(id));
   const stealOpen = race.stage === 'steal' && !!steal && steal.stage !== 'done';
-  const stolenFromWinner = chuggers.filter((t) => t.id !== winnerTeam?.id);
+  const transferring = race.stage === 'steal' && steal?.stage === 'transfer';
+  const played = transferring ? steal.played : 0;
+  const lastMove = transferring && played > 0 ? steal.moves[played - 1] : undefined;
+  const transferDone = transferring && played >= steal.moves.length;
 
   return (
     <div className="screen horse">
@@ -389,7 +449,7 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                   <b>Chug én Smirnoff Ice.</b> Hele flaska, på ett kne, mens resten teller.
                 </li>
                 <li>
-                  <b>Da stjeler dere 1 poeng</b> fra laget som vinner løpet, og tar det selv.
+                  <b>Da stjeler dere ett felt</b> fra lederen, her og nå: {leaderTeam?.name ?? 'lederen'} rygger ett felt på banen, og hesten deres går ett felt frem. Ingen poeng byttes etter målgang.
                 </li>
                 <li>
                   <b>Sier dere nei</b>, fortsetter løpet som før. Ingen skam. (Litt skam.)
@@ -406,20 +466,24 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                       </span>
                       <div className="ice-thief-actions">
                         <button type="button" className={`btn ${yes ? 'btn-primary' : 'btn-ghost'}`} onClick={() => answer(t.id, true)}>
-                          🍾 Vi chugger! (+1 poeng)
+                          🍾 Vi chugger! (+1 felt)
                         </button>
                         <button type="button" className={`btn ${no ? 'btn-primary' : 'btn-ghost'}`} onClick={() => answer(t.id, false)}>
                           🙅 Nei takk
                         </button>
                       </div>
-                      {yes && <span className="ice-thief-verdict">Skål! 1 poeng flyttes fra vinneren til dere.</span>}
+                      {yes && (
+                        <span className="ice-thief-verdict">
+                          Skål! {leaderTeam?.name ?? 'Lederen'} rygger ett felt og dere går ett felt frem.
+                        </span>
+                      )}
                       {no && <span className="ice-thief-verdict">Løpet går videre uten stjeling.</span>}
                     </div>
                   );
                 })}
               </div>
               <button type="button" className="btn btn-primary btn-xl" data-primary disabled={!allAnswered} onClick={resumeRace}>
-                {allAnswered ? 'Fortsett løpet ▶' : 'Velg for alle lagene først'}
+                {!allAnswered ? 'Velg for alle lagene først' : chuggers.length ? '🧊 Flytt hestene og fortsett ▶' : 'Fortsett løpet ▶'}
               </button>
             </div>
           </div>
@@ -506,16 +570,30 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                 const red = suit === '♥' || suit === '♦';
                 const isWinner = race.winner === suit;
                 const chugged = chuggers.some((c) => c.id === t.id);
+                const isLeader = transferring && steal.leader === t.id;
+                const isThief = transferring && chugged;
+                // Floating −1/+1 over the horse for every move of the transfer this team has had.
+                const floats = transferring ? steal.moves.slice(0, played).map((m, k) => ({ ...m, k })).filter((m) => m.teamId === t.id) : [];
+                const justMoved = lastMove?.teamId === t.id ? lastMove.delta : 0;
                 return (
-                  <div key={t.id} className={`lane ${isWinner ? 'lane-winner' : ''}`} style={{ ['--team' as string]: t.color }}>
+                  <div
+                    key={t.id}
+                    className={`lane ${isWinner ? 'lane-winner' : ''} ${isLeader ? 'lane-steal-loser' : ''} ${isThief ? 'lane-steal-thief' : ''}`}
+                    style={{ ['--team' as string]: t.color }}
+                  >
                     <div className="lane-label">
                       <span className={`lane-suit ${red ? 'red' : ''}`}>{suit}</span>
                       <span>
                         <TeamMark team={t} /> {t.name}
                       </span>
                       {chugged && (
-                        <span className="lane-ice" title="Chugget en Smirnoff Ice: stjeler 1 poeng fra vinneren">
+                        <span className="lane-ice" title="Chugget en Smirnoff Ice: tok ett felt fra lederen">
                           🧊 +1
+                        </span>
+                      )}
+                      {isLeader && (
+                        <span className="lane-ice lane-ice-loser" title="Blir frastjålet felt">
+                          🧊 −{chuggers.length}
                         </span>
                       )}
                     </div>
@@ -525,10 +603,18 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                           {k > 0 && k < TRACK && <i className="lane-post">{k}</i>}
                         </span>
                       ))}
-                      <div className={`horse-runner ${race.stage === 'running' ? 'galloping' : ''}`} style={{ ['--pos' as string]: pos / TRACK }}>
+                      <div
+                        className={`horse-runner ${race.stage === 'running' ? 'galloping' : ''} ${justMoved < 0 ? 'stumbling' : ''} ${justMoved > 0 ? 'hopping' : ''}`}
+                        style={{ ['--pos' as string]: pos / TRACK }}
+                      >
                         <span className="horse-dust" />
-                        <span className="horse-emoji">🐎</span>
+                        <span key={played} className="horse-emoji">🐎</span>
                         <span className="horse-tag"><TeamMark team={t} /></span>
+                        {floats.map((m, n) => (
+                          <span key={m.k} className={`steal-float ${m.delta < 0 ? 'steal-float-minus' : 'steal-float-plus'}`} style={{ ['--n' as string]: n }}>
+                            {m.delta < 0 ? '−1' : '+1'}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -545,7 +631,8 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
             {race.lastEvent?.startsWith('side') && race.stage !== 'finished' && (
               <div className="race-callout">Sidekort! {race.current?.suit} rygger ett steg</div>
             )}
-            {race.stage !== 'finished' && (
+            {transferring && <div className="race-callout race-callout-ice">🧊 Stjeling pågår…</div>}
+            {race.stage !== 'finished' && race.stage !== 'steal' && (
               <div className="race-controls">
                 <button
                   className="btn btn-ghost btn-sm"
@@ -560,13 +647,44 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
             )}
           </div>
 
+          {transferring && (
+            <div className="race-steal" style={{ ['--team' as string]: leaderTeam?.color }}>
+              <div className="race-steal-head">
+                <span className="race-steal-title">🧊 SMIRNOFF ICE-STJELING!</span>
+                <span className="race-steal-sub">
+                  {chuggers.map((t) => t.name).join(' og ')} chugget. {leaderTeam?.name ?? 'Lederen'} rygger{' '}
+                  {chuggers.length === 1 ? 'ett felt' : `${chuggers.length} felt`}.
+                </span>
+              </div>
+              <div className="race-steal-moves">
+                {steal.moves.map((m, k) => {
+                  const team = teamById(m.teamId);
+                  const state = k < played - 1 ? 'done' : k === played - 1 ? 'now' : 'next';
+                  return (
+                    <span
+                      key={k}
+                      className={`race-steal-move race-steal-move-${state} ${m.delta < 0 ? 'race-steal-move-minus' : 'race-steal-move-plus'}`}
+                      style={{ ['--team' as string]: team?.color }}
+                    >
+                      {team && <TeamMark team={team} />} {team?.name} <b>{m.delta < 0 ? '−1 felt' : '+1 felt'}</b>
+                    </span>
+                  );
+                })}
+              </div>
+              <div className={`race-steal-foot ${transferDone ? 'race-steal-foot-go' : ''}`}>
+                {transferDone ? '🐎 Løpet fortsetter!' : 'Se på banen…'}
+              </div>
+            </div>
+          )}
+
           {race.stage === 'finished' && winnerTeam && (
             <div className="race-winner" style={{ ['--team' as string]: winnerTeam.color }}>
               <div className="race-winner-text">
                 🏁 <TeamMark team={winnerTeam} /> {winnerTeam.name} vant løpet!
-                {stolenFromWinner.length > 0 && (
+                {chuggers.length > 0 && (
                   <span className="race-winner-steal">
-                    🧊 {stolenFromWinner.map((t) => t.name).join(' og ')} chugget og stjeler {stolenFromWinner.length} poeng fra {winnerTeam.name}
+                    🧊 {chuggers.map((t) => t.name).join(' og ')} chugget underveis og tok {chuggers.length === 1 ? 'ett felt' : `${chuggers.length} felt`} fra{' '}
+                    {leaderTeam?.name ?? 'lederen'}
                   </span>
                 )}
               </div>

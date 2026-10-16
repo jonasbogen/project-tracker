@@ -126,7 +126,7 @@ export default function App() {
     update((s) => {
       const placements = s.pending?.placements;
       if (!placements) return s;
-      const result = buildResult(event, s.teams, { placements, adjust: s.pending?.adjust, note: s.pending?.note });
+      const result = buildResult(event, s.teams, { placements, note: s.pending?.note });
       return {
         ...s,
         results: [...s.results.filter((r) => r.eventId !== event.id), result],

@@ -22,7 +22,7 @@ export function pointsForPlacements(placements: Placements, points: number[]): R
 export function buildResult(
   event: GameEvent,
   teams: Team[],
-  input: { placements?: Placements; loser?: TeamId; hits?: TeamId[]; adjust?: Record<TeamId, number>; note?: string },
+  input: { placements?: Placements; loser?: TeamId; hits?: TeamId[]; note?: string },
 ): EventResult {
   const points: Record<TeamId, number> = {};
   for (const t of teams) points[t.id] = 0;
@@ -40,11 +40,7 @@ export function buildResult(
 
   const placements = input.placements ?? {};
   Object.assign(points, pointsForPlacements(placements, event.points));
-  const adjust = input.adjust && Object.values(input.adjust).some((v) => v !== 0) ? input.adjust : undefined;
-  if (adjust) {
-    for (const [id, delta] of Object.entries(adjust)) points[id] = Math.round(((points[id] ?? 0) + delta) * 10) / 10;
-  }
-  return { eventId: event.id, placements, points, adjust, note: input.note };
+  return { eventId: event.id, placements, points, note: input.note };
 }
 
 export function totals(teams: Team[], results: EventResult[]): Record<TeamId, number> {
