@@ -49,6 +49,11 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
 
   const loserTeam = isSix ? teams.find((t) => t.id === result?.loser) : undefined;
 
+  // The Smirnoff Ice steal in the horse race: who chugged, and who paid for it.
+  const adjust = result?.adjust ?? {};
+  const stealThieves = teams.filter((t) => (adjust[t.id] ?? 0) > 0);
+  const stealVictims = teams.filter((t) => (adjust[t.id] ?? 0) < 0);
+
   const advance = (): void => {
     audio.sfx('whoosh');
     const next = nextAfterPoints(state, index);
@@ -118,6 +123,14 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
               </div>
             );
           })}
+        </div>
+      )}
+
+      {done && stealThieves.length > 0 && (
+        <div className="points-steal">
+          🧊 {stealThieves.map((t) => t.name).join(' og ')} chugget en Smirnoff Ice og stjal{' '}
+          {stealThieves.length === 1 ? '1 poeng' : `${stealThieves.length} poeng`} fra {stealVictims.map((t) => t.name).join(' og ') || 'vinneren'}.
+          Poengene over er etter stjelingen.
         </div>
       )}
 

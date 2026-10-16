@@ -36,6 +36,12 @@ export interface EventResult {
   /** Teams that hit on the wheel (flat points, no ranking). */
   hits?: TeamId[];
   points: Record<TeamId, number>;
+  /**
+   * Points moved on top of the ranking, e.g. the Smirnoff Ice steal in the
+   * horse race (+1 to the thief, −1 to the race winner). Already included in
+   * `points`; kept so the results page can tell the story.
+   */
+  adjust?: Record<TeamId, number>;
   note?: string;
 }
 
@@ -185,7 +191,7 @@ export interface GameState {
   /** Set when one event was started on its own from the setup page; its points screen returns to setup. */
   singleEvent?: string;
   /** Pending (auto-suggested) placements for the current event. */
-  pending?: { placements?: Placements; loser?: TeamId; note?: string };
+  pending?: { placements?: Placements; loser?: TeamId; adjust?: Record<TeamId, number>; note?: string };
   six?: SixState;
   mafia?: MafiaState;
   emoji?: EmojiState;

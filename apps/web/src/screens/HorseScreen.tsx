@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
+import { Portal } from '../components/Portal';
 import { placementsFromGroups } from '../game/scoring';
-import type { TeamId } from '../game/types';
+import type { Team, TeamId } from '../game/types';
 import type { ScreenProps } from './common';
 
 type Suit = '♠' | '♥' | '♦' | '♣';
@@ -13,13 +14,34 @@ const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const TRACK = 8;
 const SIDE_CARDS = 7;
 
+/**
+ * The Smirnoff Ice steal: the first time a horse gets a bit past halfway the
+ * race freezes, the teams in last place see an intro and the Teams video, and
+ * may each chug a Smirnoff Ice to steal one point from the race winner.
+ */
+const STEAL_AT = 5;
+const ICE_INTRO_MS = 5200;
+const ICE_VIDEO = '/ice-video.mp4';
+
 interface Card {
   suit: Suit;
   rank: string;
 }
 
+interface Steal {
+  stage: 'intro' | 'video' | 'offer' | 'done';
+  /** Team leading when the race was stopped. */
+  leader: TeamId;
+  /** Teams in last place when the race was stopped (one, or several on a tie). */
+  thieves: TeamId[];
+  /** Thieves that took the deal: a Smirnoff Ice for one point. */
+  accepted: TeamId[];
+  /** Thieves that said no (kept so the host sees everyone has answered). */
+  declined: TeamId[];
+}
+
 interface Race {
-  stage: 'pick' | 'ready' | 'running' | 'paused' | 'finished';
+  stage: 'pick' | 'ready' | 'running' | 'paused' | 'steal' | 'finished';
   /** Suit chosen by each team (index = team index). */
   picks: (Suit | undefined)[];
   positions: Record<Suit, number>;
@@ -30,6 +52,20 @@ interface Race {
   flipKey: number;
   lastEvent?: string;
   winner?: Suit;
+  /** The Smirnoff Ice stop; happens once per race. */
+  steal?: Steal;
+}
+
+/** Who leads and who trails among the horses that belong to a team. */
+function buildSteal(r: Race, teams: Team[]): Steal | undefined {
+  const owned = teams.map((t, i) => ({ id: t.id, pos: r.picks[i] ? r.positions[r.picks[i]!] : -1 })).filter((o) => o.pos >= 0);
+  if (owned.length < 2) return undefined;
+  const top = Math.max(...owned.map((o) => o.pos));
+  const bottom = Math.min(...owned.map((o) => o.pos));
+  if (top === bottom) return undefined;
+  const leader = owned.find((o) => o.pos === top)!.id;
+  const thieves = owned.filter((o) => o.pos === bottom).map((o) => o.id);
+  return { stage: 'intro', leader, thieves, accepted: [], declined: [] };
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -123,9 +159,68 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
 
   useEffect(() => {
     if (race.stage !== 'running') return;
-    const id = window.setInterval(() => setRace((r) => (r.stage === 'running' ? step(r) : r)), fast ? 650 : 1200);
+    const id = window.setInterval(
+      () =>
+        setRace((r) => {
+          if (r.stage !== 'running') return r;
+          const next = step(r);
+          // A bit past halfway for the first time: freeze the race for the Smirnoff Ice offer.
+          if (!next.steal && !next.winner && SUITS.some((s) => next.positions[s] >= STEAL_AT)) {
+            const steal = buildSteal(next, teams);
+            if (steal) return { ...next, stage: 'steal', steal };
+          }
+          return next;
+        }),
+      fast ? 650 : 1200,
+    );
     return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [race.stage, fast]);
+
+  const setSteal = (patch: Partial<Steal>): void => setRace((r) => (r.steal ? { ...r, steal: { ...r.steal, ...patch } } : r));
+
+  // The intro: backing track off, a few stings, then the video takes over.
+  useEffect(() => {
+    if (race.stage !== 'steal' || race.steal?.stage !== 'intro') return;
+    audio.pauseBackground();
+    audio.sfx('riser');
+    const timers = [
+      window.setTimeout(() => audio.sfx('crash'), 700),
+      window.setTimeout(() => audio.sfx('sting'), 2000),
+      window.setTimeout(() => audio.sfx('bell'), 3300),
+      window.setTimeout(() => audio.sfx('whoosh'), 4600),
+      window.setTimeout(() => setSteal({ stage: 'video' }), ICE_INTRO_MS),
+    ];
+    return () => timers.forEach((t) => window.clearTimeout(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [race.stage, race.steal?.stage]);
+
+  // Leaving the race mid-stop (host panel, reset) must not leave the music held.
+  useEffect(() => () => audio.resumeBackground(), []);
+
+  /** Video done (or failed): the music is back and the offer is on the table. */
+  const videoDone = (): void => {
+    if (race.steal?.stage !== 'video') return;
+    audio.resumeBackground();
+    audio.sfx('ding');
+    setSteal({ stage: 'offer' });
+  };
+
+  const answer = (teamId: TeamId, yes: boolean): void => {
+    audio.sfx(yes ? 'coin' : 'back');
+    setRace((r) => {
+      if (!r.steal) return r;
+      const accepted = r.steal.accepted.filter((id) => id !== teamId);
+      const declined = r.steal.declined.filter((id) => id !== teamId);
+      (yes ? accepted : declined).push(teamId);
+      return { ...r, steal: { ...r.steal, accepted, declined } };
+    });
+  };
+
+  const resumeRace = (): void => {
+    audio.sfx('rocket');
+    setRace((r) => (r.steal ? { ...r, stage: 'running', steal: { ...r.steal, stage: 'done' } } : r));
+  };
 
   useEffect(() => {
     if (!race.lastEvent) return;
@@ -157,11 +252,23 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
     }
     const winnerTeam = teams.find((t) => t.id === teamOfSuit(race.winner!));
     const tie = groups.some((g) => g.length > 1);
+    // The Smirnoff Ice steal: each thief that chugged takes one point from the race winner.
+    const thieves = (race.steal?.accepted ?? []).filter((id) => id !== winnerTeam?.id);
+    let adjust: Record<TeamId, number> | undefined;
+    if (winnerTeam && thieves.length) {
+      adjust = {};
+      for (const id of thieves) adjust[id] = (adjust[id] ?? 0) + 1;
+      adjust[winnerTeam.id] = (adjust[winnerTeam.id] ?? 0) - thieves.length;
+    }
+    const stealNote = thieves.length
+      ? ` ${thieves.map((id) => teams.find((t) => t.id === id)?.name ?? '?').join(' og ')} chugget en Smirnoff Ice og stjal 1 poeng fra ${winnerTeam?.name ?? '?'}.`
+      : '';
     update((s) => ({
       ...s,
       pending: {
         placements: placementsFromGroups(groups),
-        note: `Rekkefølgen er hentet fra løpet${tie ? ' (delte plasser deler poengene)' : ''}. Vinner: ${winnerTeam?.name ?? '?'}. Juster om nødvendig.`,
+        adjust,
+        note: `Rekkefølgen er hentet fra løpet${tie ? ' (delte plasser deler poengene)' : ''}. Vinner: ${winnerTeam?.name ?? '?'}.${stealNote} Juster om nødvendig.`,
       },
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,10 +304,127 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
   };
 
   const winnerTeam = race.winner ? teams.find((t) => t.id === teamOfSuit(race.winner!)) : undefined;
+  const teamById = (id: TeamId): Team | undefined => teams.find((t) => t.id === id);
+  const steal = race.steal;
+  const leaderTeam = steal ? teamById(steal.leader) : undefined;
+  const thiefTeams = steal ? steal.thieves.map(teamById).filter((t): t is Team => !!t) : [];
+  const chuggers = steal ? steal.accepted.map(teamById).filter((t): t is Team => !!t) : [];
+  const allAnswered = !!steal && steal.thieves.every((id) => steal.accepted.includes(id) || steal.declined.includes(id));
+  const stealOpen = race.stage === 'steal' && !!steal && steal.stage !== 'done';
+  const stolenFromWinner = chuggers.filter((t) => t.id !== winnerTeam?.id);
 
   return (
     <div className="screen horse">
       <Confetti active={race.stage === 'finished'} burst colors={winnerTeam ? [winnerTeam.color, '#fff', '#ffc53d'] : undefined} />
+
+      {stealOpen && steal.stage === 'intro' && (
+        <Portal>
+          <div className="ice ice-intro" aria-live="polite">
+            <div className="ice-flash" aria-hidden="true" />
+            <div className="ice-stop">🚨 STOPP LØPET! 🚨</div>
+            <div className="ice-line ice-line-1">
+              <span className="team-badge" style={{ ['--team' as string]: leaderTeam?.color }}>
+                {leaderTeam && <TeamMark team={leaderTeam} />} {leaderTeam?.name}
+              </span>{' '}
+              er over halvveis…
+            </div>
+            <div className="ice-line ice-line-2">
+              …og sisteplassen{' '}
+              {thiefTeams.map((t) => (
+                <span key={t.id} className="team-badge" style={{ ['--team' as string]: t.color }}>
+                  <TeamMark team={t} /> {t.name}
+                </span>
+              ))}{' '}
+              får en melding fra ledelsen
+            </div>
+            <div className="ice-bottle-wrap" aria-hidden="true">
+              <span className="ice-cube ice-cube-1">🧊</span>
+              <span className="ice-cube ice-cube-2">🧊</span>
+              <span className="ice-cube ice-cube-3">🧊</span>
+              <div className="ice-bottle">
+                <span className="ice-bottle-cap" />
+                <span className="ice-bottle-neck" />
+                <span className="ice-bottle-body">
+                  <span className="ice-bottle-label">
+                    <b>SMIRNOFF</b>
+                    <i>ICE</i>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div className="ice-title">SMIRNOFF ICE CHALLENGE</div>
+          </div>
+        </Portal>
+      )}
+
+      {stealOpen && steal.stage === 'video' && (
+        <Portal>
+          <div className="ice ice-video">
+            <div className="ice-video-kicker">🍾 Chug-instruks fra ledelsen</div>
+            <div className="ice-video-frame">
+              <video src={ICE_VIDEO} autoPlay playsInline onEnded={videoDone} onError={videoDone} />
+            </div>
+            <button type="button" className="startvideo-skip" onClick={videoDone} title="Hopp over">
+              Hopp over ›
+            </button>
+          </div>
+        </Portal>
+      )}
+
+      {stealOpen && steal.stage === 'offer' && (
+        <Portal>
+          <div className="ice ice-offer">
+            <div className="ice-card">
+              <div className="ice-card-head">
+                <span className="ice-card-emoji">🧊</span>
+                <div>
+                  <h1 className="ice-card-title">Smirnoff Ice-regelen</h1>
+                  <p className="ice-card-sub">
+                    Løpet er stoppet. Sisteplassen får ett tilbud før hestene løper videre.
+                  </p>
+                </div>
+              </div>
+              <ol className="ice-rules">
+                <li>
+                  <b>Chug én Smirnoff Ice.</b> Hele flaska, på ett kne, mens resten teller.
+                </li>
+                <li>
+                  <b>Da stjeler dere 1 poeng</b> fra laget som vinner løpet, og tar det selv.
+                </li>
+                <li>
+                  <b>Sier dere nei</b>, fortsetter løpet som før. Ingen skam. (Litt skam.)
+                </li>
+              </ol>
+              <div className="ice-thieves">
+                {thiefTeams.map((t) => {
+                  const yes = steal.accepted.includes(t.id);
+                  const no = steal.declined.includes(t.id);
+                  return (
+                    <div key={t.id} className={`ice-thief ${yes ? 'ice-thief-yes' : ''} ${no ? 'ice-thief-no' : ''}`} style={{ ['--team' as string]: t.color }}>
+                      <span className="team-badge">
+                        <TeamMark team={t} /> {t.name}
+                      </span>
+                      <div className="ice-thief-actions">
+                        <button type="button" className={`btn ${yes ? 'btn-primary' : 'btn-ghost'}`} onClick={() => answer(t.id, true)}>
+                          🍾 Vi chugger! (+1 poeng)
+                        </button>
+                        <button type="button" className={`btn ${no ? 'btn-primary' : 'btn-ghost'}`} onClick={() => answer(t.id, false)}>
+                          🙅 Nei takk
+                        </button>
+                      </div>
+                      {yes && <span className="ice-thief-verdict">Skål! 1 poeng flyttes fra vinneren til dere.</span>}
+                      {no && <span className="ice-thief-verdict">Løpet går videre uten stjeling.</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              <button type="button" className="btn btn-primary btn-xl" data-primary disabled={!allAnswered} onClick={resumeRace}>
+                {allAnswered ? 'Fortsett løpet ▶' : 'Velg for alle lagene først'}
+              </button>
+            </div>
+          </div>
+        </Portal>
+      )}
 
       {(race.stage === 'pick' || race.stage === 'ready') && (
         <div className="horse-draw">
@@ -257,7 +481,7 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
         </div>
       )}
 
-      {(race.stage === 'running' || race.stage === 'paused' || race.stage === 'finished') && (
+      {(race.stage === 'running' || race.stage === 'paused' || race.stage === 'steal' || race.stage === 'finished') && (
         <div className="race">
           <div className="race-side">
             <div className="race-side-label">Sidekort</div>
@@ -281,6 +505,7 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                 const pos = race.positions[suit];
                 const red = suit === '♥' || suit === '♦';
                 const isWinner = race.winner === suit;
+                const chugged = chuggers.some((c) => c.id === t.id);
                 return (
                   <div key={t.id} className={`lane ${isWinner ? 'lane-winner' : ''}`} style={{ ['--team' as string]: t.color }}>
                     <div className="lane-label">
@@ -288,6 +513,11 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                       <span>
                         <TeamMark team={t} /> {t.name}
                       </span>
+                      {chugged && (
+                        <span className="lane-ice" title="Chugget en Smirnoff Ice: stjeler 1 poeng fra vinneren">
+                          🧊 +1
+                        </span>
+                      )}
                     </div>
                     <div className="lane-path">
                       {Array.from({ length: TRACK + 1 }).map((_, k) => (
@@ -334,6 +564,11 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
             <div className="race-winner" style={{ ['--team' as string]: winnerTeam.color }}>
               <div className="race-winner-text">
                 🏁 <TeamMark team={winnerTeam} /> {winnerTeam.name} vant løpet!
+                {stolenFromWinner.length > 0 && (
+                  <span className="race-winner-steal">
+                    🧊 {stolenFromWinner.map((t) => t.name).join(' og ')} chugget og stjeler {stolenFromWinner.length} poeng fra {winnerTeam.name}
+                  </span>
+                )}
               </div>
               <button
                 className="btn btn-primary btn-xl"

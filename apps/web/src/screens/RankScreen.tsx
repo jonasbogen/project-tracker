@@ -41,7 +41,7 @@ export function RankScreen({ state, update, go, index }: ScreenProps & { index: 
   const confirm = (): void => {
     if (!complete) return;
     audio.sfx('ding');
-    const result = buildResult(event, teams, { placements, loser, note: state.pending?.note });
+    const result = buildResult(event, teams, { placements, loser, adjust: state.pending?.adjust, note: state.pending?.note });
     update((s) => ({
       ...s,
       results: [...s.results.filter((r) => r.eventId !== event.id), result],
