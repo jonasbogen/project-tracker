@@ -29,6 +29,10 @@ export const GAP_SEC = 2;
 export const SIPS = 5;
 /** Extra points for the team with the most titles and artists when the alarm goes. */
 export const MOST_BONUS = 2;
+/** The hidden clock stops for the Ice round at the first song change after this many seconds. */
+export const ICE_AT_SEC = 3 * 60 + 40;
+/** The Smirnoff Ice song (audio only), looped while the team decides. */
+export const ICE_SONG = '/six/ice.m4a';
 
 export const SONGS: Song[] = [
   { file: '/six/07.m4a', image: '/six/artists/07.jpg', title: 'Kygo Jo', artist: 'Kygo, Flow Kingz, JMK, Lyng', scene: ['🏃', '🌴', '🎧', '☀️'], motion: 'drive', first: true },

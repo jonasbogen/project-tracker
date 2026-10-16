@@ -102,8 +102,8 @@ interface Playing {
  */
 const MUSIC_ENABLED = false;
 const BACKGROUND_SRC = '/bakgrunn.m4a';
-/** Backing track sits a little under the effects so cheers and gunshots cut through. */
-const BACKGROUND_LEVEL = 0.85;
+/** Every audio file is loudness-normalised to the same level, so the backing track plays at full volume like the rest. */
+const BACKGROUND_LEVEL = 1;
 
 class AudioEngine {
   private ctx: AudioContext | null = null;

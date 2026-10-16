@@ -323,6 +323,8 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
       : '';
     update((s) => ({
       ...s,
+      // Remembered for 6 minutter: whoever chugged here sits out the Ice round there.
+      iceTeams: chugged,
       pending: {
         placements: placementsFromGroups(groups),
         note: `Rekkefølgen er hentet fra løpet${tie ? ' (delte plasser deler poengene)' : ''}. Vinner: ${winnerTeam?.name ?? '?'}.${stealNote} Juster om nødvendig.`,

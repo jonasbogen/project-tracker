@@ -179,11 +179,34 @@ export interface SixPlayed {
   /** Whether the title / the artist was taken before the time ran out. */
   title: boolean;
   artist: boolean;
+  /** Points per answer: 1, or 2 after a Smirnoff Ice. */
+  weight?: number;
+}
+
+/**
+ * The Ice round in 6 minutter: around 3:40 the clock stops before the next
+ * song and the team whose turn it is may chug a Smirnoff Ice to double the
+ * points on that song. Teams that chugged in the horse race are skipped.
+ */
+export interface SixIce {
+  team: TeamId;
+  /** Said yes (double points) or no; undefined while they decide. */
+  doubled?: boolean;
 }
 
 export interface SixState {
   startedAt?: number;
   finished: boolean;
+  /** Milliseconds the hidden clock has been stopped (the Ice round). */
+  pausedMs?: number;
+  /** Set while the clock is stopped. */
+  pausedAt?: number;
+  /** The Ice round in progress. */
+  ice?: SixIce;
+  /** The Ice round has been played (or there was nobody eligible). */
+  iceDone?: boolean;
+  /** Points per answer for the song playing now (2 after an Ice). */
+  weight?: number;
   /** Song indexes in the order they play this round; the opener is always first. */
   order?: number[];
   /** Position in `order` of the song playing now. */
@@ -210,6 +233,8 @@ export interface GameState {
   /** Pending (auto-suggested) placements for the current event. `bonus` is extra points on top (6 minutter: +2 for most songs). */
   pending?: { placements?: Placements; loser?: TeamId; bonus?: Record<TeamId, number>; note?: string };
   six?: SixState;
+  /** Teams that chugged a Smirnoff Ice in the horse race; they sit out the Ice round in 6 minutter. */
+  iceTeams?: TeamId[];
   mafia?: MafiaState;
   emoji?: EmojiState;
   wheel?: WheelState;

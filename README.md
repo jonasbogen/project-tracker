@@ -11,7 +11,7 @@ Lag legges til og fjernes på oppsettsiden (2–4 lag; hesteveddeløpet har fire
 
 | Øvelse | Hva appen gjør | Poeng (standard) |
 | --- | --- | --- |
-| **6 minutter** | Skjult nedtelling med musikkquiz oppå: 40 sanger (20 sekunder lyd hver, fra `public/six/`, listen med emoji-scener og artistportretter i `src/game/songs.ts`) i tilfeldig rekkefølge, Kygo Jo alltid først. Lagene bytter på, én sang hver, lag 1 begynner; kortet til venstre viser hvem som har tur. To bokser, **Tittel** og **Artist** (taster T/A): trykk når laget tar den, svaret vises i boksen (tittel med animasjon, artist med portrett) med «del ut 5 slurker» og en angreknapp. Når begge er åpne, eller 20 sekunder har gått, er det 2 sekunder pause før neste sang. Tabellen nede til venstre teller titler og artister per lag; flest riktige gir +2 poeng. Ingen teller på skjermen. Alarmlyd når tiden er ute, så fader bakgrunnsmusikken inn igjen. | Taperen får −5, flest riktige +2 |
+| **6 minutter** | Skjult nedtelling med musikkquiz oppå: 40 sanger (20 sekunder lyd hver, fra `public/six/`, listen med emoji-scener og artistportretter i `src/game/songs.ts`) i tilfeldig rekkefølge, Kygo Jo alltid først. Lagene bytter på, én sang hver, lag 1 begynner; kortet til venstre viser hvem som har tur. To bokser, **Tittel** og **Artist** (taster T/A): trykk når laget tar den, svaret vises i boksen (tittel med animasjon, artist med portrett) med «del ut 5 slurker» og en angreknapp. «Neste» (N) eller 20 sekunder åpner resten og gir 2 sekunder pause før neste sang; poeng som er trykket beholdes. Ved første sangbytte etter 3:40 stopper klokken for en **Ice-runde**: Ice-sangen spilles og laget som står for tur kan chugge en Smirnoff Ice for doble poeng på sin sang (lag som tok Ice i hesteveddeløpet står over, runden venter en sang). Tabellen nede til venstre sorteres fortløpende med lederen øverst (likt: færrest sanger vinner); lederen får +2 poeng. Ingen teller på skjermen. Alarmlyd når tiden er ute, så fader bakgrunnsmusikken inn igjen. Alle lydfiler er normalisert til −14 LUFS. | Taperen får −5, flest riktige +2 |
 | **Hesteveddeløpet** | Hvert lag velger sin hest (kortfarge, ett lag per hest). Kort flippes automatisk på en travbane, sidekort sender hester tilbake. Rekkefølgen fylles inn fra målgangen. | 6 / 4 / 2 / 1 |
 | **Mafia og politi** | Appen er forteller: natt (mafia, politi), dag (diskusjon med nedtelling, avstemning), rolleavsløring, vinnersjekk og automatisk poengforslag per lag. Roller deles ut med fysiske kort (ess = mafia, konge = politi). | 10 / 7 / 5 / 3 |
 | **Emoji Movie** | Åtte filmer forklart med emojis, to per lag. 10 sekunder per film, bare riktig/feil teller. Likt antall riktige deler plassen. | 10 / 7 / 5 / 3 |
@@ -27,7 +27,7 @@ Poengene per øvelse kan endres i oppsettet. Delte plasser deler poengene.
 - M : lyd av/på
 - F : fullskjerm
 - H : host-panel i Deal or Drink (koffertverdier, banktilbud, angre, dramatisk pause)
-- T / A / N : i 6 minutter – Tittel tatt, Artist tatt, hopp over sangen
+- T / A / N : i 6 minutter – Tittel tatt, Artist tatt, Neste
 
 ## Kjøre lokalt
 

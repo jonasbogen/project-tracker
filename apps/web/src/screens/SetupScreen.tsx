@@ -164,7 +164,7 @@ export function SetupScreen({
             + Legg til lag
           </button>
           <span className="team-add-hint">
-            {state.teams.length >= MAX_TEAMS ? `Maks ${MAX_TEAMS} lag – hesteveddeløpet har fire hester.` : `${MIN_TEAMS}–${MAX_TEAMS} lag.`}
+            {state.teams.length >= MAX_TEAMS ? `Maks ${MAX_TEAMS} lag.` : `${MIN_TEAMS}–${MAX_TEAMS} lag.`}
           </span>
         </div>
       </section>
