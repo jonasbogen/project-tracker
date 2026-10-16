@@ -171,13 +171,12 @@ export interface EmojiState {
   revealed: boolean;
 }
 
-/** How a song in the quiz was resolved: the host pressed Tittel or Artist, or the 20 seconds ran out. */
-export type SixReveal = 'title' | 'artist' | 'timeout';
-
 export interface SixPlayed {
   /** Index into SONGS. */
   song: number;
-  by: SixReveal;
+  /** Whether the title / the artist was taken before the time ran out. */
+  title: boolean;
+  artist: boolean;
 }
 
 export interface SixState {
@@ -189,6 +188,11 @@ export interface SixState {
   pos?: number;
   /** When the current song started, so the audio can be re-synced after a refresh. */
   songStartedAt?: number;
+  /** Which answers of the current song have been pressed. */
+  gotTitle?: boolean;
+  gotArtist?: boolean;
+  /** Set while the three-second pause between songs runs: the next song starts at this time. */
+  gapUntil?: number;
   /** Songs already played this round, newest last. */
   played?: SixPlayed[];
 }
