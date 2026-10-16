@@ -71,7 +71,7 @@ export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> =
     kind: 'emoji',
     title: 'Emoji Movie',
     rules:
-      'Filmer forklart kun med emojis. Hvert lag får to filmer og 10 sekunder på hver. Bare riktig eller feil teller. Flest riktige vinner.',
+      'Filmer forklart kun med emojis. Hvert lag får tre filmer og 10 sekunder på hver. Bare riktig eller feil teller. Flest riktige vinner.',
     points: [10, 7, 5, 3],
     penalty: 0,
     durationSec: 10,
@@ -135,7 +135,7 @@ function migrate(s: GameState): GameState {
     if (!events.some((e) => e.kind === kind)) events.push(newEvent(kind));
   }
   const emoji = events.find((e) => e.kind === 'emoji');
-  if (emoji && emoji.durationSec === 15) {
+  if (emoji && (emoji.durationSec === 15 || emoji.rules.includes('to filmer'))) {
     Object.assign(emoji, { durationSec: 10, rules: EVENT_TEMPLATES.emoji.rules });
   }
   const wheel = events.find((e) => e.kind === 'wheel');

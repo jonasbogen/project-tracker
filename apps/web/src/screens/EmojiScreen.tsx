@@ -21,6 +21,11 @@ const CARDS: Card[] = [
   { title: 'Haisommer', emojis: '🦈🏖️🚤🎶😱', hint: 'Jaws, Spielberg' },
   { title: 'Fight Club', emojis: '👊🧼🤫🏢💥', hint: 'Første regel…' },
   { title: 'Forrest Gump', emojis: '🏃‍♂️🍫🪶🏓🦐', hint: 'Livet er som en eske sjokolade' },
+  // Round three
+  { title: 'Oppenheimer', emojis: '👨‍🔬⚛️💣🏜️🎩', hint: 'Atombomben, Nolan' },
+  { title: 'Top Gun', emojis: '✈️🕶️🏐🎸🇺🇸', hint: 'Jagerfly, Maverick' },
+  { title: 'Gladiator', emojis: '🗡️🏟️👑🐅✊', hint: 'Roma, «Are you not entertained?»' },
+  { title: 'Batman', emojis: '🦇🌃🃏🚗🖤', hint: 'Gotham, Jokeren' },
 ];
 
 const DURATION = 10;

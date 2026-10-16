@@ -110,12 +110,12 @@ export interface WheelState {
   prank?: 'error' | 'video' | 'done';
   /**
    * The Ice round once every team has picked: the Ice song and video play,
-   * and the last team not yet asked for an Ice may chug one for a second
-   * slot on the wheel. `extra` holds that second slot.
+   * and the last team not yet asked for an Ice may chug one for two more
+   * slots on the wheel. `extra` holds those slots.
    */
   ice?: { team: TeamId; stage: 'video' | 'offer'; accepted?: boolean };
   iceDone?: boolean;
-  extra?: Record<TeamId, number>;
+  extra?: Record<TeamId, number[]>;
 }
 
 /* ---------- Deal or Drink ---------- */

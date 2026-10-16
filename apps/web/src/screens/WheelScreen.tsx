@@ -18,6 +18,8 @@ const PRANK_LINK_AFTER_MS = 4500;
 const PRANK_VIDEO = '/teams-video.mp4';
 /** The Smirnoff Ice video, back for the last Ice chance of the night. */
 const ICE_VIDEO = '/ice-video.mp4';
+/** Extra slots a team gets on the wheel for chugging an Ice. */
+const ICE_EXTRA_SLOTS = 2;
 
 /** Current visual rotation of an element mid-transition, in degrees 0..360. */
 function currentAngle(el: Element | null): number | null {
@@ -121,7 +123,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
   // Leaving the wheel mid-prank (host panel, reset) must not leave the music held.
   useEffect(() => () => audio.resumeBackground(), []);
 
-  const slotsOf = (id: string): number[] => [w?.picks[id], w?.extra?.[id]].filter((n): n is number => n !== undefined);
+  const slotsOf = (id: string): number[] => [w?.picks[id], ...(w?.extra?.[id] ?? [])].filter((n): n is number => n !== undefined);
   const hitTeams = landed ? teams.filter((t) => slotsOf(t.id).includes(w!.result!)) : [];
 
   useEffect(() => {
@@ -161,8 +163,9 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
 
   const iceTeam = w.ice ? teams.find((t) => t.id === w.ice!.team) : undefined;
   const iceOpen = !!w.ice && !w.iceDone;
-  /** The Ice team still has to place its second slot. */
-  const extraPending = !!w.iceDone && !!w.ice?.accepted && w.extra?.[w.ice.team] === undefined;
+  /** The Ice team still has extra slots to place. */
+  const extraPlaced = w.ice ? (w.extra?.[w.ice.team] ?? []).length : 0;
+  const extraPending = !!w.iceDone && !!w.ice?.accepted && extraPlaced < ICE_EXTRA_SLOTS;
   const pickingTeam = teams.find((t) => !w.picks[t.id]) ?? (extraPending ? iceTeam : undefined);
   const allPicked = !pickingTeam && !iceOpen;
   const ownerOfSlot = (n: number) => teams.find((t) => slotsOf(t.id).includes(n));
@@ -175,7 +178,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
       setW((st) => {
         const picks = { ...st.picks };
         const extra = { ...(st.extra ?? {}) };
-        if (extra[owner.id] === n) delete extra[owner.id];
+        if ((extra[owner.id] ?? []).includes(n)) extra[owner.id] = extra[owner.id].filter((x) => x !== n);
         else delete picks[owner.id];
         return { ...st, picks, extra };
       });
@@ -184,7 +187,9 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
     if (!pickingTeam) return;
     audio.sfx('click');
     const id = pickingTeam.id;
-    setW((st) => (st.picks[id] ? { ...st, extra: { ...(st.extra ?? {}), [id]: n } } : { ...st, picks: { ...st.picks, [id]: n } }));
+    setW((st) =>
+      st.picks[id] ? { ...st, extra: { ...(st.extra ?? {}), [id]: [...(st.extra?.[id] ?? []), n] } } : { ...st, picks: { ...st.picks, [id]: n } },
+    );
   };
 
   const iceVideoDone = (): void => setW((st) => (st.ice ? { ...st, ice: { ...st.ice, stage: 'offer' } } : st));
@@ -243,7 +248,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
     const result = buildResult(event, teams, {
       hits: hitTeams.map((t) => t.id),
       note: `Hjulet stoppet på ${w.result}${hitTeams.length ? '' : ' – ingen traff'}.${
-        w.ice?.accepted ? ` ${iceTeam?.name ?? '?'} hadde to felt etter en Smirnoff Ice.` : ''
+        w.ice?.accepted ? ` ${iceTeam?.name ?? '?'} hadde ${1 + ICE_EXTRA_SLOTS} felt etter en Smirnoff Ice.` : ''
       }`,
     });
     update((s) => ({ ...s, results: [...s.results.filter((r) => r.eventId !== event.id), result], pending: undefined }));
@@ -334,7 +339,8 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
                   er det siste laget uten tilbud.
                 </li>
                 <li>
-                  <b>Chug én Smirnoff Ice</b>, og laget får velge <b>ett felt til</b> på hjulet – dobbel sjanse på de {event.points[0]} poengene.
+                  <b>Chug én Smirnoff Ice</b>, og laget får velge <b>{ICE_EXTRA_SLOTS} felt til</b> på hjulet – tre felt i stedet for ett, for en bedre sjanse på de{' '}
+                  {event.points[0]} poengene.
                 </li>
                 <li>
                   <b>Sier dere nei</b>, snurrer hjulet som vanlig.
@@ -342,14 +348,14 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
               </ol>
               <div className="six-ice-choices">
                 <button type="button" className={`btn btn-xl six-ice-yes ${w.ice.accepted === true ? 'six-ice-on' : ''}`} onClick={() => iceChoose(true)}>
-                  🍾 Vi tar en Ice (+1 felt)
+                  🍾 Vi tar en Ice (+{ICE_EXTRA_SLOTS} felt)
                 </button>
                 <button type="button" className={`btn btn-ghost btn-xl ${w.ice.accepted === false ? 'six-ice-on' : ''}`} onClick={() => iceChoose(false)}>
                   Nei takk
                 </button>
               </div>
               <button type="button" className="btn btn-primary btn-xl" data-primary disabled={w.ice.accepted === undefined} onClick={iceGo}>
-                {w.ice.accepted ? 'Velg det ekstra feltet →' : 'Videre til hjulet →'}
+                {w.ice.accepted ? 'Velg de ekstra feltene →' : 'Videre til hjulet →'}
               </button>
             </div>
           </div>
@@ -364,7 +370,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
               <span className="team-badge" style={{ ['--team' as string]: pickingTeam.color }}>
                 <TeamMark team={pickingTeam} /> {pickingTeam.name}
               </span>{' '}
-              velger {extraPending ? 'et ekstra felt 🧊' : 'felt'}
+              velger {extraPending ? `ekstra felt 🧊 (${extraPlaced + 1} av ${ICE_EXTRA_SLOTS})` : 'felt'}
             </p>
           )}
           {!w.spunAt && allPicked && <p className="play-sub">Alle har valgt. Trykk på et felt for å angre, eller snurr hjulet.</p>}
