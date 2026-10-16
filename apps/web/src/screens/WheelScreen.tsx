@@ -16,6 +16,8 @@ const PRANK_AT_MS = 2300;
 /** How long the fake error page sits there before the fix link shows up. */
 const PRANK_LINK_AFTER_MS = 4500;
 const PRANK_VIDEO = '/teams-video.mp4';
+/** The Smirnoff Ice video, back for the last Ice chance of the night. */
+const ICE_VIDEO = '/ice-video.mp4';
 
 /** Current visual rotation of an element mid-transition, in degrees 0..360. */
 function currentAngle(el: Element | null): number | null {
@@ -119,7 +121,8 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
   // Leaving the wheel mid-prank (host panel, reset) must not leave the music held.
   useEffect(() => () => audio.resumeBackground(), []);
 
-  const hitTeams = landed ? teams.filter((t) => w!.picks[t.id] === w!.result) : [];
+  const slotsOf = (id: string): number[] => [w?.picks[id], w?.extra?.[id]].filter((n): n is number => n !== undefined);
+  const hitTeams = landed ? teams.filter((t) => slotsOf(t.id).includes(w!.result!)) : [];
 
   useEffect(() => {
     if (!landed) return;
@@ -133,27 +136,73 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [landed]);
 
+  // The Ice round: once every team has picked, the Ice song and video come
+  // back and the last team without an Ice chance tonight may chug one for a
+  // second slot. Runs once.
+  const everyonePicked = !!w && teams.every((t) => !!w.picks[t.id]);
+  useEffect(() => {
+    if (!w || w.spunAt || w.iceDone || w.ice || !everyonePicked || teams.length === 0) return;
+    const offered = new Set(state.iceOffered ?? []);
+    const team = teams.find((t) => !offered.has(t.id));
+    if (!team) {
+      setW((st) => ({ ...st, iceDone: true }));
+      return;
+    }
+    audio.pauseBackground();
+    update((s) => ({
+      ...s,
+      iceOffered: [...(s.iceOffered ?? []), team.id],
+      wheel: s.wheel ? { ...s.wheel, ice: { team: team.id, stage: 'video' } } : s.wheel,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [everyonePicked, w?.iceDone, !!w?.ice, w?.spunAt, teams.length]);
+
   if (!w) return null;
 
-  const pickingTeam = teams.find((t) => !w.picks[t.id]);
-  const allPicked = !pickingTeam;
-  const ownerOfSlot = (n: number) => teams.find((t) => w.picks[t.id] === n);
+  const iceTeam = w.ice ? teams.find((t) => t.id === w.ice!.team) : undefined;
+  const iceOpen = !!w.ice && !w.iceDone;
+  /** The Ice team still has to place its second slot. */
+  const extraPending = !!w.iceDone && !!w.ice?.accepted && w.extra?.[w.ice.team] === undefined;
+  const pickingTeam = teams.find((t) => !w.picks[t.id]) ?? (extraPending ? iceTeam : undefined);
+  const allPicked = !pickingTeam && !iceOpen;
+  const ownerOfSlot = (n: number) => teams.find((t) => slotsOf(t.id).includes(n));
 
   const pick = (n: number): void => {
-    if (w.spunAt) return;
+    if (w.spunAt || iceOpen) return;
     const owner = ownerOfSlot(n);
     if (owner) {
       audio.sfx('back');
       setW((st) => {
         const picks = { ...st.picks };
-        delete picks[owner.id];
-        return { ...st, picks };
+        const extra = { ...(st.extra ?? {}) };
+        if (extra[owner.id] === n) delete extra[owner.id];
+        else delete picks[owner.id];
+        return { ...st, picks, extra };
       });
       return;
     }
     if (!pickingTeam) return;
     audio.sfx('click');
-    setW((st) => ({ ...st, picks: { ...st.picks, [pickingTeam.id]: n } }));
+    const id = pickingTeam.id;
+    setW((st) => (st.picks[id] ? { ...st, extra: { ...(st.extra ?? {}), [id]: n } } : { ...st, picks: { ...st.picks, [id]: n } }));
+  };
+
+  const iceVideoDone = (): void => setW((st) => (st.ice ? { ...st, ice: { ...st.ice, stage: 'offer' } } : st));
+
+  const iceChoose = (accepted: boolean): void => {
+    audio.sfx(accepted ? 'cheer' : 'click');
+    setW((st) => (st.ice ? { ...st, ice: { ...st.ice, accepted } } : st));
+  };
+
+  const iceGo = (): void => {
+    audio.sfx('whoosh');
+    audio.resumeBackground();
+    update((s) => {
+      const st = s.wheel;
+      if (!st?.ice || st.ice.accepted === undefined) return s;
+      const iceTeams = st.ice.accepted && !(s.iceTeams ?? []).includes(st.ice.team) ? [...(s.iceTeams ?? []), st.ice.team] : s.iceTeams;
+      return { ...s, iceTeams, wheel: { ...st, iceDone: true } };
+    });
   };
 
   const startSpin = (result: number): void => {
@@ -193,7 +242,9 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
     audio.sfx('whoosh');
     const result = buildResult(event, teams, {
       hits: hitTeams.map((t) => t.id),
-      note: hitTeams.length ? `Hjulet stoppet på ${w.result}.` : `Hjulet stoppet på ${w.result} – ingen traff.`,
+      note: `Hjulet stoppet på ${w.result}${hitTeams.length ? '' : ' – ingen traff'}.${
+        w.ice?.accepted ? ` ${iceTeam?.name ?? '?'} hadde to felt etter en Smirnoff Ice.` : ''
+      }`,
     });
     update((s) => ({ ...s, results: [...s.results.filter((r) => r.eventId !== event.id), result], pending: undefined }));
     go({ name: 'event-points', index });
@@ -251,6 +302,59 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
           </div>
         </Portal>
       )}
+      {iceOpen && w.ice?.stage === 'video' && (
+        <Portal>
+          <div className="ice ice-video">
+            <div className="ice-video-kicker">🍾 Ice-sangen er tilbake – siste sjanse i kveld</div>
+            <div className="ice-video-frame">
+              <video src={ICE_VIDEO} autoPlay playsInline onEnded={iceVideoDone} onError={iceVideoDone} />
+            </div>
+            <button type="button" className="startvideo-skip" onClick={iceVideoDone} title="Hopp over">
+              Hopp over ›
+            </button>
+          </div>
+        </Portal>
+      )}
+      {iceOpen && w.ice?.stage === 'offer' && iceTeam && (
+        <Portal>
+          <div className="ice ice-offer">
+            <div className="ice-card" style={{ ['--team' as string]: iceTeam.color }}>
+              <div className="ice-card-head">
+                <span className="ice-card-emoji">🧊</span>
+                <div>
+                  <h1 className="ice-card-title">Siste Smirnoff Ice</h1>
+                  <p className="ice-card-sub">Alle har valgt felt. Ett lag har ikke fått Ice-sjansen sin ennå.</p>
+                </div>
+              </div>
+              <ol className="ice-rules">
+                <li>
+                  <b>
+                    <TeamMark team={iceTeam} /> {iceTeam.name}
+                  </b>{' '}
+                  er det siste laget uten tilbud.
+                </li>
+                <li>
+                  <b>Chug én Smirnoff Ice</b>, og laget får velge <b>ett felt til</b> på hjulet – dobbel sjanse på de {event.points[0]} poengene.
+                </li>
+                <li>
+                  <b>Sier dere nei</b>, snurrer hjulet som vanlig.
+                </li>
+              </ol>
+              <div className="six-ice-choices">
+                <button type="button" className={`btn btn-xl six-ice-yes ${w.ice.accepted === true ? 'six-ice-on' : ''}`} onClick={() => iceChoose(true)}>
+                  🍾 Vi tar en Ice (+1 felt)
+                </button>
+                <button type="button" className={`btn btn-ghost btn-xl ${w.ice.accepted === false ? 'six-ice-on' : ''}`} onClick={() => iceChoose(false)}>
+                  Nei takk
+                </button>
+              </div>
+              <button type="button" className="btn btn-primary btn-xl" data-primary disabled={w.ice.accepted === undefined} onClick={iceGo}>
+                {w.ice.accepted ? 'Velg det ekstra feltet →' : 'Videre til hjulet →'}
+              </button>
+            </div>
+          </div>
+        </Portal>
+      )}
       <Confetti active={landed && hitTeams.length > 0} burst colors={winnerColors} />
       <div className="wheel-layout">
         <div className="wheel-side">
@@ -260,7 +364,7 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
               <span className="team-badge" style={{ ['--team' as string]: pickingTeam.color }}>
                 <TeamMark team={pickingTeam} /> {pickingTeam.name}
               </span>{' '}
-              velger felt
+              velger {extraPending ? 'et ekstra felt 🧊' : 'felt'}
             </p>
           )}
           {!w.spunAt && allPicked && <p className="play-sub">Alle har valgt. Trykk på et felt for å angre, eller snurr hjulet.</p>}
@@ -281,11 +385,11 @@ export function WheelScreen({ state, update, go, index }: ScreenProps & { index:
           )}
           <div className="wheel-picks">
             {teams.map((t) => (
-              <div key={t.id} className={`wheel-pick-row ${landed && w.picks[t.id] === w.result ? 'wheel-pick-hit' : ''}`} style={{ ['--team' as string]: t.color }}>
+              <div key={t.id} className={`wheel-pick-row ${landed && slotsOf(t.id).includes(w.result!) ? 'wheel-pick-hit' : ''}`} style={{ ['--team' as string]: t.color }}>
                 <span>
                   <TeamMark team={t} /> {t.name}
                 </span>
-                <strong>{w.picks[t.id] ?? '–'}</strong>
+                <strong>{slotsOf(t.id).length ? slotsOf(t.id).join(' + ') : '–'}</strong>
               </div>
             ))}
           </div>

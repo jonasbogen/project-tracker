@@ -38,7 +38,8 @@ export const RULE_BULLETS: Partial<Record<GameEvent['kind'], string[]>> = {
   emoji: [
     'Hvert lag får 2 filmer, forklart kun med emojis. Lagene bytter på.',
     '10 sekunder per film. Si tittelen høyt – spill-lederen trykker riktig eller feil.',
-    'Bare riktig eller feil teller, ikke tiden. Flest riktige vinner, likt antall deler plassen.',
+    '🧊 Når alle lag har hatt én film kommer Ice-sangen: et lag som ikke har fått Ice-sjansen sin i kveld kan chugge en Smirnoff Ice og vinner da ved likt antall riktige.',
+    'Bare riktig eller feil teller, ikke tiden. Flest riktige vinner, likt antall deler plassen (med mindre noen tok Ice).',
   ],
   horse: [
     'Hvert lag velger sin egen hest: spar, hjerter, ruter eller kløver. Bare ett lag per hest.',
@@ -48,6 +49,7 @@ export const RULE_BULLETS: Partial<Record<GameEvent['kind'], string[]>> = {
   ],
   wheel: [
     'Hjulet har 12 felt. Lagene velger ett felt hver, i rekkefølge. Ett lag per felt.',
+    '🧊 Når alle har valgt kommer Ice-sangen og -videoen tilbake: det siste laget som ikke har fått Ice-sjansen sin kan chugge en Smirnoff Ice og får velge ett felt til.',
     'Hjulet snurres én gang. Stopper det på feltet ditt, får laget 5 poeng.',
     'Bare én runde, så går vi videre.',
   ],

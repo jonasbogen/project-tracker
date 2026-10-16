@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
 import { placementsFromGroups } from '../game/scoring';
+import { ICE_SONG } from '../game/songs';
 import type { EmojiState, TeamId } from '../game/types';
 import type { ScreenProps } from './common';
 
@@ -28,6 +29,12 @@ function initEmoji(): EmojiState {
   return { current: 0, answers: [], revealed: false };
 }
 
+/**
+ * Emoji Movie, with the Ice round between the two rounds of films: once every
+ * team has had one film, the Ice song plays and the next team that has not
+ * had its Ice chance tonight may chug one. If it does, it wins any tie on
+ * correct answers when the films are done.
+ */
 export function EmojiScreen({ state, update, go, index }: ScreenProps & { index: number }) {
   const teams = state.teams;
   const e = state.emoji;
@@ -44,6 +51,31 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
     const id = window.setInterval(() => setNow(Date.now()), 100);
     return () => window.clearInterval(id);
   }, []);
+
+  // The Ice round opens when the first round of films is over and nobody has started the next one.
+  const iceOpen = !!e && !e.iceDone && !!e.ice;
+  useEffect(() => {
+    if (!e || e.iceDone || e.ice || e.startedAt || e.current !== teams.length || teams.length === 0) return;
+    const offered = new Set(state.iceOffered ?? []);
+    const team = teams.find((t) => !offered.has(t.id));
+    if (!team) {
+      setE((st) => ({ ...st, iceDone: true }));
+      return;
+    }
+    update((s) => ({
+      ...s,
+      iceOffered: [...(s.iceOffered ?? []), team.id],
+      emoji: s.emoji ? { ...s.emoji, ice: { team: team.id } } : s.emoji,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [e?.current, e?.iceDone, !!e?.ice, e?.startedAt, teams.length]);
+
+  // The Ice song loops while the team decides; the backing track comes back afterwards.
+  useEffect(() => {
+    if (!iceOpen) return;
+    audio.playTrack(ICE_SONG, true);
+    return () => audio.stopTrack();
+  }, [iceOpen]);
 
   const elapsed = e?.startedAt ? (now - e.startedAt) / 1000 : 0;
   const timeLeft = Math.max(0, DURATION - elapsed);
@@ -66,6 +98,8 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
   const card = CARDS[e.current];
   const team = teams[e.current % teams.length];
   const answered = e.answers.some((a) => a.card === e.current);
+  const iceTeam = e.ice ? teams.find((t) => t.id === e.ice!.team) : undefined;
+  const iceWinner = e.ice?.accepted ? e.ice.team : undefined;
 
   const answer = (correct: boolean): void => {
     audio.sfx(correct ? 'ding' : 'fail');
@@ -79,6 +113,21 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
   const next = (): void => {
     audio.sfx('whoosh');
     setE((st) => ({ ...st, current: st.current + 1, startedAt: undefined, revealed: false }));
+  };
+
+  const iceChoose = (accepted: boolean): void => {
+    audio.sfx(accepted ? 'cheer' : 'click');
+    setE((st) => (st.ice ? { ...st, ice: { ...st.ice, accepted } } : st));
+  };
+
+  const iceGo = (): void => {
+    audio.sfx('whoosh');
+    update((s) => {
+      const st = s.emoji;
+      if (!st?.ice || st.ice.accepted === undefined) return s;
+      const iceTeams = st.ice.accepted && !(s.iceTeams ?? []).includes(st.ice.team) ? [...(s.iceTeams ?? []), st.ice.team] : s.iceTeams;
+      return { ...s, iceTeams, emoji: { ...st, iceDone: true } };
+    });
   };
 
   const summary = teams.map((t) => {
@@ -96,15 +145,51 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
       else groups.push([s.team.id]);
       prev = s.correct;
     }
+    // The Ice tie-break: the team that chugged goes ahead of the teams it is level with.
+    let iceNote = '';
+    if (iceWinner) {
+      const gi = groups.findIndex((g) => g.includes(iceWinner));
+      if (gi >= 0 && groups[gi].length > 1) {
+        const rest = groups[gi].filter((id) => id !== iceWinner);
+        groups.splice(gi, 1, [iceWinner], rest);
+        iceNote = ` ${teams.find((t) => t.id === iceWinner)?.name ?? '?'} vinner tiebreaken på Smirnoff Ice.`;
+      }
+    }
     update((s) => ({
       ...s,
       pending: {
         placements: placementsFromGroups(groups),
-        note: `Riktige svar: ${sorted.map((s) => `${s.team.name} ${s.correct}`).join(' · ')}. Likt antall deler plassen. Juster om nødvendig.`,
+        note: `Riktige svar: ${sorted.map((s) => `${s.team.name} ${s.correct}`).join(' · ')}.${iceNote || ' Likt antall deler plassen.'} Juster om nødvendig.`,
       },
     }));
     go({ name: 'event-rank', index });
   };
+
+  if (iceOpen && iceTeam) {
+    return (
+      <div className="screen emoji">
+        <div className="six-ice" style={{ ['--team' as string]: iceTeam.color }}>
+          <div className="six-ice-kicker">Alle lag har hatt én film</div>
+          <h2 className="six-ice-title">🧊 ICE-RUNDE</h2>
+          <p className="six-ice-text">
+            <strong>{iceTeam.name}</strong> kan chugge en Smirnoff Ice nå. Står det likt på riktige svar når alle filmene er gjettet, vinner de
+            tiebreaken.
+          </p>
+          <div className="six-ice-choices">
+            <button type="button" className={`btn btn-xl six-ice-yes ${e.ice?.accepted === true ? 'six-ice-on' : ''}`} onClick={() => iceChoose(true)}>
+              🍾 Vi tar en Ice – vinner ved likt
+            </button>
+            <button type="button" className={`btn btn-ghost btn-xl ${e.ice?.accepted === false ? 'six-ice-on' : ''}`} onClick={() => iceChoose(false)}>
+              Nei takk
+            </button>
+          </div>
+          <button type="button" className="btn btn-primary btn-xl" data-primary disabled={e.ice?.accepted === undefined} onClick={iceGo}>
+            Videre til runde 2 →
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (done) {
     return (
@@ -115,6 +200,7 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
             <div key={s.team.id} className="emoji-summary-row" style={{ ['--team' as string]: s.team.color }}>
               <span>
                 <TeamMark team={s.team} /> {s.team.name}
+                {iceWinner === s.team.id && <span className="emoji-ice-badge">🧊 vinner ved likt</span>}
               </span>
               <strong>
                 {s.correct} av {s.total} riktige
@@ -143,6 +229,7 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
       </div>
       <h1 className="play-title">
         <TeamMark team={team} /> {team.name} sin tur
+        {iceWinner === team.id && <span className="emoji-ice-badge">🧊</span>}
       </h1>
 
       {!e.startedAt ? (

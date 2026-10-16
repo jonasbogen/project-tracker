@@ -108,6 +108,14 @@ export interface WheelState {
    * then a link that plays the Teams video, then back to the wheel. Runs once.
    */
   prank?: 'error' | 'video' | 'done';
+  /**
+   * The Ice round once every team has picked: the Ice song and video play,
+   * and the last team not yet asked for an Ice may chug one for a second
+   * slot on the wheel. `extra` holds that second slot.
+   */
+  ice?: { team: TeamId; stage: 'video' | 'offer'; accepted?: boolean };
+  iceDone?: boolean;
+  extra?: Record<TeamId, number>;
 }
 
 /* ---------- Deal or Drink ---------- */
@@ -169,6 +177,12 @@ export interface EmojiState {
   answers: EmojiAnswer[];
   startedAt?: number;
   revealed: boolean;
+  /**
+   * The Ice round between the two rounds of films: one team (not yet asked
+   * for an Ice tonight) may chug one to win any tie on correct answers.
+   */
+  ice?: { team: TeamId; accepted?: boolean };
+  iceDone?: boolean;
 }
 
 export interface SixPlayed {
@@ -233,8 +247,14 @@ export interface GameState {
   /** Pending (auto-suggested) placements for the current event. `bonus` is extra points on top (6 minutter: +2 for most songs). */
   pending?: { placements?: Placements; loser?: TeamId; bonus?: Record<TeamId, number>; note?: string };
   six?: SixState;
-  /** Teams that chugged a Smirnoff Ice in the horse race; they sit out the Ice round in 6 minutter. */
+  /** Teams that chugged a Smirnoff Ice somewhere during the night. */
   iceTeams?: TeamId[];
+  /**
+   * Teams that have had their Ice chance (asked, whatever they answered).
+   * Every team gets one over the night: the horse race asks the last-placed,
+   * 6 minutter, Emoji Movie and the wheel each ask the next team not yet asked.
+   */
+  iceOffered?: TeamId[];
   mafia?: MafiaState;
   emoji?: EmojiState;
   wheel?: WheelState;

@@ -3264,6 +3264,23 @@ input[type='color'] {
   outline-offset: 3px;
 }
 
+.ice-card .six-ice-choices {
+  margin-top: 6px;
+}
+
+.emoji-ice-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(77, 163, 255, 0.25);
+  border: 1px solid rgba(77, 163, 255, 0.6);
+  color: #d6ecff;
+  font-size: 0.75em;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
 .six-quiz-head {
   display: flex;
   flex-direction: column;

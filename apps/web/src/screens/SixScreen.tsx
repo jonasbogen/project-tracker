@@ -123,18 +123,22 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
       const t = Date.now();
       const base: SixState = { ...cur, order: nextOrder, pos: nextPos, gotTitle: false, gotArtist: false, gapUntil: undefined, weight: 1, played: nextPlayed };
 
-      // The Ice round: first song change after 3:40, for a team that did not chug in the horse race.
+      // The Ice round: first song change after 3:40, for a team that has not had its Ice chance yet tonight.
       const nextTeam = s.teams.length ? s.teams[nextPlayed.length % s.teams.length] : undefined;
-      const excluded = new Set(s.iceTeams ?? []);
+      const excluded = new Set(s.iceOffered ?? []);
       if (!cur.iceDone && nextTeam && elapsedSec(cur, t) >= ICE_AT_SEC) {
         if (s.teams.every((tm) => excluded.has(tm.id))) {
           // Nobody is eligible; the round is simply skipped.
           return { ...s, six: { ...base, iceDone: true, songStartedAt: t } };
         }
         if (!excluded.has(nextTeam.id)) {
-          return { ...s, six: { ...base, ice: { team: nextTeam.id }, pausedAt: t, songStartedAt: undefined } };
+          return {
+            ...s,
+            iceOffered: [...(s.iceOffered ?? []), nextTeam.id],
+            six: { ...base, ice: { team: nextTeam.id }, pausedAt: t, songStartedAt: undefined },
+          };
         }
-        // This team chugged in the horse race: wait a song.
+        // This team already had its chance: wait a song.
       }
       return { ...s, six: { ...base, songStartedAt: t } };
     });
@@ -148,7 +152,8 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
       if (!cur || !cur.ice || cur.ice.doubled === undefined) return s;
       const t = Date.now();
       const pausedMs = (cur.pausedMs ?? 0) + (cur.pausedAt ? t - cur.pausedAt : 0);
-      return { ...s, six: { ...cur, ice: undefined, iceDone: true, pausedAt: undefined, pausedMs, weight: cur.ice.doubled ? 2 : 1, songStartedAt: t } };
+      const iceTeams = cur.ice.doubled && !(s.iceTeams ?? []).includes(cur.ice.team) ? [...(s.iceTeams ?? []), cur.ice.team] : s.iceTeams;
+      return { ...s, iceTeams, six: { ...cur, ice: undefined, iceDone: true, pausedAt: undefined, pausedMs, weight: cur.ice.doubled ? 2 : 1, songStartedAt: t } };
     });
   };
 
@@ -333,7 +338,7 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
             <div className="six-ice-kicker">Klokken står stille</div>
             <h2 className="six-ice-title">🧊 ICE-RUNDE</h2>
             <p className="six-ice-text">
-              <strong>{iceTeam.name}</strong> står for tur. Chugg en Smirnoff Ice og doble poengene på sangen som kommer: tittel {2} poeng, artist {2}{' '}
+              <strong>{iceTeam.name}</strong> står for tur. Chugg en Smirnoff Ice og doble poengene på sangen som kommer: tittel 2 poeng, artist 2
               poeng.
             </p>
             <div className="six-ice-choices">
