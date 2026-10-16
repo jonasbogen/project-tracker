@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { TeamMark } from './components/TeamMark';
 import { audio } from './audio/engine';
 import { FitScreen } from './components/FitScreen';
-import { LiveBackdrop } from './components/LiveBackdrop';
+import { LiveBackdrop, hasPlayBackdrop } from './components/LiveBackdrop';
 import { buildResult, totals } from './game/scoring';
 import { useGameStore } from './game/store';
 import type { Phase } from './game/types';
@@ -235,6 +235,7 @@ export default function App() {
       style={resultsPhoto ? ({ '--results-img': `url(${resultsPhoto.src})` } as CSSProperties) : undefined}
     >
       {phase.name === 'event-intro' && event && <LiveBackdrop key={event.kind} kind={event.kind} />}
+      {phase.name === 'event-play' && event && hasPlayBackdrop(event.kind) && <LiveBackdrop key={`play-${event.kind}`} kind={event.kind} stage="play" />}
       <header className="topbar">
         <div className="topbar-left">
           <span className="topbar-brand">Sosial Grunnmur</span>
