@@ -115,18 +115,23 @@ export default function App() {
   const resultsPhoto = resultsPhotoFor(phase.name, eventIndex);
 
   // Horse race, Emoji Movie, Mafia and Deal or Drink work out the order
-  // themselves, so their "who came 1st–4th" page is skipped: the order they
-  // hand over is committed straight away and the results page opens. Only
-  // 6 minutter (who lost) and custom events still ask the host.
+  // themselves, and 6 minutter knows who had the turn when the alarm went,
+  // so their ranking page is skipped: what they hand over is committed
+  // straight away and the results page opens. Only custom events (and an
+  // old 6 minutter save without a loser) still ask the host.
   const autoRanked =
-    phase.name === 'event-rank' && !!event && event.kind !== 'six' && event.kind !== 'custom' && !!state.pending?.placements;
+    phase.name === 'event-rank' &&
+    !!event &&
+    event.kind !== 'custom' &&
+    (event.kind === 'six' ? !!state.pending?.loser : !!state.pending?.placements);
   useEffect(() => {
     if (!autoRanked || !event || phase.name !== 'event-rank') return;
     const index = phase.index;
     update((s) => {
       const placements = s.pending?.placements;
-      if (!placements) return s;
-      const result = buildResult(event, s.teams, { placements, note: s.pending?.note });
+      const loser = s.pending?.loser;
+      if (event.kind === 'six' ? !loser : !placements) return s;
+      const result = buildResult(event, s.teams, { placements, loser, bonus: s.pending?.bonus, note: s.pending?.note });
       return {
         ...s,
         results: [...s.results.filter((r) => r.eventId !== event.id), result],

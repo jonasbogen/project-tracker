@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { TeamMark } from '../components/TeamMark';
+import { HorseFigure, HORSE_NAME } from '../components/HorseFigure';
 import { audio } from '../audio/engine';
 import { Confetti } from '../components/Confetti';
 import { Portal } from '../components/Portal';
@@ -518,9 +519,13 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                   style={{ ['--team' as string]: owner?.color ?? 'rgba(255,255,255,0.2)' }}
                   onClick={() => pickSuit(suit)}
                 >
-                  <span className="horse-pick-horse">🐎</span>
+                  <span className="horse-pick-horse">
+                    <HorseFigure suit={suit} />
+                  </span>
                   <span className={`horse-pick-suit ${red ? 'red' : ''}`}>{suit}</span>
-                  <span className="horse-pick-name">{SUIT_NAME[suit]}</span>
+                  <span className="horse-pick-name">
+                    {SUIT_NAME[suit]} · «{HORSE_NAME[suit]}»
+                  </span>
                   <span className="horse-pick-owner">{owner ? `${owner.name}` : 'Ledig'}</span>
                 </button>
               );
@@ -611,7 +616,9 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                         style={{ ['--pos' as string]: pos / TRACK }}
                       >
                         <span className="horse-dust" />
-                        <span key={played} className="horse-emoji">🐎</span>
+                        <span key={played} className="horse-emoji">
+                          <HorseFigure suit={suit} />
+                        </span>
                         <span className="horse-tag"><TeamMark team={t} /></span>
                         {floats.map((m, n) => (
                           <span key={m.k} className={`steal-float ${m.delta < 0 ? 'steal-float-minus' : 'steal-float-plus'}`} style={{ ['--n' as string]: n }}>

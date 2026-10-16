@@ -73,7 +73,7 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
       <h1 className="play-title">{event.title} – resultat</h1>
       <p className="points-lead">
         {isSix
-          ? `Taperen får trekk. ${result?.note ?? 'Laget med flest riktige sanger får bonus.'}`
+          ? (result?.note ?? 'Laget som hadde tur da alarmen gikk får trekk og tar 5 slurker selv. Laget med flest riktige sanger får bonus.')
           : isWheel
             ? 'Lagene som traff feltet hjulet stoppet på, får poeng.'
             : 'Plasseringene avsløres én etter én, fra sist til først.'}
@@ -105,6 +105,7 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
               <span className="six-loser-emoji"><TeamMark team={loserTeam} /></span>
               <span className="six-loser-name">{loserTeam.name}</span>
               <span className="six-loser-points">−{Math.abs(event.penalty)}</span>
+              <span className="muted">🍻 Alle på laget tar 5 slurker selv</span>
             </div>
           )}
           {revealed > 0 &&

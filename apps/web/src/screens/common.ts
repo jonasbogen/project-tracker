@@ -24,7 +24,7 @@ export const RULE_BULLETS: Partial<Record<GameEvent['kind'], string[]>> = {
     'Når begge er tatt, eller tiden er ute, kommer neste sang og neste lag etter en kort pause.',
     '🧊 Underveis stopper klokken for en Ice-runde: laget som står for tur kan chugge en Smirnoff Ice og doble poengene på sin sang (tittel 2, artist 2). Lag som tok Ice i hesteveddeløpet står over.',
     '🏆 Laget med flest riktige totalt (titler + artister) får 2 poeng ekstra. Ved likt vinner laget som brukte færrest sanger.',
-    'Når alarmen går er det slutt. Laget som tapte får minuspoeng.',
+    '🚨 Når alarmen går er det slutt. Laget som har tur akkurat da taper: minuspoeng, og alle på laget tar 5 slurker selv.',
   ],
   mafia: [
     'Kort: ess = mafia, konge = politi, resten er sivile. Ingen viser kortet sitt.',

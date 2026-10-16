@@ -273,7 +273,11 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     update((s) => ({ ...s, six: undefined }));
   };
 
-  /** On to "who lost": the leader(s) of the table get the bonus. */
+  /**
+   * On to the result: the team whose turn it was when the alarm went is the
+   * loser (no asking), and the leader(s) of the table get the bonus. The
+   * ranking page is skipped; App.tsx commits the pending result straight away.
+   */
   const toRank = (): void => {
     audio.stopMusic(0.2);
     audio.sfx('click');
@@ -281,10 +285,11 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     const winners = top && top.total > 0 ? stats.filter((s) => s.total === top.total && s.songs === top.songs) : [];
     const bonus: Record<TeamId, number> = {};
     for (const w of winners) bonus[w.team.id] = MOST_BONUS;
-    const note = winners.length
+    const loserNote = turnTeam ? `${turnTeam.name} hadde tur da alarmen gikk: −${Math.abs(event.penalty)} poeng, og alle på laget tar ${SIPS} slurker selv.` : '';
+    const bonusNote = winners.length
       ? `Flest riktige: ${winners.map((w) => `${w.team.name} (${w.total})`).join(' og ')} → +${MOST_BONUS} poeng${winners.length > 1 ? ' hver' : ''}.`
       : 'Ingen tok noen sanger, så ingen bonus.';
-    update((s) => ({ ...s, pending: { ...(s.pending ?? {}), bonus, note } }));
+    update((s) => ({ ...s, pending: { ...(s.pending ?? {}), loser: turnTeam?.id, bonus, note: `${loserNote} ${bonusNote}`.trim() } }));
     go({ name: 'event-rank', index });
   };
 
@@ -305,9 +310,19 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
             </div>
           </div>
         )}
+        {turnTeam && (
+          <div className="six-loser-card six-alarm-loser" style={{ ['--team' as string]: turnTeam.color }}>
+            <span className="six-loser-emoji">
+              <TeamMark team={turnTeam} />
+            </span>
+            <span className="six-loser-name">{turnTeam.name} hadde tur – og tapte</span>
+            <span className="six-loser-points">−{Math.abs(event.penalty)}</span>
+            <span className="six-alarm-sips">🍻 Alle på laget tar {SIPS} slurker selv</span>
+          </div>
+        )}
         <StatsTable stats={stats} compact={false} />
         <button className="btn btn-primary btn-xl" data-primary onClick={toRank}>
-          Stopp alarmen – hvem tapte? →
+          Stopp alarmen – vis resultatet →
         </button>
       </div>
     );
