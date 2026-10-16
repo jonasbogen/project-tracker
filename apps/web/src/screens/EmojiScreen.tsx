@@ -23,12 +23,57 @@ const CARDS: Card[] = [
   { title: 'Forrest Gump', emojis: '🏃‍♂️🍫🪶🏓🦐', hint: 'Livet er som en eske sjokolade' },
   // Round three
   { title: 'Oppenheimer', emojis: '👨‍🔬⚛️💣🏜️🎩', hint: 'Atombomben, Nolan' },
-  { title: 'Top Gun', emojis: '✈️🕶️🏐🎸🇺🇸', hint: 'Jagerfly, Maverick' },
+  { title: 'Top Gun', emojis: '{jet}🕶️🏐🎸🇺🇸', hint: 'Jagerfly, Maverick' },
   { title: 'Gladiator', emojis: '🗡️🏟️👑🐅✊', hint: 'Roma, «Are you not entertained?»' },
   { title: 'Batman', emojis: '🦇🌃🃏🚗🖤', hint: 'Gotham, Jokeren' },
 ];
 
 const DURATION = 10;
+
+/**
+ * There is no fighter-jet emoji, so Top Gun gets a drawn one. `{jet}` in a
+ * card's emoji string is swapped for this.
+ */
+function JetIcon() {
+  return (
+    <svg className="emoji-jet" viewBox="0 0 120 64" aria-label="jagerfly" role="img">
+      {/* afterburner */}
+      <path d="M8 32 L 26 26 L 26 38 Z" fill="#ff8a1f" />
+      <path d="M2 32 L 22 29 L 22 35 Z" fill="#ffd23f" />
+      {/* fuselage */}
+      <path d="M24 26 L 70 24 C 90 24, 106 28, 116 32 C 106 36, 90 40, 70 40 L 24 38 Z" fill="#8e99a8" />
+      <path d="M24 32 L 116 32" stroke="#6b7684" strokeWidth="1.5" />
+      {/* cockpit */}
+      <path d="M78 24 C 84 18, 94 18, 100 26 L 78 26 Z" fill="#1c2a44" />
+      <path d="M80 24.5 C 85 20, 92 20, 97 25" stroke="#7fd3ff" strokeWidth="1.3" fill="none" />
+      {/* swept wings */}
+      <path d="M44 27 L 72 4 L 84 4 L 66 27 Z" fill="#6b7684" />
+      <path d="M44 37 L 72 60 L 84 60 L 66 37 Z" fill="#6b7684" />
+      {/* tail fins */}
+      <path d="M26 27 L 36 12 L 46 12 L 40 27 Z" fill="#5a6572" />
+      <path d="M26 37 L 36 52 L 46 52 L 40 37 Z" fill="#5a6572" />
+      {/* star and stripe */}
+      <circle cx="56" cy="32" r="4" fill="#fff" />
+      <path d="M56 28.6 l 1 2.3 2.5 .2 -1.9 1.6 .6 2.4 -2.2 -1.3 -2.2 1.3 .6 -2.4 -1.9 -1.6 2.5 -.2 z" fill="#c8102e" />
+      <path d="M100 30 L 112 32 L 100 34 Z" fill="#c8102e" />
+    </svg>
+  );
+}
+
+/** A card's emojis, with `{jet}` rendered as the drawn fighter jet. */
+function CardEmojis({ emojis }: { emojis: string }) {
+  const parts = emojis.split('{jet}');
+  return (
+    <>
+      {parts.map((part, i) => (
+        <span key={i}>
+          {i > 0 && <JetIcon />}
+          {part}
+        </span>
+      ))}
+    </>
+  );
+}
 
 function initEmoji(): EmojiState {
   return { current: 0, answers: [], revealed: false };
@@ -259,7 +304,9 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
           <div className={`countdown countdown-small ${timeUp ? 'countdown-over' : secondsLeft <= 3 ? 'countdown-warn' : ''}`}>
             {answered ? (e.answers.find((a) => a.card === e.current)?.correct ? '✅' : '❌') : timeUp ? 'Tiden er ute' : secondsLeft}
           </div>
-          <div className="emoji-card">{card.emojis}</div>
+          <div className="emoji-card">
+            <CardEmojis emojis={card.emojis} />
+          </div>
           {e.revealed && (
             <div className="emoji-answer">
               {card.title} <small className="muted">({card.hint})</small>

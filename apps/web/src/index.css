@@ -4133,6 +4133,15 @@ input[type='color'] {
   box-shadow: 0 20px 80px color-mix(in srgb, var(--team, var(--accent)) 35%, transparent);
 }
 
+.emoji-jet {
+  display: inline-block;
+  width: 1.7em;
+  height: 0.9em;
+  vertical-align: -0.12em;
+  margin-right: 0.08em;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
 .emoji-card-hidden {
   opacity: 0.6;
 }
