@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { TeamMark } from '../components/TeamMark';
+import { Portal } from '../components/Portal';
 import { audio } from '../audio/engine';
 import { placementsFromGroups } from '../game/scoring';
-import { ICE_SONG } from '../game/songs';
+import { ICE_SONG, ICE_VIDEO } from '../game/songs';
 import type { EmojiState, TeamId } from '../game/types';
 import type { ScreenProps } from './common';
 
@@ -115,17 +116,29 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
     update((s) => ({
       ...s,
       iceOffered: [...(s.iceOffered ?? []), team.id],
-      emoji: s.emoji ? { ...s.emoji, ice: { team: team.id } } : s.emoji,
+      emoji: s.emoji ? { ...s.emoji, ice: { team: team.id, stage: 'video' } } : s.emoji,
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [e?.current, e?.iceDone, !!e?.ice, e?.startedAt, teams.length]);
 
-  // The Ice song loops while the team decides; the backing track comes back afterwards.
+  // The dancers' video has the sound first (backing track held), then the Ice
+  // song loops while the team decides; the backing track comes back afterwards.
+  const iceVideo = iceOpen && e?.ice?.stage === 'video';
   useEffect(() => {
     if (!iceOpen) return;
+    if (iceVideo) {
+      audio.pauseBackground();
+      return;
+    }
     audio.playTrack(ICE_SONG, true);
     return () => audio.stopTrack();
-  }, [iceOpen]);
+  }, [iceOpen, iceVideo]);
+  // Leaving the screen mid-video must not leave the music held.
+  useEffect(() => () => audio.resumeBackground(), []);
+
+  const iceVideoDone = (): void => {
+    setE((st) => (st.ice?.stage === 'video' ? { ...st, ice: { ...st.ice, stage: 'offer' } } : st));
+  };
 
   const elapsed = e?.startedAt ? (now - e.startedAt) / 1000 : 0;
   const timeLeft = Math.max(0, DURATION - elapsed);
@@ -218,6 +231,19 @@ export function EmojiScreen({ state, update, go, index }: ScreenProps & { index:
   if (iceOpen && iceTeam) {
     return (
       <div className="screen emoji">
+        {iceVideo && (
+          <Portal>
+            <div className="ice ice-video">
+              <div className="ice-video-kicker">🍾 Chug-instruks fra ledelsen</div>
+              <div className="ice-video-frame">
+                <video src={ICE_VIDEO} autoPlay playsInline onEnded={iceVideoDone} onError={iceVideoDone} />
+              </div>
+              <button type="button" className="startvideo-skip" onClick={iceVideoDone} title="Hopp over">
+                Hopp over ›
+              </button>
+            </div>
+          </Portal>
+        )}
         <div className="six-ice" style={{ ['--team' as string]: iceTeam.color }}>
           <div className="six-ice-kicker">Alle lag har hatt én film</div>
           <h2 className="six-ice-title">🧊 ICE-RUNDE</h2>

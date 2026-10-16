@@ -24,6 +24,8 @@ const SIDE_CARDS = 7;
 const STEAL_AT = 5;
 const ICE_INTRO_MS = 5200;
 const ICE_VIDEO = '/ice-video.mp4';
+/** The user's own clip: plays full screen on "START LØPET!", then the horses run. Only here. */
+const START_VIDEO = '/start-race.mp4';
 /** The transfer: a beat before the first move, a beat between moves, and a hold at the end. */
 const TRANSFER_FIRST_MS = 1600;
 const TRANSFER_STEP_MS = 1300;
@@ -57,7 +59,7 @@ interface Steal {
 }
 
 interface Race {
-  stage: 'pick' | 'ready' | 'running' | 'paused' | 'steal' | 'finished';
+  stage: 'pick' | 'ready' | 'video' | 'running' | 'paused' | 'steal' | 'finished';
   /** Suit chosen by each team (index = team index). */
   picks: (Suit | undefined)[];
   positions: Record<Suit, number>;
@@ -213,6 +215,21 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
 
   // Leaving the race mid-stop (host panel, reset) must not leave the music held.
   useEffect(() => () => audio.resumeBackground(), []);
+
+  // "START LØPET!": the start clip plays with its own sound, the backing track waits.
+  useEffect(() => {
+    if (race.stage === 'video') audio.pauseBackground();
+  }, [race.stage]);
+
+  /** The start clip is over (or missing): music back, and they're off. */
+  const startVideoDone = (): void => {
+    setRace((r) => {
+      if (r.stage !== 'video') return r;
+      audio.resumeBackground();
+      audio.sfx('rocket');
+      return { ...r, stage: 'running' };
+    });
+  };
 
   /** Video done (or failed): the music is back and the offer is on the table. */
   const videoDone = (): void => {
@@ -542,8 +559,8 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
                 className="btn btn-primary btn-xl btn-start"
                 data-primary
                 onClick={() => {
-                  audio.sfx('rocket');
-                  setRace((r) => ({ ...r, stage: 'running' }));
+                  audio.sfx('whoosh');
+                  setRace((r) => (r.stage === 'ready' ? { ...r, stage: 'video' } : r));
                 }}
               >
                 START LØPET!
@@ -551,6 +568,19 @@ export function HorseScreen({ state, update, go, index }: ScreenProps & { index:
             )}
           </div>
         </div>
+      )}
+
+      {race.stage === 'video' && (
+        <Portal>
+          <div className="ice race-video">
+            <div className="race-video-frame">
+              <video src={START_VIDEO} autoPlay playsInline onEnded={startVideoDone} onError={startVideoDone} />
+            </div>
+            <button type="button" className="startvideo-skip" onClick={startVideoDone} title="Hopp over">
+              Hopp over ›
+            </button>
+          </div>
+        </Portal>
       )}
 
       {(race.stage === 'running' || race.stage === 'paused' || race.stage === 'steal' || race.stage === 'finished') && (

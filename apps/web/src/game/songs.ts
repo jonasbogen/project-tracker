@@ -33,6 +33,8 @@ export const MOST_BONUS = 2;
 export const ICE_AT_SEC = 3 * 60 + 40;
 /** The Smirnoff Ice song (audio only), looped while the team decides. */
 export const ICE_SONG = '/six/ice.m4a';
+/** The dancers in tracksuits: shown every single time an Ice round opens, in every event. */
+export const ICE_VIDEO = '/ice-video.mp4';
 
 export const SONGS: Song[] = [
   { file: '/six/07.m4a', image: '/six/artists/07.jpg', title: 'Kygo Jo', artist: 'Kygo, Flow Kingz, JMK, Lyng', scene: ['🏃', '🌴', '🎧', '☀️'], motion: 'drive', first: true },

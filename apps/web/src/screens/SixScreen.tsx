@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { TeamMark } from '../components/TeamMark';
+import { Portal } from '../components/Portal';
 import { audio } from '../audio/engine';
-import { GAP_SEC, ICE_AT_SEC, ICE_SONG, MOST_BONUS, SIPS, SONGS, SONG_SEC, shuffledOrder, type Song } from '../game/songs';
+import { GAP_SEC, ICE_AT_SEC, ICE_SONG, ICE_VIDEO, MOST_BONUS, SIPS, SONGS, SONG_SEC, shuffledOrder, type Song } from '../game/songs';
 import type { SixState, Team, TeamId } from '../game/types';
 import type { ScreenProps } from './common';
 
@@ -138,7 +139,7 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
           return {
             ...s,
             iceOffered: [...(s.iceOffered ?? []), nextTeam.id],
-            six: { ...base, ice: { team: nextTeam.id }, pausedAt: t, songStartedAt: undefined },
+            six: { ...base, ice: { team: nextTeam.id, stage: 'video' }, pausedAt: t, songStartedAt: undefined },
           };
         }
         // This team already had its chance: wait a song.
@@ -165,6 +166,12 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     update((s) => (s.six?.ice ? { ...s, six: { ...s.six, ice: { ...s.six.ice, doubled } } } : s));
   };
 
+  /** The dancers' video is over: the Ice song loops while the team decides. */
+  const iceVideoDone = (): void => {
+    update((s) => (s.six?.ice?.stage === 'video' ? { ...s, six: { ...s.six, ice: { ...s.six.ice, stage: 'offer' } } } : s));
+  };
+  const iceVideo = !!ice && ice.stage === 'video';
+
   const timeUpRef = useRef(timeUp);
   timeUpRef.current = timeUp;
 
@@ -181,11 +188,12 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
 
   // The song that is playing: 20 seconds of audio, re-synced to songStartedAt after a refresh.
   // In the pause the clip is stopped and the room is silent; the backing track stays held.
-  // In the Ice round the Ice song loops instead.
+  // In the Ice round the dancers' video has the sound first, then the Ice song loops.
   useEffect(() => {
     if (!running || !song) return;
     if (ice) {
-      audio.playTrack(ICE_SONG, true);
+      if (iceVideo) audio.stopTrack(false);
+      else audio.playTrack(ICE_SONG, true);
       return;
     }
     if (inGap || !six.songStartedAt) {
@@ -196,7 +204,7 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     if (offset >= SONG_SEC) return; // the timer effect opens the pause
     audio.playTrack(song.file, false, { offset, onEnded: () => timeUpRef.current(pos) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, inGap, !!ice, songStartedAt, songIndex]);
+  }, [running, inGap, !!ice, iceVideo, songStartedAt, songIndex]);
 
   // Time's up: the clip stops, the alarm wails, and the backing track fades slowly back in behind it.
   // The alarm screen moves on to the result by itself; the host does not have to press anything.
@@ -363,6 +371,19 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     const showTeam = ice ? iceTeam : turnTeam;
     return (
       <div className={`screen six six-running six-quiz ${inGap ? 'six-in-gap' : ''} ${ice ? 'six-in-ice' : ''}`}>
+        {iceVideo && (
+          <Portal>
+            <div className="ice ice-video">
+              <div className="ice-video-kicker">🍾 Chug-instruks fra ledelsen</div>
+              <div className="ice-video-frame">
+                <video src={ICE_VIDEO} autoPlay playsInline onEnded={iceVideoDone} onError={iceVideoDone} />
+              </div>
+              <button type="button" className="startvideo-skip" onClick={iceVideoDone} title="Hopp over">
+                Hopp over ›
+              </button>
+            </div>
+          </Portal>
+        )}
         {showTeam && (
           <aside className="six-turn" style={{ ['--team' as string]: showTeam.color }}>
             <div className="six-turn-kicker">Sin tur</div>

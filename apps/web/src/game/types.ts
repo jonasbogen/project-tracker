@@ -181,7 +181,7 @@ export interface EmojiState {
    * The Ice round between the two rounds of films: one team (not yet asked
    * for an Ice tonight) may chug one to win any tie on correct answers.
    */
-  ice?: { team: TeamId; accepted?: boolean };
+  ice?: { team: TeamId; stage?: 'video' | 'offer'; accepted?: boolean };
   iceDone?: boolean;
 }
 
@@ -204,6 +204,8 @@ export interface SixPlayed {
  */
 export interface SixIce {
   team: TeamId;
+  /** The dancers' video plays first, then the offer. */
+  stage?: 'video' | 'offer';
   /** Said yes (double points) or no; undefined while they decide. */
   doubled?: boolean;
 }
