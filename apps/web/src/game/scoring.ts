@@ -22,13 +22,15 @@ export function pointsForPlacements(placements: Placements, points: number[]): R
 export function buildResult(
   event: GameEvent,
   teams: Team[],
-  input: { placements?: Placements; loser?: TeamId; hits?: TeamId[]; note?: string },
+  input: { placements?: Placements; loser?: TeamId; hits?: TeamId[]; bonus?: Record<TeamId, number>; note?: string },
 ): EventResult {
   const points: Record<TeamId, number> = {};
   for (const t of teams) points[t.id] = 0;
 
   if (event.kind === 'six') {
     if (input.loser) points[input.loser] = -Math.abs(event.penalty);
+    // The song quiz: the team with the most titles and artists gets a bonus on top.
+    for (const [id, b] of Object.entries(input.bonus ?? {})) if (id in points) points[id] += b;
     return { eventId: event.id, loser: input.loser, points, note: input.note };
   }
 

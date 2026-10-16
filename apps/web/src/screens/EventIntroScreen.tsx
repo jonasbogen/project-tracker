@@ -48,7 +48,10 @@ export function EventIntroScreen({ state, update, go, index }: ScreenProps & { i
 
       <div className="points-chips">
         {event.kind === 'six' ? (
-          <span className="chip chip-neg">Taperen: −{Math.abs(event.penalty)} poeng</span>
+          <>
+            <span className="chip chip-place-1">Flest riktige sanger: +2 poeng</span>
+            <span className="chip chip-neg">Taperen: −{Math.abs(event.penalty)} poeng</span>
+          </>
         ) : event.kind === 'wheel' ? (
           <span className="chip chip-place-1">Treff: +{event.points[0]} poeng</span>
         ) : (

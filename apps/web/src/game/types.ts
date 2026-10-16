@@ -174,6 +174,8 @@ export interface EmojiState {
 export interface SixPlayed {
   /** Index into SONGS. */
   song: number;
+  /** The team whose turn it was. */
+  team: TeamId;
   /** Whether the title / the artist was taken before the time ran out. */
   title: boolean;
   artist: boolean;
@@ -205,8 +207,8 @@ export interface GameState {
   phase: Phase;
   /** Set when one event was started on its own from the setup page; its points screen returns to setup. */
   singleEvent?: string;
-  /** Pending (auto-suggested) placements for the current event. */
-  pending?: { placements?: Placements; loser?: TeamId; note?: string };
+  /** Pending (auto-suggested) placements for the current event. `bonus` is extra points on top (6 minutter: +2 for most songs). */
+  pending?: { placements?: Placements; loser?: TeamId; bonus?: Record<TeamId, number>; note?: string };
   six?: SixState;
   mafia?: MafiaState;
   emoji?: EmojiState;

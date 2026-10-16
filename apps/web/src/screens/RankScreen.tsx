@@ -41,7 +41,7 @@ export function RankScreen({ state, update, go, index }: ScreenProps & { index: 
   const confirm = (): void => {
     if (!complete) return;
     audio.sfx('ding');
-    const result = buildResult(event, teams, { placements, loser, note: state.pending?.note });
+    const result = buildResult(event, teams, { placements, loser, bonus: state.pending?.bonus, note: state.pending?.note });
     update((s) => ({
       ...s,
       results: [...s.results.filter((r) => r.eventId !== event.id), result],
@@ -57,7 +57,7 @@ export function RankScreen({ state, update, go, index }: ScreenProps & { index: 
       <h1 className="play-title">{isSix ? 'Hvem tapte?' : 'Hvem kom på 1., 2., 3. og 4.?'}</h1>
       <p className="play-sub">
         {isSix
-          ? `Laget du velger får −${Math.abs(event.penalty)} poeng.`
+          ? `Laget du velger får −${Math.abs(event.penalty)} poeng.${state.pending?.note ? ` ${state.pending.note}` : ''}`
           : state.pending?.note ?? `Trykk på lagene i rekkefølge. Neste: ${PLACE_LABEL[Math.min(ranked, 3)]} plass. Trykk igjen for å angre.`}
       </p>
 

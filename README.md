@@ -5,11 +5,13 @@ X-kamp-app for fire lag på én felles skjerm. Spill-lederen klikker seg gjennom
 på 1., 2., 3. og 4. plass. Musikk og lydeffekter lages i nettleseren med Web
 Audio, så appen trenger ingen eksterne filer.
 
+Lag legges til og fjernes på oppsettsiden (2–4 lag; hesteveddeløpet har fire hester).
+
 ## Øvelser
 
 | Øvelse | Hva appen gjør | Poeng (standard) |
 | --- | --- | --- |
-| **6 minutter** | Skjult nedtelling med musikkquiz oppå: 40 sanger (20 sekunder lyd hver, fra `public/six/`, listen med emoji-scener i `src/game/songs.ts`) i tilfeldig rekkefølge, Kygo Jo alltid først. To bokser, **Tittel** og **Artist** (taster T/A): trykk når noen tar den, svaret vises i boksen med «del ut 5 slurker» og en liten animasjon for sangen. Begge kan tas. Når begge er åpne, eller 20 sekunder har gått (resten åpnes grått), er det 3 sekunder pause før neste sang. Ingen teller på skjermen. Alarm når tiden er ute. | Taperen får −5 |
+| **6 minutter** | Skjult nedtelling med musikkquiz oppå: 40 sanger (20 sekunder lyd hver, fra `public/six/`, listen med emoji-scener og artistportretter i `src/game/songs.ts`) i tilfeldig rekkefølge, Kygo Jo alltid først. Lagene bytter på, én sang hver, lag 1 begynner; kortet til venstre viser hvem som har tur. To bokser, **Tittel** og **Artist** (taster T/A): trykk når laget tar den, svaret vises i boksen (tittel med animasjon, artist med portrett) med «del ut 5 slurker» og en angreknapp. Når begge er åpne, eller 20 sekunder har gått, er det 2 sekunder pause før neste sang. Tabellen nede til venstre teller titler og artister per lag; flest riktige gir +2 poeng. Ingen teller på skjermen. Alarmlyd når tiden er ute, så fader bakgrunnsmusikken inn igjen. | Taperen får −5, flest riktige +2 |
 | **Hesteveddeløpet** | Hvert lag velger sin hest (kortfarge, ett lag per hest). Kort flippes automatisk på en travbane, sidekort sender hester tilbake. Rekkefølgen fylles inn fra målgangen. | 6 / 4 / 2 / 1 |
 | **Mafia og politi** | Appen er forteller: natt (mafia, politi), dag (diskusjon med nedtelling, avstemning), rolleavsløring, vinnersjekk og automatisk poengforslag per lag. Roller deles ut med fysiske kort (ess = mafia, konge = politi). | 10 / 7 / 5 / 3 |
 | **Emoji Movie** | Åtte filmer forklart med emojis, to per lag. 10 sekunder per film, bare riktig/feil teller. Likt antall riktige deler plassen. | 10 / 7 / 5 / 3 |

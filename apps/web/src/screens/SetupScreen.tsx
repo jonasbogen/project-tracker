@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { audio } from '../audio/engine';
-import { newEvent, TEAM_PALETTE } from '../game/store';
+import { MAX_TEAMS, MIN_TEAMS, newEvent, newTeam, TEAM_PALETTE } from '../game/store';
 import type { GameEvent } from '../game/types';
 import { KIND_EMOJI, playedEvents, resumePhase, type ScreenProps } from './common';
 import { iconSrc, TEAM_ICONS, TeamMark } from '../components/TeamMark';
@@ -27,6 +27,12 @@ export function SetupScreen({
 
   const setTeam = (id: string, patch: Partial<(typeof state.teams)[number]>): void =>
     update((s) => ({ ...s, teams: s.teams.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
+
+  const addTeam = (): void =>
+    update((s) => (s.teams.length >= MAX_TEAMS ? s : { ...s, teams: [...s.teams, newTeam(s.teams.length, s.teams)] }));
+
+  const removeTeam = (id: string): void =>
+    update((s) => (s.teams.length <= MIN_TEAMS ? s : { ...s, teams: s.teams.filter((t) => t.id !== id) }));
 
   const setEvent = (id: string, patch: Partial<GameEvent>): void =>
     update((s) => ({ ...s, events: s.events.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
@@ -108,6 +114,15 @@ export function SetupScreen({
                     <option key={p.color} value={p.color} />
                   ))}
                 </datalist>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm team-remove"
+                  onClick={() => removeTeam(team.id)}
+                  disabled={state.teams.length <= MIN_TEAMS || hasProgress}
+                  title={hasProgress ? 'Lag kan ikke fjernes etter at kvelden er i gang' : state.teams.length <= MIN_TEAMS ? `Minst ${MIN_TEAMS} lag` : 'Fjern laget'}
+                >
+                  ✕
+                </button>
               </div>
               <div className="icon-pick" role="radiogroup" aria-label="Ikon">
                 {TEAM_ICONS.map((ic) => (
@@ -137,6 +152,20 @@ export function SetupScreen({
               />
             </div>
           ))}
+        </div>
+        <div className="team-add-row">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={addTeam}
+            disabled={state.teams.length >= MAX_TEAMS || hasProgress}
+            title={hasProgress ? 'Lag kan ikke legges til etter at kvelden er i gang' : undefined}
+          >
+            + Legg til lag
+          </button>
+          <span className="team-add-hint">
+            {state.teams.length >= MAX_TEAMS ? `Maks ${MAX_TEAMS} lag – hesteveddeløpet har fire hester.` : `${MIN_TEAMS}–${MAX_TEAMS} lag.`}
+          </span>
         </div>
       </section>
 

@@ -19,9 +19,10 @@ export const KIND_EMOJI: Record<GameEvent['kind'], string> = {
 export const RULE_BULLETS: Partial<Record<GameEvent['kind'], string[]>> = {
   six: [
     'Klokken går i skjul. Ingen får se hvor lenge det er igjen.',
-    'Mens den går spilles sanger, 20 sekunder hver. Rop ut tittelen og artisten!',
-    'Spill-lederen trykker Tittel eller Artist når noen tar den – svaret kommer opp i boksen. Riktig svar = del ut 5 slurker 🍻',
-    'Når begge er tatt, eller tiden er ute, kommer neste sang etter en kort pause.',
+    'Mens den går spilles sanger, 20 sekunder hver. Lagene bytter på, én sang hver – lag 1 begynner.',
+    'Laget som har tur roper ut tittel og artist. Spill-lederen trykker boksen når de tar den. Riktig = del ut 5 slurker 🍻',
+    'Når begge er tatt, eller tiden er ute, kommer neste sang og neste lag etter en kort pause.',
+    '🏆 Laget med flest riktige totalt (titler + artister) får 2 poeng ekstra.',
     'Når alarmen går er det slutt. Laget som tapte får minuspoeng.',
   ],
   mafia: [

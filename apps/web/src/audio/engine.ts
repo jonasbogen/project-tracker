@@ -38,7 +38,8 @@ export type SfxName =
   | 'stamp'
   | 'crash'
   | 'riser'
-  | 'coin';
+  | 'coin'
+  | 'alarm';
 
 const SEMITONES: Record<string, number> = {
   C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11,
@@ -119,6 +120,7 @@ class AudioEngine {
    * fake error page would start the music again.
    */
   private held = false;
+  private fadeTimer: number | null = null;
   private volume = 0.7;
   private muted = false;
 
@@ -177,10 +179,32 @@ class AudioEngine {
     this.background?.pause();
   }
 
-  resumeBackground(): void {
+  /** Resume the backing track; with `fadeSec` it comes back from silence over that many seconds. */
+  resumeBackground(fadeSec = 0): void {
     this.held = false;
     if (this.track) return; // a track is in charge; it resumes the backing track when it stops
-    if (this.background?.paused) void this.background.play().catch(() => undefined);
+    const el = this.background;
+    if (!el) return;
+    if (this.fadeTimer) {
+      window.clearInterval(this.fadeTimer);
+      this.fadeTimer = null;
+    }
+    if (fadeSec > 0) {
+      const target = Math.max(0, Math.min(1, this.volume * BACKGROUND_LEVEL));
+      const started = Date.now();
+      el.volume = 0;
+      this.fadeTimer = window.setInterval(() => {
+        const p = Math.min(1, (Date.now() - started) / (fadeSec * 1000));
+        el.volume = Math.max(0, Math.min(1, this.volume * BACKGROUND_LEVEL)) * p * p;
+        if (p >= 1) {
+          window.clearInterval(this.fadeTimer!);
+          this.fadeTimer = null;
+          el.volume = Math.max(0, Math.min(1, this.volume * BACKGROUND_LEVEL));
+        }
+      }, 100);
+      void target;
+    }
+    if (el.paused) void el.play().catch(() => undefined);
   }
 
   /**
@@ -225,14 +249,14 @@ class AudioEngine {
     return el;
   }
 
-  stopTrack(resume = true): void {
+  stopTrack(resume = true, fadeSec = 0): void {
     const el = this.track;
     if (el) {
       el.pause();
       el.remove();
       this.track = null;
     }
-    if (resume) this.resumeBackground();
+    if (resume) this.resumeBackground(fadeSec);
   }
 
   setVolume(v: number): void {
@@ -877,6 +901,34 @@ class AudioEngine {
         this.tone({ t, dur: 0.06, freq: 1975, type: 'square', gain: 0.07, release: 0.04, dest });
         this.tone({ t: t + 0.07, dur: 0.25, freq: 2637, type: 'square', gain: 0.07, release: 0.25, dest });
         break;
+      case 'alarm': {
+        // Time's up in 6 minutter: a siren that wails for about four seconds, with a thumping pulse.
+        for (const det of [-7, 7]) {
+          const osc = ctx.createOscillator();
+          osc.type = 'sawtooth';
+          osc.detune.value = det;
+          osc.frequency.setValueAtTime(520, t);
+          for (let i = 0; i < 4; i++) {
+            osc.frequency.linearRampToValueAtTime(980, t + i + 0.5);
+            osc.frequency.linearRampToValueAtTime(520, t + i + 1);
+          }
+          const f = ctx.createBiquadFilter();
+          f.type = 'lowpass';
+          f.frequency.value = 2800;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(0.13, t + 0.05);
+          g.gain.setValueAtTime(0.13, t + 3.6);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 4.2);
+          osc.connect(f);
+          f.connect(g);
+          g.connect(dest);
+          osc.start(t);
+          osc.stop(t + 4.3);
+        }
+        for (let i = 0; i < 8; i++) this.kick(t + i * 0.5, dest, 0.8);
+        break;
+      }
     }
   }
 }

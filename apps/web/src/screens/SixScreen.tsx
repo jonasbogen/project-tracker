@@ -1,22 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
+import { TeamMark } from '../components/TeamMark';
 import { audio } from '../audio/engine';
-import { GAP_SEC, SIPS, SONGS, SONG_SEC, shuffledOrder, type Song } from '../game/songs';
-import type { SixState } from '../game/types';
+import { GAP_SEC, MOST_BONUS, SIPS, SONGS, SONG_SEC, shuffledOrder, type Song } from '../game/songs';
+import type { SixState, Team, TeamId } from '../game/types';
 import type { ScreenProps } from './common';
 
 /**
  * 6 minutter: a hidden six-minute clock with a song quiz on top. Twenty
- * seconds of each song play (audio only, the recordings are never shown)
- * while the teams shout out the title and the artist. The host presses the
- * Tittel box or the Artist box when someone gets it: the answer appears in
- * that box, with "del ut 5 slurker". Both can be taken. When both boxes are
- * open, or the twenty seconds run out (the unanswered boxes then open on
- * their own), there is a three-second pause with the answers on screen and
- * the next song starts. Nothing on screen says how many songs have played,
- * so nobody can estimate the clock. The alarm ends it all.
+ * seconds of each song play (audio only, the recordings are never shown).
+ * The teams take turns, one song each, team 1 first; the team whose turn it
+ * is shouts out the title and the artist, and the host presses the Tittel
+ * box or the Artist box when they get it. An open box shows its answer (the
+ * title with a little emoji scene, the artist with a portrait) and "del ut
+ * 5 slurker"; a small undo in its corner closes it again. When both boxes
+ * are open, or the twenty seconds run out, there is a two-second silent
+ * pause and the next song and team come up. A table bottom-left keeps count
+ * of titles and artists per team; the team with the most gets 2 extra
+ * points when the alarm goes. Nothing on screen says how many songs have
+ * played, so nobody can estimate the clock.
  */
 export function SixScreen({ state, update, go, index }: ScreenProps & { index: number }) {
   const event = state.events[index];
+  const teams = state.teams;
   const six: SixState = state.six ?? { finished: false };
   const [now, setNow] = useState(Date.now());
   const running = !!six.startedAt && !six.finished;
@@ -26,8 +31,13 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
   const song = songIndex !== undefined ? SONGS[songIndex] : undefined;
   const songStartedAt = six.songStartedAt ?? six.startedAt ?? 0;
   const inGap = !!six.gapUntil;
-  const last = six.played?.length ? six.played[six.played.length - 1] : undefined;
+  const played = six.played ?? [];
+  const last = played.length ? played[played.length - 1] : undefined;
   const lastSong = last ? SONGS[last.song] : undefined;
+  // Team 1 opens, then one song per team round and round.
+  const turnTeam: Team | undefined = teams.length ? teams[played.length % teams.length] : undefined;
+
+  const stats = tally(teams, six);
 
   // Nothing synthesized here: the quiz clips take over from the backing track while they play.
   useEffect(() => {
@@ -62,6 +72,16 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     });
   };
 
+  /** Closes a box again after a wrong press. Cancels the pause so the song plays on if there is time left. */
+  const undo = (which: 'title' | 'artist'): void => {
+    audio.sfx('back');
+    update((s) => {
+      const cur = s.six;
+      if (!cur || !cur.startedAt || cur.finished) return s;
+      return { ...s, six: { ...cur, gotTitle: which === 'title' ? false : cur.gotTitle, gotArtist: which === 'artist' ? false : cur.gotArtist, gapUntil: undefined } };
+    });
+  };
+
   /** The twenty seconds are up (or the host skipped): open what is left and start the pause. */
   const timeUp = (expectedPos: number): void => {
     update((s) => {
@@ -71,17 +91,16 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     });
   };
 
-  /** The pause is over: book the song and start the next one. */
+  /** The pause is over: book the song for the team and start the next one. */
   const advance = (expectedPos: number): void => {
     update((s) => {
       const cur = s.six;
       if (!cur || !cur.startedAt || cur.finished || !cur.gapUntil || (cur.pos ?? 0) !== expectedPos) return s;
       const curOrder = cur.order ?? shuffledOrder();
       const curSong = curOrder[cur.pos ?? 0];
-      const played = [
-        ...(cur.played ?? []),
-        ...(curSong !== undefined ? [{ song: curSong, title: !!cur.gotTitle, artist: !!cur.gotArtist }] : []),
-      ];
+      const prev = cur.played ?? [];
+      const team = s.teams.length ? s.teams[prev.length % s.teams.length].id : '';
+      const nextPlayed = [...prev, ...(curSong !== undefined ? [{ song: curSong, team, title: !!cur.gotTitle, artist: !!cur.gotArtist }] : [])];
       let nextOrder = curOrder;
       let nextPos = (cur.pos ?? 0) + 1;
       if (nextPos >= curOrder.length) {
@@ -91,7 +110,7 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
       }
       return {
         ...s,
-        six: { ...cur, order: nextOrder, pos: nextPos, songStartedAt: Date.now(), gotTitle: false, gotArtist: false, gapUntil: undefined, played },
+        six: { ...cur, order: nextOrder, pos: nextPos, songStartedAt: Date.now(), gotTitle: false, gotArtist: false, gapUntil: undefined, played: nextPlayed },
       };
     });
   };
@@ -124,13 +143,25 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, inGap, songStartedAt, songIndex]);
 
-  // Hand the sound back to the backing track when the quiz stops or the screen goes away.
+  // Time's up: the clip stops, the alarm wails, and the backing track fades slowly back in behind it.
+  const alarmed = useRef(false);
   useEffect(() => {
-    if (!running) audio.stopTrack();
-  }, [running]);
+    if (six.finished) {
+      if (alarmed.current) return;
+      alarmed.current = true;
+      audio.stopTrack(false);
+      // Hold the backing track: every click (and the alarm itself) runs ensure(), which would otherwise start it at once.
+      audio.pauseBackground();
+      audio.sfx('alarm');
+      const id = window.setTimeout(() => audio.resumeBackground(8), 3500);
+      return () => window.clearTimeout(id);
+    }
+    alarmed.current = false;
+    if (!six.startedAt) audio.stopTrack();
+  }, [six.finished, six.startedAt]);
   useEffect(() => () => audio.stopTrack(), []);
 
-  // Warm up the next clip so it starts the instant the pause is over.
+  // Warm up the next clip and portrait so they are ready the instant the pause is over.
   useEffect(() => {
     if (!running) return;
     const next = order[pos + 1];
@@ -138,6 +169,8 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     const el = new Audio(SONGS[next].file);
     el.preload = 'auto';
     el.load();
+    const img = new Image();
+    img.src = SONGS[next].image;
   }, [running, order, pos]);
 
   // T = Tittel, A = Artist, N = hopp over sangen.
@@ -188,6 +221,21 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     update((s) => ({ ...s, six: undefined }));
   };
 
+  /** On to "who lost": the team(s) with the most titles and artists get the bonus. */
+  const toRank = (): void => {
+    audio.stopMusic(0.2);
+    audio.sfx('click');
+    const best = Math.max(0, ...stats.map((s) => s.total));
+    const winners = best > 0 ? stats.filter((s) => s.total === best) : [];
+    const bonus: Record<TeamId, number> = {};
+    for (const w of winners) bonus[w.team.id] = MOST_BONUS;
+    const note = winners.length
+      ? `Flest riktige: ${winners.map((w) => `${w.team.name} (${w.total})`).join(' og ')} → +${MOST_BONUS} poeng${winners.length > 1 ? ' hver' : ''}.`
+      : 'Ingen tok noen sanger, så ingen bonus.';
+    update((s) => ({ ...s, pending: { ...(s.pending ?? {}), bonus, note } }));
+    go({ name: 'event-rank', index });
+  };
+
   if (six.finished) {
     return (
       <div className="screen six six-finished">
@@ -195,20 +243,18 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
         <div className="six-alarm-sub">{Math.round(event.durationSec / 60)} minutter har gått</div>
         {song && (
           <div className="six-last six-last-final">
-            <div className="six-last-kicker">Sangen som spilte</div>
-            <div className="six-last-title">{song.title}</div>
-            <div className="six-last-artist">{song.artist}</div>
+            <div className="six-last-kicker">Riktig sang var</div>
+            <div className="six-last-row">
+              <img className="six-last-img" src={song.image} alt="" />
+              <div>
+                <div className="six-last-title">{song.title}</div>
+                <div className="six-last-artist">{song.artist}</div>
+              </div>
+            </div>
           </div>
         )}
-        <button
-          className="btn btn-primary btn-xl"
-          data-primary
-          onClick={() => {
-            audio.stopMusic(0.2);
-            audio.sfx('click');
-            go({ name: 'event-rank', index });
-          }}
-        >
+        <StatsTable stats={stats} compact={false} />
+        <button className="btn btn-primary btn-xl" data-primary onClick={toRank}>
           Stopp alarmen – hvem tapte? →
         </button>
       </div>
@@ -223,20 +269,28 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
     const artistOpen = !!six.gotArtist || inGap;
     return (
       <div className={`screen six six-running six-quiz ${inGap ? 'six-in-gap' : ''}`}>
+        {turnTeam && (
+          <aside className="six-turn" style={{ ['--team' as string]: turnTeam.color }}>
+            <div className="six-turn-kicker">Sin tur</div>
+            <div className="six-turn-mark">
+              <TeamMark team={turnTeam} />
+            </div>
+            <div className="six-turn-name">{turnTeam.name}</div>
+          </aside>
+        )}
+
         <div className="six-quiz-head">
-          <span className="six-quiz-hint">
-            {inGap ? `Neste sang om ${gapLeft}…` : 'Klokken går i skjul · rop ut tittel og artist'}
-          </span>
+          <span className="six-quiz-hint">{inGap ? `Neste sang om ${gapLeft}…` : ''}</span>
         </div>
 
         <div className="six-tiles" key={`${songStartedAt}-${songIndex}`}>
-          <Tile which="title" label="Tittel" keyHint="T" open={titleOpen} got={!!six.gotTitle} song={song} onPress={() => press('title')} />
+          <Tile which="title" label="Tittel" keyHint="T" open={titleOpen} got={!!six.gotTitle} song={song} onPress={() => press('title')} onUndo={() => undo('title')} />
           <div className={`six-eq ${inGap ? 'six-eq-quiet' : ''}`} aria-hidden="true">
             {Array.from({ length: 7 }, (_, i) => (
               <span key={i} style={{ ['--i' as string]: i }} />
             ))}
           </div>
-          <Tile which="artist" label="Artist" keyHint="A" open={artistOpen} got={!!six.gotArtist} song={song} onPress={() => press('artist')} />
+          <Tile which="artist" label="Artist" keyHint="A" open={artistOpen} got={!!six.gotArtist} song={song} onPress={() => press('artist')} onUndo={() => undo('artist')} />
         </div>
 
         <div className="six-progress" aria-hidden="true">
@@ -248,6 +302,8 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
             Forrige sang: <strong>{lastSong.title}</strong> · {lastSong.artist}
           </div>
         )}
+
+        <StatsTable stats={stats} compact />
 
         <div className="six-side-actions">
           <button className="btn btn-ghost" onClick={skipSong} disabled={inGap}>
@@ -269,14 +325,73 @@ export function SixScreen({ state, update, go, index }: ScreenProps & { index: n
       <div className="six-big-emoji">🎧</div>
       <h1 className="play-title">{event.title}</h1>
       <p className="play-sub">
-        Når du trykker start, skjules klokken og første sang spilles. 20 sekunder per sang. Trykk Tittel eller Artist når noen tar den – svaret
-        kommer i boksen, og laget deler ut {SIPS} slurker. Når begge er tatt, eller tiden er ute, kommer neste sang etter {GAP_SEC} sekunder.
-        Alarmen går etter {Math.round(event.durationSec / 60)} minutter.
+        Når du trykker start, skjules klokken og første sang spilles. Lagene bytter på, én sang hver – {teams[0]?.name ?? 'lag 1'} begynner. Trykk
+        Tittel eller Artist når laget tar den, så kommer svaret i boksen og laget deler ut {SIPS} slurker. Laget med flest riktige får{' '}
+        {MOST_BONUS} poeng ekstra. Alarmen går etter {Math.round(event.durationSec / 60)} minutter.
       </p>
       <button className="btn btn-primary btn-xl btn-start" data-primary onClick={start}>
         START
       </button>
     </div>
+  );
+}
+
+/* ---------- pieces ---------- */
+
+interface TeamStat {
+  team: Team;
+  titles: number;
+  artists: number;
+  total: number;
+}
+
+/** Titles and artists per team, including the boxes open for the song playing now. */
+function tally(teams: Team[], six: SixState): TeamStat[] {
+  const played = six.played ?? [];
+  const turn = teams.length ? teams[played.length % teams.length]?.id : undefined;
+  return teams.map((team) => {
+    let titles = 0;
+    let artists = 0;
+    for (const p of played) {
+      if (p.team !== team.id) continue;
+      if (p.title) titles += 1;
+      if (p.artist) artists += 1;
+    }
+    if (six.startedAt && !six.finished && turn === team.id) {
+      if (six.gotTitle) titles += 1;
+      if (six.gotArtist) artists += 1;
+    }
+    return { team, titles, artists, total: titles + artists };
+  });
+}
+
+function StatsTable({ stats, compact }: { stats: TeamStat[]; compact: boolean }) {
+  const best = Math.max(0, ...stats.map((s) => s.total));
+  return (
+    <table className={`six-stats ${compact ? 'six-stats-compact' : 'six-stats-big'}`}>
+      <thead>
+        <tr>
+          <th>Lag</th>
+          <th title="Titler">🎵</th>
+          <th title="Artister">🎤</th>
+          <th>Sum</th>
+        </tr>
+      </thead>
+      <tbody>
+        {stats.map((s) => (
+          <tr key={s.team.id} className={best > 0 && s.total === best ? 'six-stats-lead' : ''} style={{ ['--team' as string]: s.team.color }}>
+            <td>
+              <TeamMark team={s.team} /> {s.team.name}
+            </td>
+            <td>{s.titles}</td>
+            <td>{s.artists}</td>
+            <td>
+              <strong>{s.total}</strong>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -290,29 +405,49 @@ interface TileProps {
   got: boolean;
   song: Song;
   onPress: () => void;
+  onUndo: () => void;
 }
 
-function Tile({ which, label, keyHint, open, got, song, onPress }: TileProps) {
+function Tile({ which, label, keyHint, open, got, song, onPress, onUndo }: TileProps) {
   const answer = which === 'title' ? song.title : song.artist;
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={open ? -1 : 0}
       className={`six-tile six-tile-${which} ${open ? 'six-tile-open' : ''} ${got ? 'six-tile-got' : open ? 'six-tile-missed' : ''}`}
-      onClick={onPress}
-      disabled={open}
+      onClick={open ? undefined : onPress}
+      onKeyDown={(e) => {
+        if (!open && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onPress();
+        }
+      }}
     >
       <span className="six-tile-label">{label}</span>
       {open ? (
         <>
-          {which === 'title' && <SongScene song={song} />}
+          {which === 'title' ? <SongScene song={song} /> : <img className="six-tile-img" src={song.image} alt="" draggable={false} />}
           <span className={`six-tile-answer ${answer.length > 24 ? 'six-tile-answer-long' : ''}`}>{answer}</span>
-          <span className={`six-tile-sips ${got ? '' : 'six-tile-sips-none'}`}>{got ? `🍻 Del ut ${SIPS} slurker` : 'Ingen tok den'}</span>
+          {got && <span className="six-tile-sips">🍻 Del ut {SIPS} slurker</span>}
+          {got && (
+            <button
+              type="button"
+              className="six-tile-undo"
+              title="Angre – trykket feil"
+              onClick={(e) => {
+                e.stopPropagation();
+                onUndo();
+              }}
+            >
+              ↩ Angre
+            </button>
+          )}
         </>
       ) : (
         <span className="six-tile-q">?</span>
       )}
       <span className="six-tile-key">{keyHint}</span>
-    </button>
+    </div>
   );
 }
 

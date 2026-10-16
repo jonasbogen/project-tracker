@@ -17,14 +17,26 @@ export function uid(prefix = 'id'): string {
 }
 
 export function defaultTeams(): Team[] {
-  return TEAM_PALETTE.map((p, i) => ({
-    id: uid('team'),
-    name: `Lag ${i + 1}`,
-    color: p.color,
-    emoji: p.emoji,
-    icon: p.icon,
-    players: [],
-  }));
+  const teams: Team[] = [];
+  for (let i = 0; i < TEAM_PALETTE.length; i++) teams.push(newTeam(i, teams));
+  return teams;
+}
+
+/** The horse race has four horses (one per suit), so the night takes two to four teams. */
+export const MIN_TEAMS = 2;
+export const MAX_TEAMS = 4;
+
+/**
+ * A fresh team in the palette slot `index` (colours and icons cycle). Given the
+ * existing teams it takes the first "Lag N" name and palette colour not in use.
+ */
+export function newTeam(index: number, existing: Team[] = []): Team {
+  const names = new Set(existing.map((t) => t.name.trim().toLowerCase()));
+  let n = 1;
+  while (names.has(`lag ${n}`)) n += 1;
+  const colors = new Set(existing.map((t) => t.color.toLowerCase()));
+  const p = TEAM_PALETTE.find((c) => !colors.has(c.color.toLowerCase())) ?? TEAM_PALETTE[index % TEAM_PALETTE.length];
+  return { id: uid('team'), name: `Lag ${n}`, color: p.color, emoji: p.emoji, icon: p.icon, players: [] };
 }
 
 export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> = {
@@ -32,7 +44,7 @@ export const EVENT_TEMPLATES: Record<GameEvent['kind'], Omit<GameEvent, 'id'>> =
     kind: 'six',
     title: '6 minutter',
     rules:
-      'Klokken går i skjul mens sangene spilles, 20 sekunder hver. Rop ut tittel og artist – spill-lederen trykker, svaret vises i boksen og riktig gir 5 slurker å dele ut. Når alarmen går er det slutt, og laget som tapte får minuspoeng.',
+      'Klokken går i skjul mens sangene spilles, 20 sekunder hver. Lagene bytter på, én sang hver, lag 1 begynner. Tittel og artist gir 5 slurker å dele ut. Laget med flest riktige totalt får 2 poeng ekstra. Når alarmen går er det slutt, og laget som tapte får minuspoeng.',
     points: [0, 0, 0, 0],
     penalty: 5,
     durationSec: 6 * 60,
@@ -132,7 +144,7 @@ function migrate(s: GameState): GameState {
   }
   // 6 minutter became a song quiz; saves from before still carry the plain hidden-clock text.
   const six = events.find((e) => e.kind === 'six');
-  if (six && (six.rules.startsWith('Klokken går i skjul. Ingen får se') || six.rules.includes('Rop ut tittel eller artist'))) {
+  if (six && six.rules.startsWith('Klokken går i skjul') && !six.rules.includes('2 poeng ekstra')) {
     Object.assign(six, { rules: EVENT_TEMPLATES.six.rules });
   }
   // The night now opens with the horse race; older saves had 6 minutter first.

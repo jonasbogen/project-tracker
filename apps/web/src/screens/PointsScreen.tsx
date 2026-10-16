@@ -48,6 +48,14 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
   const resultsForBoard = done && result ? [...previousResults, result] : previousResults;
 
   const loserTeam = isSix ? teams.find((t) => t.id === result?.loser) : undefined;
+  // 6 minutter: the team(s) with the most titles and artists got a bonus on top of the penalty.
+  const bonusTeams = isSix
+    ? teams.filter((t) => {
+        const p = result?.points[t.id] ?? 0;
+        return t.id === result?.loser ? p > -Math.abs(event.penalty) : p > 0;
+      })
+    : [];
+  const bonusFor = (id: string): number => (result?.points[id] ?? 0) + (id === result?.loser ? Math.abs(event.penalty) : 0);
 
   const advance = (): void => {
     audio.sfx('whoosh');
@@ -65,7 +73,7 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
       <h1 className="play-title">{event.title} – resultat</h1>
       <p className="points-lead">
         {isSix
-          ? 'Laget som brukte lengst tid får trekk. Resten går videre uten poeng.'
+          ? `Taperen får trekk. ${result?.note ?? 'Laget med flest riktige sanger får bonus.'}`
           : isWheel
             ? 'Lagene som traff feltet hjulet stoppet på, får poeng.'
             : 'Plasseringene avsløres én etter én, fra sist til først.'}
@@ -91,7 +99,7 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
             ))}
         </div>
       ) : isSix ? (
-        <div className="six-loser">
+        <div className="six-loser reveal-row">
           {revealed > 0 && loserTeam && (
             <div className="six-loser-card" style={{ ['--team' as string]: loserTeam.color }}>
               <span className="six-loser-emoji"><TeamMark team={loserTeam} /></span>
@@ -99,6 +107,15 @@ export function PointsScreen({ state, update, go, index }: ScreenProps & { index
               <span className="six-loser-points">−{Math.abs(event.penalty)}</span>
             </div>
           )}
+          {revealed > 0 &&
+            bonusTeams.map((t) => (
+              <div key={t.id} className="six-loser-card six-bonus-card" style={{ ['--team' as string]: t.color }}>
+                <span className="six-loser-emoji"><TeamMark team={t} /></span>
+                <span className="six-loser-name">{t.name}</span>
+                <span className="reveal-points">+{bonusFor(t.id)}</span>
+                <span className="muted">Flest riktige sanger</span>
+              </div>
+            ))}
         </div>
       ) : (
         <div className="reveal-row">
