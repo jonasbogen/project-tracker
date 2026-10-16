@@ -6,6 +6,13 @@ import { placementsFromGroups } from '../game/scoring';
 import type { MafiaPlayer, MafiaRole, MafiaState, Team, TeamId } from '../game/types';
 import { formatClock, type ScreenProps } from './common';
 
+/**
+ * The mafia music: the sound of the user's own clip, looped from the moment
+ * the event opens until the screen is left (mafia and police included). Only
+ * the sound. The backing track waits and comes back afterwards.
+ */
+const MAFIA_MUSIC = '/mafia.m4a';
+
 const ROLE_LABEL: Record<MafiaRole, string> = { mafia: 'Mafia', politi: 'Politi', sivil: 'Sivil' };
 const ROLE_EMOJI: Record<MafiaRole, string> = { mafia: '🔫', politi: '👮', sivil: '🙂' };
 const NEXT_ROLE: Record<MafiaRole, MafiaRole> = { sivil: 'mafia', mafia: 'politi', politi: 'sivil' };
@@ -54,6 +61,14 @@ export function MafiaScreen({ state, update, go, index }: ScreenProps & { index:
   useEffect(() => {
     if (!m) update((s) => ({ ...s, mafia: initMafia(s.teams) }));
   }, [m, update]);
+
+  // The mafia music runs through the whole event; leaving hands the sound back to the backing track.
+  useEffect(() => {
+    const el = audio.playTrack(MAFIA_MUSIC, true);
+    // No file (or a broken one): the backing track carries on instead of silence.
+    el?.addEventListener('error', () => audio.stopTrack(), { once: true });
+    return () => audio.stopTrack();
+  }, []);
 
   useEffect(() => {
     if (!m) return;

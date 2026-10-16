@@ -840,14 +840,60 @@ input[type='color'] {
 
 /* ---------- intro ---------- */
 
+/* Overflow stays visible so FitScreen can measure the whole page and scale it
+   down instead of the edges being cut off; the backdrop clips its own sparks. */
 .intro {
-  overflow: hidden;
+  overflow: visible;
+  isolation: isolate;
 }
 
 .intro-bg {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  overflow: hidden;
+  z-index: -1;
+  border-radius: 24px;
+}
+
+/* The photo fills the backdrop; a dark shade keeps the gold title and the cards readable on top of it. */
+.intro-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  animation: intro-photo-in 1.6s ease both;
+}
+
+.intro-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 100%, rgba(11, 16, 32, 0.95) 0%, rgba(11, 16, 32, 0.7) 45%, rgba(11, 16, 32, 0.45) 100%),
+    linear-gradient(180deg, rgba(11, 16, 32, 0.55), rgba(11, 16, 32, 0.35) 40%, rgba(11, 16, 32, 0.8));
+}
+
+@keyframes intro-photo-in {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.intro > :not(.intro-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.intro-word {
+  display: inline-flex;
+  white-space: nowrap;
 }
 
 .intro-spark {
@@ -878,15 +924,20 @@ input[type='color'] {
 }
 
 .intro-title {
-  font-size: clamp(3rem, 10vw, 7.5rem);
+  font-size: clamp(3rem, 8vw, 6.5rem);
   font-weight: 900;
   letter-spacing: 0.08em;
+  line-height: 1.05;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.35em;
+  max-width: 100%;
   background: linear-gradient(180deg, #fff6d5, #ffc53d 60%, #ff9f43);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 10px 30px rgba(255, 170, 60, 0.35));
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7)) drop-shadow(0 10px 30px rgba(255, 170, 60, 0.35));
 }
 
 .intro-letter {
@@ -908,7 +959,8 @@ input[type='color'] {
 
 .intro-sub {
   font-size: 1.4rem;
-  color: var(--muted);
+  color: #d6dcf5;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
 }
 
 .intro-teams {
@@ -918,7 +970,7 @@ input[type='color'] {
 }
 
 .intro-team {
-  background: color-mix(in srgb, var(--team) 22%, rgba(255, 255, 255, 0.04));
+  background: color-mix(in srgb, var(--team) 22%, rgba(11, 16, 32, 0.75));
   border: 2px solid var(--team);
   border-radius: var(--radius);
   padding: 18px 12px;
@@ -971,7 +1023,8 @@ input[type='color'] {
   gap: 8px;
   padding: 8px 16px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(11, 16, 32, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   animation: screen-in 0.5s ease both;
   animation-delay: calc(1.2s + var(--i) * 120ms);
 }
@@ -4360,6 +4413,66 @@ input[type='color'] {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* The small print over the start video: a stamp top left and one clause at a time along the bottom. */
+.startvideo-stamp {
+  position: absolute;
+  top: 22px;
+  left: 26px;
+  padding: 6px 12px;
+  border: 2px solid rgba(255, 90, 90, 0.75);
+  border-radius: 6px;
+  color: rgba(255, 110, 110, 0.9);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+  animation: pop-in 0.5s 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.startvideo-legal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px 120px 22px;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.75) 35%, rgba(0, 0, 0, 0.92));
+  text-align: center;
+  color: #fff;
+  pointer-events: none;
+}
+
+.startvideo-legal-kicker {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 8px;
+}
+
+.startvideo-legal-text {
+  margin: 0 auto;
+  max-width: 1100px;
+  min-height: 2.9em;
+  font-size: 1.25rem;
+  line-height: 1.45;
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+  animation: legal-in 0.5s ease both;
+}
+
+@keyframes legal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Small escape hatch on the start video, barely visible until hovered. */
